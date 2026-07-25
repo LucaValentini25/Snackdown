@@ -28,9 +28,33 @@ correction is applied without throwing away the player's more recent actions.
 
 ## The tick
 
-Everything is quantized to a fixed **network tick** (e.g. 30 Hz) from NGO's `NetworkTickSystem`.
+Everything is quantized to a fixed **network tick of 30 Hz** (33.3 ms) from NGO's `NetworkTickSystem`.
 Inputs, snapshots, and buffers are all keyed by an integer tick number — never wall-clock time.
 A fixed tick is what makes "replay inputs since tick N" well-defined.
+
+30 Hz over 60 Hz on purpose: it halves bandwidth, keeps the prediction buffer small, and — the part
+that matters for a project *about* netcode — it makes remote interpolation genuinely necessary.
+At 60 Hz raw snapshots already look almost smooth, which hides the very layer we're building.
+Rendering still runs at whatever the display allows; it just reads interpolated state.
+
+## Topology
+
+**Host** (listen server): one player's machine is both server and client. This is what Relay assumes,
+and it forces an honest treatment of a case a dedicated server would let us ignore — the host's own
+player is `IsOwner && IsServer`, has zero latency, and must **not** be predicted or reconciled.
+Code branches on *roles*, never on "am I the host", so a headless dedicated build stays possible
+(Phase 5) without a rewrite.
+
+## The simulation is kinematic, by necessity
+
+The character is a **kinematic controller written by hand** — `Rigidbody2D` in `Kinematic` mode,
+collisions resolved with casts/overlaps — never a dynamic `Rigidbody2D`.
+
+This is not a style preference; **prediction requires it**. Reconciliation means re-simulating one
+player across N ticks on demand, and Box2D can't do that: `Physics2D.Simulate` steps the *entire*
+world, and its contact ordering and float accumulation don't reproduce identically across machines.
+A pure function `Move(state, input, dt) → state` re-runs 10 ticks in a loop and yields the same
+answer every time, on every machine. That determinism is the whole foundation.
 
 ## Owner client — per tick
 
@@ -75,6 +99,27 @@ works if both sides simulate identically.
                         state = Move(state, buffer[t].input)
                    3. buffer[t].predictedState = state  (updated)
 ```
+
+### What the player sees during a correction
+
+The **simulated state snaps** — the logic never runs on a position neither side believes in.
+The **visual** doesn't: the sprite lives on a child transform that absorbs the positional error and
+decays it to zero over ~100 ms. So corrections are logically instant and visually invisible, and the
+debug overlay can draw both the corrected and the smoothed position at once.
+
+Interpolating the *simulated* state instead would be the tempting shortcut and the wrong one: errors
+would compound tick over tick instead of closing.
+
+## Wire format
+
+| Direction | Mechanism | Why |
+|---|---|---|
+| Input (owner → server) | `[Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable)]` carrying the **last 3 `InputCommand`s** | Redundancy beats retransmission: a dropped packet is covered by the next one, with no head-of-line blocking. The server ignores ticks it already consumed. |
+| Snapshot (server → all) | one **unreliable** `Rpc` per tick with every player's state | One packet per tick, not one per player. Stale snapshots are worthless, so reliability would only add latency. |
+
+`NetworkVariable` is deliberately **not** used for input: it replicates *latest value*, collapsing
+intermediate ones — and a gap in the input sequence makes replay impossible. It stays where it fits:
+slow, state-like data (life timer, match state).
 
 ## Remote players — interpolation
 
