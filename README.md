@@ -49,6 +49,7 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
 - **[01 — Architecture](docs/01-architecture.md)** — layers, folder structure, authority rules.
 - **[02 — Netcode design](docs/02-netcode.md)** — tick loop, prediction, reconciliation, interpolation.
 - **[03 — Roadmap](docs/03-roadmap.md)** — phased plan, each phase independently demoable.
+- **[04 — Git workflow](docs/04-workflow.md)** — branching model, PRs, releases, Unity merge setup.
 
 ## 📈 Status
 

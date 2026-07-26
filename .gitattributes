@@ -1,0 +1,68 @@
+# Line endings: LF in the repository, native in the working tree.
+* text=auto
+
+# ---------------------------------------------------------------------------
+#  Unity YAML
+# ---------------------------------------------------------------------------
+# These files are text, but a plain three-way merge mangles them — Git happily
+# produces a syntactically valid file that Unity refuses to open. UnityYAMLMerge
+# understands the format and merges by object instead of by line.
+#
+# Requires a one-time local config; see docs/04-workflow.md.
+*.unity              merge=unityyamlmerge
+*.prefab             merge=unityyamlmerge
+*.asset              merge=unityyamlmerge
+*.meta               merge=unityyamlmerge
+*.mat                merge=unityyamlmerge
+*.anim               merge=unityyamlmerge
+*.controller         merge=unityyamlmerge
+*.overrideController merge=unityyamlmerge
+*.playable           merge=unityyamlmerge
+*.mask               merge=unityyamlmerge
+*.preset             merge=unityyamlmerge
+*.lighting           merge=unityyamlmerge
+*.terrainlayer       merge=unityyamlmerge
+*.signal             merge=unityyamlmerge
+*.physicMaterial     merge=unityyamlmerge
+*.physicsMaterial2D  merge=unityyamlmerge
+*.shadervariants     merge=unityyamlmerge
+*.inputactions       merge=unityyamlmerge
+
+# ---------------------------------------------------------------------------
+#  Source
+# ---------------------------------------------------------------------------
+*.cs      text diff=csharp
+*.shader  text
+*.hlsl    text
+*.cginc   text
+*.md      text
+*.json    text
+*.yml     text
+*.txt     text
+
+# ---------------------------------------------------------------------------
+#  Binaries
+# ---------------------------------------------------------------------------
+# Not tracked with Git LFS on purpose: this project's art is pixel art measured
+# in kilobytes, and LFS would add bandwidth quotas and a smudge/clean step for
+# no benefit. Revisit if audio or large textures ever land here.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.psd   binary
+*.ase   binary
+*.aseprite binary
+*.tif   binary
+*.ico   binary
+*.wav   binary
+*.mp3   binary
+*.ogg   binary
+*.ttf   binary
+*.otf   binary
+*.fbx   binary
+*.blend binary
+*.dll   binary
+*.so    binary
+*.pdb   binary
+*.unitypackage binary
