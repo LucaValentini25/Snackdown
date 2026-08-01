@@ -55,6 +55,7 @@ namespace Snackdown.Gameplay.Player
         uint _latestPredictedTick;
         uint _lastAckedTick;
         bool _hasSyncedOnce;
+        bool _predictionWasEnabled = true;
 
         // --- server -----------------------------------------------------------------------
         readonly Queue<InputCommand> _incomingInputs = new Queue<InputCommand>();
@@ -64,6 +65,30 @@ namespace Snackdown.Gameplay.Player
 
         /// <summary>Inputs are buffered to absorb jitter; past this depth we're just adding latency.</summary>
         const int MaxQueueDepth = 8;
+
+        /// <summary>Hard ceiling on the input queue, regardless of what the client sends.</summary>
+        /// <remarks>
+        /// <see cref="MaxQueueDepth"/> only makes the server drain one extra command per tick, so
+        /// it bounds latency, not memory: a client sending faster than the tick rate adds entries
+        /// quicker than two-per-tick removes them, and the queue grows without limit. Nothing here
+        /// is protected by "no real client would do that" — a ServerRpc assumes the caller is
+        /// hostile. At 30 Hz this is still a second of buffered intent, far beyond anything a
+        /// legitimate connection needs.
+        /// </remarks>
+        const int MaxQueueCapacity = 32;
+
+        /// <summary>
+        /// How far ahead of the server's own tick an input may claim to be before it is discarded.
+        /// </summary>
+        /// <remarks>
+        /// NGO deliberately runs a client's local tick ahead of the server so input lands just in
+        /// time, and the lead grows with RTT — so some lead is correct and must be accepted. What
+        /// must not be accepted is an unbounded one: a client claiming a tick far in the future
+        /// would push <see cref="_highestReceivedInputTick"/> beyond anything it could legitimately
+        /// send afterwards, and every honest input behind it would then be rejected as stale.
+        /// ~2 seconds of lead is generous for any real connection.
+        /// </remarks>
+        const uint MaxInputTickLead = 64;
 
         // --- remote -----------------------------------------------------------------------
         readonly SnapshotInterpolator _interpolator = new SnapshotInterpolator();
@@ -87,9 +112,25 @@ namespace Snackdown.Gameplay.Player
 
         public override void OnNetworkSpawn()
         {
+            if (_config == null)
+            {
+                // Without a config every Simulate call dereferences null, thirty times a second,
+                // inside the one code path that has to be trustworthy. Fail once and loudly here
+                // instead, and stay out of the loop entirely.
+                Debug.LogError($"[Snackdown] {name} has no MovementConfig assigned; simulation disabled.", this);
+                enabled = false;
+                return;
+            }
+
             _tickDelta = 1f / NetworkManager.NetworkConfig.TickRate;
             _state = PlayerState.AtPosition(transform.position);
             _inputReader = GetComponent<InputReader>();
+
+            // Only the owner's device drives this character. On every other peer the reader would
+            // enable its InputActions and latch the local keyboard's jumps into a character that
+            // never reads them. The host counts as owner: its input skips the wire, but it is
+            // still sampled — in ServerSimulateTick rather than in prediction.
+            if (_inputReader != null) _inputReader.enabled = IsOwner;
 
             if (_smoother != null) _smoother.Snap();
             if (_authoritativeGhost != null)
@@ -110,6 +151,8 @@ namespace Snackdown.Gameplay.Player
         /// </summary>
         public void OwnerPredictTick(uint tick)
         {
+            if (PredictionEnabled != _predictionWasEnabled) OnPredictionToggled();
+
             InputCommand input = SampleInput(tick);
 
             // With prediction switched off the owner still samples and still sends — it just
@@ -132,6 +175,24 @@ namespace Snackdown.Gameplay.Player
             _previous1 = input;
 
             if (PredictionEnabled) ApplyLogicalPosition(_state.Position, smooth: true);
+        }
+
+        /// <summary>
+        /// Discards everything the buffer holds when the F1 switch is flipped, in either direction.
+        /// </summary>
+        /// <remarks>
+        /// While prediction is off the owner still records a buffer entry per tick, but the state
+        /// in it was never simulated — it is whatever the last snapshot left behind. Turning
+        /// prediction back on and reconciling against those entries would compare the server's
+        /// answer to a state nobody ever predicted, and report a correction that says more about
+        /// the switch than about the network. Since this exists to make the demo legible, a lying
+        /// correction counter is the one thing it cannot afford.
+        /// </remarks>
+        void OnPredictionToggled()
+        {
+            _predictionWasEnabled = PredictionEnabled;
+            _buffer.Clear();
+            _hasSyncedOnce = false;   // the next snapshot re-establishes a known-good baseline
         }
 
         InputCommand SampleInput(uint tick)
@@ -157,19 +218,38 @@ namespace Snackdown.Gameplay.Player
         [Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable)]
         void SubmitInputRpc(InputPacket packet)
         {
+            uint serverTick = (uint)NetworkManager.ServerTime.Tick;
+
             // Oldest first, so the queue stays ordered.
-            EnqueueIfNew(packet.Oldest);
-            EnqueueIfNew(packet.Previous);
-            EnqueueIfNew(packet.Newest);
+            EnqueueIfNew(packet.Oldest, serverTick);
+            EnqueueIfNew(packet.Previous, serverTick);
+            EnqueueIfNew(packet.Newest, serverTick);
         }
 
-        void EnqueueIfNew(in InputCommand input)
+        /// <summary>
+        /// Admits one command from a redundancy window, if it is genuinely new and plausible.
+        /// </summary>
+        /// <remarks>
+        /// Tick 0 needs no special case: <see cref="_highestReceivedInputTick"/> starts at zero, so
+        /// the staleness test below already rejects it. The cost is one discarded input on the very
+        /// first tick of a session, before the character can have moved — which buys the absence of
+        /// a sentinel value that would have to stay true forever.
+        /// </remarks>
+        void EnqueueIfNew(in InputCommand input, uint serverTick)
         {
             // A command we've already seen — either an earlier copy of this redundant window, or a
             // duplicate from the network. Either way, applying it twice would double the movement.
-            if (input.Tick == 0 || input.Tick <= _highestReceivedInputTick) return;
+            if (input.Tick <= _highestReceivedInputTick) return;
+
+            // Further into the future than any real clock skew explains.
+            if (input.Tick > serverTick + MaxInputTickLead) return;
 
             _highestReceivedInputTick = input.Tick;
+
+            // Drop the oldest rather than refuse the newest: what the player is doing now matters
+            // more than a backlog they have already moved past.
+            if (_incomingInputs.Count >= MaxQueueCapacity) _incomingInputs.Dequeue();
+
             _incomingInputs.Enqueue(input);
         }
 
@@ -267,6 +347,19 @@ namespace Snackdown.Gameplay.Player
             if (ackTick == _lastAckedTick) return;
             _lastAckedTick = ackTick;
 
+            uint pendingTicks = _latestPredictedTick > ackTick ? _latestPredictedTick - ackTick : 0;
+
+            if (pendingTicks > PredictionBuffer.Capacity)
+            {
+                // More pending ticks than the ring can hold: the oldest inputs in the range have
+                // already been overwritten. Replaying anyway would skip them one by one and land
+                // on a state neither side ever computed — wrong, and silently so. Taking the
+                // server's word for it is the honest answer, and at 34 seconds of gap the player
+                // was disconnected in every sense that matters.
+                HardSnapTo(snapshot.State);
+                return;
+            }
+
             if (!_buffer.TryGetState(ackTick, out PlayerState predicted))
             {
                 // We have no memory of that tick (buffer wrapped, or we just spawned).
@@ -281,13 +374,16 @@ namespace Snackdown.Gameplay.Player
             PlayerState replayed = snapshot.State;
             for (uint t = ackTick + 1; t <= _latestPredictedTick; t++)
             {
+                // A genuine hole — a tick this client never predicted, as after a spawn or a
+                // toggle. Overflow can no longer reach here; the capacity check above caught it.
                 if (!_buffer.TryGetInput(t, out InputCommand input)) continue;
+
                 replayed = PlayerMotor.Simulate(replayed, input, _config, _tickDelta);
                 _buffer.OverwriteState(t, replayed);
             }
 
             _state = replayed;
-            LastReplayedTicks = _latestPredictedTick > ackTick ? _latestPredictedTick - ackTick : 0;
+            LastReplayedTicks = pendingTicks;
             ReconciliationCount++;
 
             // Logically instant, visually smooth: the smoother eats the jump.
