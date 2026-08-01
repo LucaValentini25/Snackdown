@@ -72,15 +72,28 @@ reviewable later, and it's the habit that transfers to a team.
 ## One-time local setup
 
 Unity's YAML doesn't survive a normal text merge. `.gitattributes` already routes scenes, prefabs
-and assets to Unity's own merge tool — point Git at the executable once per machine:
+and assets to Unity's own merge tool, but **that only names a driver — it doesn't define one.** The
+definition is Git config, which lives on the machine and never travels with a clone. Set it once per
+machine, with `--global` so a re-clone doesn't lose it:
 
 ```bash
-git config merge.unityyamlmerge.name "Unity SmartMerge"
-git config merge.unityyamlmerge.driver '"D:/Unity editors/6000.3.14f1/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p "$BASE" "$REMOTE" "$LOCAL" "$MERGED"'
+git config --global merge.unityyamlmerge.name "Unity SmartMerge"
+git config --global merge.unityyamlmerge.driver '"D:/Unity editors/6000.3.14f1/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p "$BASE" "$REMOTE" "$LOCAL" "$MERGED"'
+git config --global merge.unityyamlmerge.recursive binary
 ```
 
-Adjust the path to your Unity install. Without this, a scene conflict produces a file Unity cannot
-open — and the only way out is picking one side wholesale.
+Adjust the path to your Unity install. The third line matters as much as the other two: when a merge
+has more than one common ancestor, Git first merges the ancestors together, and `recursive binary`
+stops it from text-merging Unity YAML behind the driver's back.
+
+Verify before the first merge on a new machine — empty output means it is **not** set up:
+
+```bash
+git config --get merge.unityyamlmerge.driver
+```
+
+Without this, Git falls back to a plain text merge and reports success. The result is a scene file
+Unity refuses to open, and the only way out is picking one side wholesale.
 
 ## Notes
 
