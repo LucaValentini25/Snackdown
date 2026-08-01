@@ -17,15 +17,23 @@ working core.
 
 The one phase that matters most. Everything else is scaffolding around it.
 
-- [ ] Fixed network tick wired to `NetworkTickSystem`
-- [ ] `InputCommand` (tick, moveX, jump) sampled on the owner and sent to the server
-- [ ] Shared `Move()` simulation used identically by client and server
-- [ ] Client prediction — owner applies input locally, buffers `(tick, input, state)`
-- [ ] `StateSnapshot` broadcast from server with `lastProcessedInputTick`
-- [ ] Reconciliation — rewind to snapshot, replay pending inputs
-- [ ] Snapshot interpolation for remote players
-- [ ] Debug overlay: predicted vs authoritative, reconciliation count, RTT, tick
-- [ ] Validated against NGO Network Simulator (latency + loss)
+- [x] Fixed network tick wired to `NetworkTickSystem` — 30 Hz, phases ordered in `NetworkSimulationLoop`
+- [x] `InputCommand` (tick, moveX, jump) sampled on the owner and sent to the server
+- [x] Shared `Move()` simulation used identically by client and server — `PlayerMotor.Simulate`
+- [x] Client prediction — owner applies input locally, buffers `(tick, input, state)`
+- [x] `StateSnapshot` broadcast from server with `lastProcessedInputTick`
+- [x] Reconciliation — rewind to snapshot, replay pending inputs
+- [x] Snapshot interpolation for remote players
+- [x] Debug overlay: predicted vs authoritative, reconciliation count, RTT, tick
+- [ ] **Validated against NGO Network Simulator (latency + loss)** — needs two live peers; the
+      prediction/reconciliation paths have not been exercised against a real remote yet
+
+### Verified so far
+
+Host session in `NetTest.unity`: spawn placement, collision (stops exactly at the wall face and
+rests exactly on the ground surface), jump arc, and the tick/snapshot loop all behave. Plus the
+property everything else depends on — **40 ticks of mixed input, simulated twice from the same
+state, produce bit-identical results**. Without that, replay would be fiction.
 
 **Acceptance:** with 150 ms simulated latency, the local player feels instant; a watcher sees smooth
 remote motion; forced desyncs self-correct within a tick or two.
@@ -34,8 +42,9 @@ remote motion; forced desyncs self-correct within a tick or two.
 
 - [ ] `IConnectionProvider` interface
 - [ ] `DirectProvider` (UnityTransport, host + join by IP)
-- [ ] `RelayProvider` (UGS Relay + Lobby, join by code)
-- [ ] `ConnectionApproval` with payload (nickname, version check)
+- [ ] `RelayProvider` (UGS Relay + Lobby, join by code) — needs a **fresh UGS project**; the inherited one from the original project is unlinked
+- [ ] `ConnectionApproval` with payload (nickname, **chosen character**, version check)
+- [ ] Character select (4 Pixel Adventure skins, mechanically identical)
 - [ ] Main menu → mode select → host/join → lobby, wired to the abstraction
 
 ## Phase 3 — Gameplay core
@@ -47,10 +56,14 @@ remote motion; forced desyncs self-correct within a tick or two.
 
 ## Phase 4 — Extended features
 
-- [ ] Power-ups (networked spawn + timed effects)
-- [ ] A second arena
-- [ ] Live scoreboard
-- [ ] Spectator camera polish
+Ordered by value-per-effort; each is independently droppable.
+
+1. [ ] **Live scoreboard** — `NetworkVariable` + events over data Phase 3 already computes. Cheapest, and it's what makes a recorded demo readable.
+2. [ ] **Spectator camera polish** — follow + target switching on death; exercises late-join, already part of the model.
+3. [ ] **A second arena** — mostly level design; the networked scene load comes free from Phase 3.
+
+*Power-ups are cut* — the most netcode-interesting item here (timed authoritative effects feeding
+into the predicted `Move()`), but not worth the scope against the three above.
 
 ## Phase 5 — Polish
 

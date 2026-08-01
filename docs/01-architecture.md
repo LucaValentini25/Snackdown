@@ -27,17 +27,20 @@ layer doesn't know there's a game at all.
 Assets/
 ├── _Project/                 ← everything we write lives here
 │   ├── Scripts/
-│   │   ├── Core/             Bootstrap, app state machine, scene flow
+│   │   ├── Core/             NetTestBootstrap (Phase 2: app state machine, scene flow)
 │   │   ├── Connection/       IConnectionProvider, DirectProvider, RelayProvider, approval
-│   │   ├── Netcode/          NetworkTick, prediction buffer, reconciliation, interpolation
+│   │   ├── Netcode/          NetworkSimulationLoop, PredictionBuffer, SnapshotFrame,
+│   │   │                     SnapshotInterpolator, VisualSmoother
 │   │   ├── Gameplay/
-│   │   │   ├── Player/       Predicted character controller, input command
+│   │   │   ├── Player/       PlayerState, InputCommand, PlayerMotor, PredictedPlayer,
+│   │   │   │                 MovementConfig, PlayerSpawnPoints
 │   │   │   ├── Fruits/       Spawner, fruit pickup
 │   │   │   └── Combat/       Head-bounce, stun
-│   │   ├── UI/               Main menu, lobby, HUD, end screen
-│   │   └── Input/            Input actions + reader
-│   ├── Scenes/
-│   ├── Prefabs/
+│   │   ├── UI/               NetDebugOverlay (Phase 2: menu, lobby, HUD, end screen)
+│   │   └── Input/            InputReader
+│   ├── Scenes/               NetTest
+│   ├── Prefabs/              Player
+│   ├── Art/                  placeholder primitives for the test arena
 │   └── Settings/             ScriptableObject configs (movement, match, spawn tables)
 ├── Pixel Adventure 1/        third-party art
 ├── DEVNIK 2D/                third-party UI
@@ -59,6 +62,15 @@ These are the invariants every system must respect. If a change would break one 
    overrides it (reconciliation).
 4. **Remote clients only *interpolate*** authoritative snapshots — they never predict other players.
 5. **RPCs are validated.** A `ServerRpc` assumes the caller is hostile until checked.
+
+## Settled parameters
+
+| Decision | Value | Rationale |
+|---|---|---|
+| Players per match | **4** | Enough that a client interpolates 3 remotes at once and bandwidth scales for real; matches the 4 Pixel Adventure characters; fits Relay's free tier and Multiplayer Play Mode on one machine. |
+| Topology | **Host** (listen server), written so a headless server stays possible | See [02 — Netcode](02-netcode.md#topology). |
+| Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
+| Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
 
 ## Configuration lives in data, not code
 

@@ -22,11 +22,13 @@ Last-player-standing survival. Your **life is a countdown timer** that drains on
 
 | Area | Choice |
 |------|--------|
-| Engine | Unity **6000.2.6f2**, URP (2D) |
-| Netcode | **Netcode for GameObjects 2.4** |
+| Engine | Unity **6000.3.14f1**, URP (2D Renderer) |
+| Netcode | **Netcode for GameObjects 2.11** |
 | Transport | Unity Transport + **Relay / Lobby** (Unity Gaming Services) |
-| Input | New Input System |
+| Input | New Input System (legacy Input Manager disabled) |
 | Art | *Pixel Adventure* + *DEVNIK 2D UI* (third-party) |
+| Topology | **Host** (listen server), up to **4 players** |
+| Network tick | **30 Hz**, decoupled from render framerate |
 
 ## 🌐 Netcode highlights — *the reason this project exists*
 
@@ -41,7 +43,22 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
 
 ## 🚀 Running it
 
-> Instructions land as the connection layer is built (Phase 2). For now this is a work in progress.
+Phase 1 ships a bare test arena, not a game yet.
+
+1. Open `Assets/_Project/Scenes/NetTest.unity` and press Play.
+2. Hit **Host**. Move with `A`/`D` or the arrows, jump with `Space`.
+3. For a second peer, use **Multiplayer Play Mode** (`Window > Multiplayer > Multiplayer Play Mode`),
+   enable a virtual player, and press **Client** there.
+4. To see the netcode do its job, open `Window > Multiplayer > Network Simulator`, apply ~150 ms of
+   latency and some packet loss, then use the overlay:
+
+| Key | Effect |
+|---|---|
+| `F1` | Toggle client-side prediction — off is what the game would feel like without it |
+| `F2` | Toggle visual smoothing — off shows every raw correction |
+| `F3` | Hide the overlay |
+
+The red ghost is where the server says you are; the green box is where you predicted you'd be.
 
 ## 📚 Documentation
 
@@ -53,4 +70,6 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
 
 ## 📈 Status
 
-🚧 **In development.** Phase 0 (scaffold + docs) complete. See the [roadmap](docs/03-roadmap.md).
+🚧 **In development.** Phase 1 (netcode core) is in — predicted character over a fixed 30 Hz tick,
+with reconciliation and interpolation in place, pending validation against a live remote peer under
+simulated latency. See the [roadmap](docs/03-roadmap.md).
