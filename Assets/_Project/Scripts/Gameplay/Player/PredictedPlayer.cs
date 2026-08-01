@@ -103,6 +103,7 @@ namespace Snackdown.Gameplay.Player
 
         // --- debug telemetry (read by NetDebugOverlay) ------------------------------------
         readonly ReconciliationStats _stats = new ReconciliationStats();
+        readonly RunRecorder _recorder = new RunRecorder();
 
         public int ReconciliationCount => _stats.TotalCorrections;
         public float LastPredictionError { get; private set; }
@@ -119,10 +120,38 @@ namespace Snackdown.Gameplay.Player
 
         /// <summary>How far the sprite currently trails the simulated position, in units.</summary>
         /// <remarks>
-        /// The one number that shows the correction was absorbed rather than hidden: it spikes on
+        /// The one number that shows a correction was absorbed rather than hidden: it spikes on
         /// a correction and decays to zero, while the logical position never moved off the truth.
         /// </remarks>
         public float VisualError => _smoother != null ? _smoother.CurrentError : 0f;
+
+        /// <summary>True while a run is being recorded for export.</summary>
+        public bool IsRecording => _recorder.IsRunning;
+
+        public int RecordedCorrections => _recorder.SampleCount;
+        public float RecordedDuration => _recorder.Duration(Time.time);
+
+        ulong CurrentRtt()
+        {
+            if (IsServer) return 0UL;
+            return NetworkManager.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManager.ServerClientId);
+        }
+
+        /// <summary>
+        /// Writes the recorded run to disk and returns the path, or null if this peer has nothing
+        /// to report — which is every peer except a predicting client.
+        /// </summary>
+        /// <remarks>
+        /// Only the owning client reconciles, so only the owning client has a run worth writing.
+        /// The host and remote peers deliberately return null rather than an empty file: an empty
+        /// measurement file is indistinguishable from a run where nothing went wrong, and those
+        /// two mean opposite things.
+        /// </remarks>
+        public string WriteRunMetrics(string directory, string fileName, string conditions)
+        {
+            if (!IsOwner || IsServer || !_recorder.IsRunning) return null;
+            return _recorder.Write(directory, fileName, Time.time, conditions);
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -149,6 +178,11 @@ namespace Snackdown.Gameplay.Player
             if (_smoother != null) _smoother.Snap();
             if (_authoritativeGhost != null)
                 _authoritativeGhost.gameObject.SetActive(IsOwner && !IsServer);
+
+            // Recording starts with the character, not with a keypress: the interesting corrections
+            // are the ones right after joining, and a run that only begins once someone remembers
+            // to press a key is missing exactly them.
+            if (IsOwner && !IsServer) _recorder.Begin(Time.time);
 
             NetworkSimulationLoop.Register(this);
         }
@@ -404,6 +438,7 @@ namespace Snackdown.Gameplay.Player
             _state = replayed;
             LastReplayedTicks = pendingTicks;
             _stats.Record(Time.time, LastPredictionError, pendingTicks);
+            _recorder.Record(Time.time, LastPredictionError, pendingTicks, CurrentRtt());
 
             // Logically instant, visually smooth: the smoother eats the jump.
             ApplyLogicalPosition(_state.Position, smooth: true);

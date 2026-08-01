@@ -1,6 +1,8 @@
+using System.IO;
 using System.Text;
 using Snackdown.Gameplay.Player;
 using Snackdown.Netcode;
+using Unity.Multiplayer.Tools.NetworkSimulator.Runtime;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -28,6 +30,12 @@ namespace Snackdown.UI
 
         GUIStyle _style;
 
+        string _lastExport;
+        float _lastExportTime;
+
+        /// <summary>How long the export confirmation stays on screen.</summary>
+        const float ExportNoticeSeconds = 8f;
+
         void Update()
         {
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
@@ -36,6 +44,68 @@ namespace Snackdown.UI
             if (keyboard.f1Key.wasPressedThisFrame) PredictedPlayer.PredictionEnabled = !PredictedPlayer.PredictionEnabled;
             if (keyboard.f2Key.wasPressedThisFrame) VisualSmoother.SmoothingEnabled = !VisualSmoother.SmoothingEnabled;
             if (keyboard.f3Key.wasPressedThisFrame) _visible = !_visible;
+            if (keyboard.f4Key.wasPressedThisFrame) ExportRun();
+        }
+
+        /// <summary>
+        /// Dumps the local client's recorded run to disk and reports where it landed.
+        /// </summary>
+        /// <remarks>
+        /// Deliberately a keypress rather than an automatic write on shutdown: a run is worth
+        /// keeping when the person watching decides it was, and writing on every exit would bury
+        /// the interesting ones under dozens of accidental two-second files.
+        /// </remarks>
+        void ExportRun()
+        {
+            foreach (PredictedPlayer player in NetworkSimulationLoop.ActivePlayers)
+            {
+                if (player == null) continue;
+
+                string path = player.WriteRunMetrics(RunDirectory, BuildFileName(), DescribeConditions());
+                if (path == null) continue;
+
+                _lastExport = path;
+                _lastExportTime = Time.realtimeSinceStartup;
+                Debug.Log($"[Snackdown] Run metrics written to {path}");
+                return;
+            }
+
+            _lastExport = "nothing to export — only a predicting client records a run";
+            _lastExportTime = Time.realtimeSinceStartup;
+        }
+
+        static string RunDirectory => Path.Combine(Application.persistentDataPath, "metrics");
+
+        static string BuildFileName()
+        {
+            System.DateTime now = System.DateTime.Now;
+            return $"run-{now:yyyyMMdd-HHmmss}.csv";
+        }
+
+        /// <summary>
+        /// The network conditions the run was produced under, read from the live simulator rather
+        /// than typed in — a hand-written note about latency records what someone meant to set.
+        /// </summary>
+        /// <remarks>
+        /// Read from <see cref="NetworkSimulator"/> and not from <c>UnityTransport.DebugSimulator</c>:
+        /// the latter still exists, still compiles, and has no effect whatsoever since the
+        /// Multiplayer Tools package took the job over. A run labelled with settings that were
+        /// never applied is worse than an unlabelled one.
+        /// </remarks>
+        static string DescribeConditions()
+        {
+            NetworkManager networkManager = NetworkManager.Singleton;
+            if (networkManager == null) return "unknown";
+
+            string tick = $"tick {networkManager.NetworkConfig.TickRate}Hz";
+            NetworkSimulator simulator = FindFirstObjectByType<NetworkSimulator>();
+
+            if (simulator == null || simulator.ConnectionPreset == null)
+                return $"{tick} | no simulated impairment";
+
+            INetworkSimulatorPreset preset = simulator.ConnectionPreset;
+            return $"{tick} | {preset.Name}: delay {preset.PacketDelayMs}ms " +
+                   $"jitter {preset.PacketJitterMs}ms loss {preset.PacketLossPercent}%";
         }
 
         void OnGUI()
@@ -84,6 +154,9 @@ namespace Snackdown.UI
 
                     _text.AppendLine($"   visual lag   {player.VisualError:F3} u");
                     _text.AppendLine($"   authority    {player.LastAuthoritativePosition:F2}");
+
+                    if (player.IsRecording)
+                        _text.AppendLine($"   recording    {player.RecordedDuration:F0}s, {player.RecordedCorrections} samples");
                 }
                 else if (player.IsServer)
                 {
@@ -100,7 +173,13 @@ namespace Snackdown.UI
             _text.AppendLine();
             _text.AppendLine($"F1 prediction {(PredictedPlayer.PredictionEnabled ? "ON " : "OFF")}   (off = feel the latency)");
             _text.AppendLine($"F2 smoothing  {(VisualSmoother.SmoothingEnabled ? "ON " : "OFF")}   (off = see the corrections)");
-            _text.AppendLine("F3 hide");
+            _text.AppendLine("F3 hide      F4 export run");
+
+            if (_lastExport != null && Time.realtimeSinceStartup - _lastExportTime < ExportNoticeSeconds)
+            {
+                _text.AppendLine();
+                _text.AppendLine($"saved: {_lastExport}");
+            }
 
             // Ask the style how tall the text actually is. Estimating from character count happens
             // to look right for one particular block of text and silently stops fitting the moment
