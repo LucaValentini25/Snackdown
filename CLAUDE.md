@@ -77,10 +77,39 @@ If a comment is needed to explain *what* the code does, the code needs renaming,
 ## Git
 
 - **Never add Claude as a co-author or as a commit trailer.** The history is Luca's.
-- No remote is configured. **Commit locally only, when asked — never push.** `docs/04-workflow.md`
-  describes the target flow (PRs into `dev`, tags, releases); it is not yet in effect.
-- Branch naming, commit message shape and the release model: see [docs/04-workflow.md](docs/04-workflow.md).
+- The remote is `origin` on GitHub, and the flow described in
+  [docs/04-workflow.md](docs/04-workflow.md) — feature branches, PRs into `dev`, tags on `main` —
+  **is in effect.** Branch naming, commit message shape and the release model live there.
 - Commit messages explain **why**, in imperative mood, whenever the diff doesn't make it obvious.
+
+### What Claude does alone, and what needs Luca
+
+| Action | |
+|---|---|
+| Commit and push on `feature/*` and `bugfix/*` | **On its own** |
+| Open a pull request against `dev` | **On its own** |
+| Merge any pull request | **Needs Luca's ok** |
+| Commit or push directly to `dev` or `main` | **Needs Luca's ok** |
+| Create a tag, cut a release | **Needs Luca's ok** |
+| Force-push anything, delete a remote branch | **Needs Luca's ok** |
+
+Opening a PR is not merging it. Review is the point of the flow; a PR Claude both writes and merges
+is a commit with extra steps.
+
+### The Unity YAML merge driver is per machine
+
+`.gitattributes` routes 18 Unity file types to `merge=unityyamlmerge`, but the driver itself is
+**local Git config — it does not travel with a clone.** Where it is missing, Git silently falls back
+to a plain text merge, and a scene or prefab conflict produces a file Unity refuses to open.
+
+Check before the first merge on any new clone or machine; empty output means it is not set up:
+
+```bash
+git config --get merge.unityyamlmerge.driver
+```
+
+The setup command (and the path to adjust) is in
+[docs/04-workflow.md](docs/04-workflow.md#one-time-local-setup).
 
 ## Before every commit or PR
 
