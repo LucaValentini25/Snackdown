@@ -102,13 +102,27 @@ namespace Snackdown.Gameplay.Player
         public static bool PredictionEnabled = true;
 
         // --- debug telemetry (read by NetDebugOverlay) ------------------------------------
-        public int ReconciliationCount { get; private set; }
+        readonly ReconciliationStats _stats = new ReconciliationStats();
+
+        public int ReconciliationCount => _stats.TotalCorrections;
         public float LastPredictionError { get; private set; }
         public uint LastReplayedTicks { get; private set; }
         public Vector2 LastAuthoritativePosition { get; private set; }
         public int ServerQueueDepth => _incomingInputs.Count;
         public int StarvedTicks { get; private set; }
         public PlayerState State => _state;
+
+        /// <summary>Correction rate and typical error over the last few seconds, or false if there
+        /// were none — which is the outcome the whole layer is aiming for.</summary>
+        public bool TryGetReconciliationWindow(out ReconciliationWindow window)
+            => _stats.TryGetWindow(Time.time, out window);
+
+        /// <summary>How far the sprite currently trails the simulated position, in units.</summary>
+        /// <remarks>
+        /// The one number that shows the correction was absorbed rather than hidden: it spikes on
+        /// a correction and decays to zero, while the logical position never moved off the truth.
+        /// </remarks>
+        public float VisualError => _smoother != null ? _smoother.CurrentError : 0f;
 
         public override void OnNetworkSpawn()
         {
@@ -193,6 +207,11 @@ namespace Snackdown.Gameplay.Player
             _predictionWasEnabled = PredictionEnabled;
             _buffer.Clear();
             _hasSyncedOnce = false;   // the next snapshot re-establishes a known-good baseline
+
+            // The rolling window describes current conditions, and the switch just changed them.
+            // Averaging across the flip would blend two different regimes into one meaningless
+            // number, in the exact moment the demo is trying to contrast them.
+            _stats.Clear();
         }
 
         InputCommand SampleInput(uint tick)
@@ -384,7 +403,7 @@ namespace Snackdown.Gameplay.Player
 
             _state = replayed;
             LastReplayedTicks = pendingTicks;
-            ReconciliationCount++;
+            _stats.Record(Time.time, LastPredictionError, pendingTicks);
 
             // Logically instant, visually smooth: the smoother eats the jump.
             ApplyLogicalPosition(_state.Position, smooth: true);
