@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Snackdown.Input;
 using Snackdown.Netcode;
+using Snackdown.Simulation;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -26,7 +27,7 @@ namespace Snackdown.Gameplay.Player
     /// Predicting there would be pure overhead and would invent errors that cannot exist.</para>
     /// </remarks>
     [RequireComponent(typeof(NetworkObject))]
-    public class PredictedPlayer : NetworkBehaviour
+    public class PredictedPlayer : NetworkBehaviour, IPredictedPeer
     {
         [Header("Simulation")]
         [SerializeField] MovementConfig _config;

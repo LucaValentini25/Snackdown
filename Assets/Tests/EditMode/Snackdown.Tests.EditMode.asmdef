@@ -1,0 +1,21 @@
+{
+    "name": "Snackdown.Tests.EditMode",
+    "rootNamespace": "Snackdown.Tests",
+    "references": [
+        "Snackdown.Simulation",
+        "Snackdown.Netcode",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Unity.Netcode.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
+}

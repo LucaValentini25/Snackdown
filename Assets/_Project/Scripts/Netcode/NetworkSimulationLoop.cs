@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Snackdown.Gameplay.Player;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -25,9 +24,9 @@ namespace Snackdown.Netcode
         /// Registered characters. Static because each peer is its own process (and its own
         /// NetworkManager) — including under Multiplayer Play Mode.
         /// </summary>
-        static readonly List<PredictedPlayer> Players = new List<PredictedPlayer>();
+        static readonly List<IPredictedPeer> Players = new List<IPredictedPeer>();
 
-        public static IReadOnlyList<PredictedPlayer> ActivePlayers => Players;
+        public static IReadOnlyList<IPredictedPeer> ActivePlayers => Players;
         public static NetworkSimulationLoop Instance { get; private set; }
 
         PlayerSnapshot[] _snapshotScratch;
@@ -35,12 +34,12 @@ namespace Snackdown.Netcode
         /// <summary>Snapshots sent since the loop started. Read by the debug overlay.</summary>
         public uint SnapshotsSent { get; private set; }
 
-        public static void Register(PredictedPlayer player)
+        public static void Register(IPredictedPeer player)
         {
             if (!Players.Contains(player)) Players.Add(player);
         }
 
-        public static void Unregister(PredictedPlayer player) => Players.Remove(player);
+        public static void Unregister(IPredictedPeer player) => Players.Remove(player);
 
         public override void OnNetworkSpawn()
         {
@@ -64,7 +63,7 @@ namespace Snackdown.Netcode
             uint localTick = (uint)NetworkManager.LocalTime.Tick;
             for (int i = 0; i < Players.Count; i++)
             {
-                PredictedPlayer player = Players[i];
+                IPredictedPeer player = Players[i];
                 if (player.IsOwner && !player.IsServer)
                     player.OwnerPredictTick(localTick);
             }
@@ -113,7 +112,7 @@ namespace Snackdown.Netcode
                         snapshot.NetworkObjectId, out NetworkObject networkObject))
                     continue;   // spawn message hasn't landed yet; the next snapshot will do
 
-                if (networkObject.TryGetComponent(out PredictedPlayer player))
+                if (networkObject.TryGetComponent(out IPredictedPeer player))
                     player.ApplySnapshot(snapshot, snapshotTime);
             }
         }

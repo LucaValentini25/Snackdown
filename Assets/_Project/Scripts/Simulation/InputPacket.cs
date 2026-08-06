@@ -1,6 +1,6 @@
 using Unity.Netcode;
 
-namespace Snackdown.Gameplay.Player
+namespace Snackdown.Simulation
 {
     /// <summary>
     /// The redundancy window sent to the server every tick: the newest command plus the two

@@ -1,0 +1,12 @@
+{
+    "name": "Snackdown.Gameplay",
+    "rootNamespace": "Snackdown.Gameplay",
+    "references": [
+        "Snackdown.Simulation",
+        "Snackdown.Netcode",
+        "Snackdown.Input",
+        "Unity.Netcode.Runtime"
+    ],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

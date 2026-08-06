@@ -1,0 +1,13 @@
+{
+    "name": "Snackdown.UI",
+    "rootNamespace": "Snackdown.UI",
+    "references": [
+        "Snackdown.Netcode",
+        "Snackdown.Gameplay",
+        "Unity.Netcode.Runtime",
+        "Unity.InputSystem",
+        "Unity.Multiplayer.Tools.NetworkSimulator.Runtime"
+    ],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

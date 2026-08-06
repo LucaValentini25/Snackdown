@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Snackdown.Gameplay.Player
+namespace Snackdown.Simulation
 {
     /// <summary>
     /// The complete simulation state of one character at one tick.

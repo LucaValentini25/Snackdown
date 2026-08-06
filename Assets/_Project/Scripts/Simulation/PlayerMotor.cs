@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Snackdown.Gameplay.Player
+namespace Snackdown.Simulation
 {
     /// <summary>
     /// The shared simulation. One function, one file, run identically by the server and by every

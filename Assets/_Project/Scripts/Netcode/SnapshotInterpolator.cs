@@ -1,4 +1,4 @@
-using Snackdown.Gameplay.Player;
+using Snackdown.Simulation;
 using UnityEngine;
 
 namespace Snackdown.Netcode

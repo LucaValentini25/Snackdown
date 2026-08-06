@@ -1,6 +1,6 @@
 using Unity.Netcode;
 
-namespace Snackdown.Gameplay.Player
+namespace Snackdown.Simulation
 {
     /// <summary>
     /// One tick's worth of player intent. This is the ONLY thing a client is allowed to tell the
