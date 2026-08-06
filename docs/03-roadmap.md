@@ -74,7 +74,8 @@ into the predicted `Move()`), but not worth the scope against the three above.
 
 - [ ] Network debug HUD (bandwidth, tick, RTT, reconciliation graph)
 - [ ] Edit/Play-mode tests for the prediction buffer & reconciliation math
-- [ ] Assembly definitions (Netcode core as a standalone assembly)
+- [ ] Assembly definitions — for compile times and test isolation, **not** to prove the netcode layer
+      is reusable; that goal was dropped, see [ADR 0002](adr/0002-decoupling-the-netcode-layer.md)
 - [ ] Final architecture diagrams; a runnable build
 
 ---

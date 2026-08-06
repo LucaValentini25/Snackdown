@@ -1,8 +1,10 @@
 # ADR 0002 — Decoupling the netcode layer from gameplay
 
-**Status:** Proposed — awaiting a decision
+**Status:** **Rejected** — 2026-08-06. The decoupling is not being done; the claim it was meant to
+support was removed instead. See [Decision](#decision) at the end.
 **Date:** 2026-08-06
-**Supersedes:** nothing. **Blocks:** the assembly split, and the "reusable netcode core" claim in the README.
+**Supersedes:** nothing. **Consequence:** [01 — Architecture](../01-architecture.md) no longer
+describes the netcode layer as a reusable core.
 
 ## Context
 
@@ -18,7 +20,7 @@ layers never know about higher ones.* The netcode layer breaks it, systematicall
 
 `ReconciliationStats`, `RunRecorder` and `VisualSmoother` are already clean.
 
-Until this is fixed, **"a reusable netcode core" in the README is false**, and the assembly split
+Until this is fixed, **the "reusable core" description in docs/01 is false**, and the assembly split
 that would let the compiler prove otherwise cannot be done — an assembly definition for `Netcode`
 would need a reference to `Gameplay`, which is the exact thing it is meant to forbid.
 
@@ -177,11 +179,36 @@ public class PlayerSimulationLoop : NetworkSimulationLoop<PlayerState, InputComm
   refactor of measured, working code. The recorded runs are the regression check — re-run scenario B
   afterwards and the correction rate and median error should land in the same range.
 
-## Open question for the decision
+## Decision
 
-Option 3 is recommended. The remaining judgement call is **how far to take the abstraction**: whether
-`IPredictedPeer` is worth defining at all, or whether the loop should simply hold an abstract
-`protected abstract void TickPeers(uint localTick, uint serverTick)` and let the concrete subclass
-iterate its own concrete list. The second is less code and less ceremony; the first keeps the
-per-tick phase ordering — the thing `NetworkSimulationLoop` exists to guarantee — inside the reusable
-layer instead of duplicating it per game.
+**None of the options were taken. The requirement was withdrawn instead.**
+
+Presented with option 3 and its consequence — that the wire format leaves the "reusable" layer and
+moves into gameplay — the reaction was the right question: if the reusable part keeps shrinking to
+preserve the label, what is the label buying?
+
+Nothing, on inspection. The reuse was hypothetical. Nobody lifts a netcode core out of one game into
+another without rewriting it around a different state type, a different input and a different wire
+format, which is most of what is here. The refactor would have touched every file measured in
+[05 — Validation](../05-validation.md) — risking working, verified code to make one sentence of
+documentation true, when deleting the sentence costs nothing and is equally honest.
+
+So `Netcode/` keeps importing `PlayerState` and `InputCommand`, as an accepted dependency rather than
+as debt. [01 — Architecture](../01-architecture.md) was corrected to describe what the layer is —
+this game's netcode, layered so gameplay depends on it and not the reverse — instead of what it was
+aspiring to be.
+
+**What survives this rejection:**
+
+- **The layering rule itself.** Gameplay depends on netcode, never the reverse. Still holds, still
+  enforced by convention, still worth keeping.
+- **Tests.** `PlayerMotor.Simulate`, `PredictionBuffer` and `SnapshotInterpolator` are pure or nearly
+  so and testable exactly as they stand today. They never needed this refactor — that was an
+  assumption worth discarding early.
+- **The NGO finding**, which outlives the decision that prompted it: an `[Rpc]` whose parameter is
+  closed over its declaring class's generic parameter crashes the IL post-processor with a
+  `NullReferenceException` instead of reporting a diagnostic. Anyone who reaches for a generic
+  `NetworkBehaviour` here will hit it, and this is the only place it is written down.
+
+Assembly definitions stay in Phase 5, justified by compile times and test isolation rather than by
+proving a decoupling that is no longer a goal.
