@@ -104,7 +104,15 @@ namespace Snackdown.UI
                 return $"{tick} | no simulated impairment";
 
             INetworkSimulatorPreset preset = simulator.ConnectionPreset;
-            return $"{tick} | {preset.Name}: delay {preset.PacketDelayMs}ms " +
+
+            // An unnamed preset with everything at zero is the component's default, which means
+            // nobody configured impairment. Saying so beats printing "delay 0ms" next to an empty
+            // name and letting a reader assume the run was shaped on purpose.
+            bool impaired = preset.PacketDelayMs > 0 || preset.PacketJitterMs > 0 || preset.PacketLossPercent > 0;
+            if (!impaired) return $"{tick} | no simulated impairment (direct localhost)";
+
+            string name = string.IsNullOrWhiteSpace(preset.Name) ? "custom" : preset.Name;
+            return $"{tick} | {name}: delay {preset.PacketDelayMs}ms " +
                    $"jitter {preset.PacketJitterMs}ms loss {preset.PacketLossPercent}%";
         }
 
@@ -120,7 +128,7 @@ namespace Snackdown.UI
             string role = networkManager.IsHost ? "HOST" : networkManager.IsServer ? "SERVER" : "CLIENT";
             _text.AppendLine($"── {role} ──────────────────────");
             _text.AppendLine($"tick   local {networkManager.LocalTime.Tick}  server {networkManager.ServerTime.Tick}");
-            _text.AppendLine($"rate   {networkManager.NetworkConfig.TickRate} Hz     rtt {Rtt(networkManager)} ms");
+            _text.AppendLine($"rate   {networkManager.NetworkConfig.TickRate} Hz     rtt {Rtt(networkManager)} ms (transport)");
             _text.AppendLine($"peers  {networkManager.ConnectedClients.Count}");
 
             if (NetworkSimulationLoop.Instance != null && networkManager.IsServer)
@@ -153,6 +161,7 @@ namespace Snackdown.UI
                     }
 
                     _text.AppendLine($"   visual lag   {player.VisualError:F3} u");
+                    _text.AppendLine($"   rtt (ours)   {player.LastMeasuredRttMs:F0} ms  measured on our own traffic");
                     _text.AppendLine($"   authority    {player.LastAuthoritativePosition:F2}");
 
                     if (player.IsRecording)

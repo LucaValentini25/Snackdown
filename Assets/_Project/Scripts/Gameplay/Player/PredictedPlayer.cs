@@ -90,6 +90,18 @@ namespace Snackdown.Gameplay.Player
         /// </remarks>
         const uint MaxInputTickLead = 64;
 
+        /// <summary>
+        /// How many consecutive snapshots keep announcing a teleport after one happens.
+        /// </summary>
+        /// <remarks>
+        /// Snapshots are unreliable, so a flag announced once is a flag that can be dropped — and
+        /// a dropped teleport flag turns a deliberate reposition back into a counted prediction
+        /// failure. Three is the same redundancy the input window uses, for the same reason.
+        /// </remarks>
+        const int TeleportAnnounceCount = 3;
+
+        int _teleportAnnouncesLeft;
+
         // --- remote -----------------------------------------------------------------------
         readonly SnapshotInterpolator _interpolator = new SnapshotInterpolator();
 
@@ -131,7 +143,23 @@ namespace Snackdown.Gameplay.Player
         public int RecordedCorrections => _recorder.SampleCount;
         public float RecordedDuration => _recorder.Duration(Time.time);
 
-        ulong CurrentRtt()
+        /// <summary>
+        /// Round trip measured on this project's own traffic, in milliseconds.
+        /// </summary>
+        /// <remarks>
+        /// <c>UnityTransport.GetCurrentRtt</c> cannot answer this. It reads
+        /// <c>RttInfo.LastRtt</c> off the <i>reliable sequenced</i> pipeline, and every packet this
+        /// layer sends — input and snapshots alike — is deliberately unreliable. What it reports is
+        /// NGO's handshake and time-sync traffic, not the game's.
+        /// <para>The honest measurement was already in the data: the owner predicts up to tick N
+        /// while the server acknowledges tick M, so <c>(N - M)</c> ticks is exactly how long a
+        /// command takes to go out and come back. Multiplied by the tick interval, that is the
+        /// round trip of the traffic we actually care about.</para>
+        /// </remarks>
+        public float LastMeasuredRttMs { get; private set; }
+
+        /// <summary>What the transport claims, kept only to be reported next to the real one.</summary>
+        ulong TransportRtt()
         {
             if (IsServer) return 0UL;
             return NetworkManager.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManager.ServerClientId);
@@ -342,12 +370,19 @@ namespace Snackdown.Gameplay.Player
             ApplyLogicalPosition(_state.Position, smooth: true);
         }
 
-        public PlayerSnapshot BuildSnapshot() => new PlayerSnapshot
+        public PlayerSnapshot BuildSnapshot()
         {
-            NetworkObjectId = NetworkObjectId,
-            State = _state,
-            LastProcessedInputTick = _lastProcessedInputTick
-        };
+            var snapshot = new PlayerSnapshot
+            {
+                NetworkObjectId = NetworkObjectId,
+                State = _state,
+                LastProcessedInputTick = _lastProcessedInputTick,
+                IsTeleport = _teleportAnnouncesLeft > 0
+            };
+
+            if (_teleportAnnouncesLeft > 0) _teleportAnnouncesLeft--;
+            return snapshot;
+        }
 
         // ==================================================================================
         //  Client — reconcile (owner) / interpolate (remote)
@@ -378,6 +413,24 @@ namespace Snackdown.Gameplay.Player
             // Unreliable delivery means frames arrive out of order sometimes. An older one carries
             // no new information and must not be allowed to undo a newer correction.
             if (ackTick < _lastAckedTick) return;
+
+            // The round trip of our OWN traffic, in ticks: how far our prediction has run past the
+            // newest input the server had seen. See LastMeasuredRttMs for why the transport's
+            // number cannot answer this.
+            if (_latestPredictedTick > ackTick)
+                LastMeasuredRttMs = (_latestPredictedTick - ackTick) * _tickDelta * 1000f;
+
+            if (snapshot.IsTeleport)
+            {
+                // The server moved us on purpose. Replaying inputs across a teleport would carry
+                // over momentum from a place we are no longer in, and counting it as a correction
+                // would blame prediction for something it never got to predict.
+                HardSnapTo(snapshot.State);
+                _hasSyncedOnce = true;
+                _lastAckedTick = ackTick;
+                _buffer.Clear();
+                return;
+            }
 
             if (!_hasSyncedOnce)
             {
@@ -438,7 +491,7 @@ namespace Snackdown.Gameplay.Player
             _state = replayed;
             LastReplayedTicks = pendingTicks;
             _stats.Record(Time.time, LastPredictionError, pendingTicks);
-            _recorder.Record(Time.time, LastPredictionError, pendingTicks, CurrentRtt());
+            _recorder.Record(Time.time, LastPredictionError, pendingTicks, LastMeasuredRttMs, TransportRtt());
 
             // Logically instant, visually smooth: the smoother eats the jump.
             ApplyLogicalPosition(_state.Position, smooth: true);
@@ -478,10 +531,16 @@ namespace Snackdown.Gameplay.Player
         }
 
         /// <summary>Server-side teleport that every peer will follow through the next snapshot.</summary>
+        /// <remarks>
+        /// The next few snapshots announce this as a teleport rather than letting owners discover
+        /// it as an enormous prediction error. Without that, a spawn placement is indistinguishable
+        /// on the wire from the simulation having gone badly wrong.
+        /// </remarks>
         public void ServerTeleport(Vector2 position)
         {
             if (!IsServer) return;
             _state = PlayerState.AtPosition(position);
+            _teleportAnnouncesLeft = TeleportAnnounceCount;
             ApplyLogicalPosition(position, smooth: false);
             if (_smoother != null) _smoother.Snap();
         }

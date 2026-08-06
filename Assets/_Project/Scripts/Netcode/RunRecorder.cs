@@ -28,7 +28,8 @@ namespace Snackdown.Netcode
             public float Time;
             public float Error;
             public uint ReplayedTicks;
-            public ulong RttMs;
+            public float MeasuredRttMs;
+            public ulong TransportRttMs;
         }
 
         readonly List<Sample> _samples = new List<Sample>(4096);
@@ -46,7 +47,7 @@ namespace Snackdown.Netcode
             _running = true;
         }
 
-        public void Record(float time, float error, uint replayedTicks, ulong rttMs)
+        public void Record(float time, float error, uint replayedTicks, float measuredRttMs, ulong transportRttMs)
         {
             if (!_running) return;
 
@@ -55,7 +56,8 @@ namespace Snackdown.Netcode
                 Time = time - _startTime,
                 Error = error,
                 ReplayedTicks = replayedTicks,
-                RttMs = rttMs
+                MeasuredRttMs = measuredRttMs,
+                TransportRttMs = transportRttMs
             });
         }
 
@@ -84,7 +86,8 @@ namespace Snackdown.Netcode
             {
                 float errorSum = 0f, errorWorst = 0f;
                 uint replaySum = 0, replayWorst = 0;
-                ulong rttSum = 0;
+                float measuredRttSum = 0f;
+                ulong transportRttSum = 0;
 
                 for (int i = 0; i < _samples.Count; i++)
                 {
@@ -93,24 +96,29 @@ namespace Snackdown.Netcode
                     if (s.Error > errorWorst) errorWorst = s.Error;
                     replaySum += s.ReplayedTicks;
                     if (s.ReplayedTicks > replayWorst) replayWorst = s.ReplayedTicks;
-                    rttSum += s.RttMs;
+                    measuredRttSum += s.MeasuredRttMs;
+                    transportRttSum += s.TransportRttMs;
                 }
 
                 text.AppendLine("# mean_error_units," + F(errorSum / _samples.Count));
                 text.AppendLine("# max_error_units," + F(errorWorst));
                 text.AppendLine("# mean_replayed_ticks," + F(replaySum / (float)_samples.Count));
                 text.AppendLine("# max_replayed_ticks," + replayWorst);
-                text.AppendLine("# mean_rtt_ms," + F(rttSum / (float)_samples.Count));
+                text.AppendLine("# mean_rtt_measured_ms," + F(measuredRttSum / _samples.Count));
+                text.AppendLine("# mean_rtt_transport_ms," + F(transportRttSum / (float)_samples.Count));
+                text.AppendLine("# note,rtt_measured is this project's own unreliable traffic; " +
+                                "rtt_transport is UnityTransport's reliable-pipeline figure and does not describe it");
             }
 
-            text.AppendLine("time_s,error_units,replayed_ticks,rtt_ms");
+            text.AppendLine("time_s,error_units,replayed_ticks,rtt_measured_ms,rtt_transport_ms");
             for (int i = 0; i < _samples.Count; i++)
             {
                 Sample s = _samples[i];
                 text.Append(F(s.Time)).Append(',')
                     .Append(F(s.Error)).Append(',')
                     .Append(s.ReplayedTicks).Append(',')
-                    .Append(s.RttMs).AppendLine();
+                    .Append(F(s.MeasuredRttMs)).Append(',')
+                    .Append(s.TransportRttMs).AppendLine();
             }
 
             File.WriteAllText(path, text.ToString());
