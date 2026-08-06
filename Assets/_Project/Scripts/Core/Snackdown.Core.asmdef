@@ -2,6 +2,7 @@
     "name": "Snackdown.Core",
     "rootNamespace": "Snackdown.Core",
     "references": [
+        "Snackdown.Connection",
         "Unity.Netcode.Runtime",
         "Unity.Networking.Transport"
     ],
