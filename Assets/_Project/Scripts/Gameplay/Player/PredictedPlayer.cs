@@ -175,10 +175,18 @@ namespace Snackdown.Gameplay.Player
         /// measurement file is indistinguishable from a run where nothing went wrong, and those
         /// two mean opposite things.
         /// </remarks>
+        /// <remarks>
+        /// Exporting also starts a fresh run. Comparing behaviour across network conditions means
+        /// several runs in one session, and a recorder that only ever accumulates would blend the
+        /// calm minute and the hostile one into a single average describing neither.
+        /// </remarks>
         public string WriteRunMetrics(string directory, string fileName, string conditions)
         {
             if (!IsOwner || IsServer || !_recorder.IsRunning) return null;
-            return _recorder.Write(directory, fileName, Time.time, conditions);
+
+            string path = _recorder.Write(directory, fileName, Time.time, conditions);
+            _recorder.Begin(Time.time);
+            return path;
         }
 
         public override void OnNetworkSpawn()

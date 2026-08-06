@@ -105,14 +105,18 @@ namespace Snackdown.UI
 
             INetworkSimulatorPreset preset = simulator.ConnectionPreset;
 
-            // An unnamed preset with everything at zero is the component's default, which means
-            // nobody configured impairment. Saying so beats printing "delay 0ms" next to an empty
-            // name and letting a reader assume the run was shaped on purpose.
+            // This reads THIS peer's simulator only. Impairment applied on the other end shapes the
+            // connection just as much and is invisible from here — the first recorded run under
+            // 150ms said "no impairment" and reported 466ms RTT in the same file. So the local
+            // setting is labelled as local, and the measured round trip is what states the
+            // conditions the run actually happened under.
             bool impaired = preset.PacketDelayMs > 0 || preset.PacketJitterMs > 0 || preset.PacketLossPercent > 0;
-            if (!impaired) return $"{tick} | no simulated impairment (direct localhost)";
+
+            if (!impaired)
+                return $"{tick} | local simulator off — see mean_rtt_measured_ms for actual conditions";
 
             string name = string.IsNullOrWhiteSpace(preset.Name) ? "custom" : preset.Name;
-            return $"{tick} | {name}: delay {preset.PacketDelayMs}ms " +
+            return $"{tick} | local simulator '{name}': delay {preset.PacketDelayMs}ms " +
                    $"jitter {preset.PacketJitterMs}ms loss {preset.PacketLossPercent}%";
         }
 
