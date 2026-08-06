@@ -11,7 +11,7 @@ layer doesn't know there's a game at all.
 │  Gameplay      Player, fruits, combat, match rules       │
 ├─────────────────────────────────────────────────────────┤
 │  Netcode       Tick, prediction, reconciliation,         │
-│                interpolation  (the reusable core)        │
+│                interpolation                             │
 ├─────────────────────────────────────────────────────────┤
 │  Connection    IConnectionProvider → LAN | Relay,        │
 │                approval, lobby                            │
@@ -78,8 +78,24 @@ Movement tuning, jump feel, match length, fruit spawn tables, rarity weights →
 under `_Project/Settings/`. Designers (and future-you) tune the game without recompiling, and the
 netcode code stays free of magic numbers.
 
-## Assemblies (planned)
+## The netcode layer is built for this game, not for reuse
 
-Once the code stabilizes, split into assembly definitions so the **Netcode** layer compiles as a
-standalone, reusable assembly with no gameplay references — proof that the core is genuinely decoupled.
-Deferred to a polish phase to avoid reference churn during rapid iteration.
+An earlier version of this document called the netcode layer "the reusable core" and planned an
+assembly split to prove it. That goal is **dropped**, deliberately.
+
+The layering rule still holds and still matters: gameplay depends on netcode, never the reverse, and
+that keeps the tick, prediction and reconciliation reasonable about in isolation. What is not being
+pursued is the stronger claim — that the layer could be lifted out and dropped into another project.
+Achieving it would mean generic buffers, an interpolation contract on the state, and moving the wire
+format out of the layer that defines it, and the result would still need rewriting for any game whose
+state is not a 2D position and a velocity. The cost is real and the payoff was hypothetical.
+
+See [ADR 0002](adr/0002-decoupling-the-netcode-layer.md) for the full analysis, including the NGO
+constraint that shaped it: an `[Rpc]` cannot take a parameter closed over its class's generic
+parameter — the code generator crashes rather than reporting an error.
+
+Today `Netcode/` imports `PlayerState` and `InputCommand` from `Gameplay/Player/`. That is a known,
+accepted dependency rather than an oversight.
+
+Assembly definitions stay in Phase 5, where they were, and on their own merits — compile times and
+letting tests reference a narrow slice of the project — not as proof of a decoupling nobody needs.

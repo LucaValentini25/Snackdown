@@ -22,11 +22,28 @@ namespace Snackdown.Netcode
         /// </remarks>
         public uint LastProcessedInputTick;
 
+        /// <summary>
+        /// Set when this state is the result of the server repositioning the character rather than
+        /// simulating it — a spawn placement, and from Phase 3 on, a respawn.
+        /// </summary>
+        /// <remarks>
+        /// Without this the client cannot tell the two apart, because they look identical on the
+        /// wire: a state far from what was predicted. It would treat a deliberate teleport as a
+        /// prediction failure, replay inputs across it, and count a correction — which quietly
+        /// poisons the one statistic the whole layer is judged by. A spawn placement alone
+        /// contributed an error of 3.8 units against a real correction of 0.29.
+        /// <para>The server keeps setting it for a few consecutive snapshots. Snapshots travel
+        /// unreliably, so a flag sent once is a flag that can be lost — the same reasoning that
+        /// makes input redundant rather than retransmitted.</para>
+        /// </remarks>
+        public bool IsTeleport;
+
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
             serializer.SerializeValue(ref NetworkObjectId);
             State.NetworkSerialize(serializer);
             serializer.SerializeValue(ref LastProcessedInputTick);
+            serializer.SerializeValue(ref IsTeleport);
         }
     }
 

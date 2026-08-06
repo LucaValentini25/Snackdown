@@ -25,8 +25,10 @@ The one phase that matters most. Everything else is scaffolding around it.
 - [x] Reconciliation — rewind to snapshot, replay pending inputs
 - [x] Snapshot interpolation for remote players
 - [x] Debug overlay: predicted vs authoritative, reconciliation count, RTT, tick
-- [ ] **Validated against NGO Network Simulator (latency + loss)** — needs two live peers; the
-      prediction/reconciliation paths have not been exercised against a real remote yet
+- [x] **Validated against NGO Network Simulator (latency + loss)** — host + client under simulated
+      impairment, measured and written up in [05 — Validation](05-validation.md). Under 20% packet
+      loss (≈3× the worst real-world profile Unity models) the median prediction error was 0.302
+      units. One scenario still lacks a recorded run; see the open items there.
 
 ### Verified so far
 
@@ -36,7 +38,10 @@ property everything else depends on — **40 ticks of mixed input, simulated twi
 state, produce bit-identical results**. Without that, replay would be fiction.
 
 **Acceptance:** with 150 ms simulated latency, the local player feels instant; a watcher sees smooth
-remote motion; forced desyncs self-correct within a tick or two.
+remote motion; forced desyncs self-correct within a tick or two. **Met** — see
+[05 — Validation](05-validation.md) for the measurements. The one caveat worth carrying forward:
+remote smoothness holds at 150 ms but not at 520 ms, where the 100 ms interpolation buffer runs dry.
+The predicted local player stays responsive at both.
 
 ## Phase 2 — Connection layer
 
@@ -69,7 +74,8 @@ into the predicted `Move()`), but not worth the scope against the three above.
 
 - [ ] Network debug HUD (bandwidth, tick, RTT, reconciliation graph)
 - [ ] Edit/Play-mode tests for the prediction buffer & reconciliation math
-- [ ] Assembly definitions (Netcode core as a standalone assembly)
+- [ ] Assembly definitions — for compile times and test isolation, **not** to prove the netcode layer
+      is reusable; that goal was dropped, see [ADR 0002](adr/0002-decoupling-the-netcode-layer.md)
 - [ ] Final architecture diagrams; a runnable build
 
 ---
