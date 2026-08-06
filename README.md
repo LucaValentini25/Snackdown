@@ -57,8 +57,12 @@ Phase 1 ships a bare test arena, not a game yet.
 | `F1` | Toggle client-side prediction — off is what the game would feel like without it |
 | `F2` | Toggle visual smoothing — off shows every raw correction |
 | `F3` | Hide the overlay |
+| `F4` | Export the client's run to CSV — correction rate, error, replayed ticks |
 
 The red ghost is where the server says you are; the green box is where you predicted you'd be.
+
+For the measured results and the procedure that produced them, see
+**[docs/05 — Validation](docs/05-validation.md)**.
 
 ## 📚 Documentation
 
@@ -67,6 +71,7 @@ The red ghost is where the server says you are; the green box is where you predi
 - **[02 — Netcode design](docs/02-netcode.md)** — tick loop, prediction, reconciliation, interpolation.
 - **[03 — Roadmap](docs/03-roadmap.md)** — phased plan, each phase independently demoable.
 - **[04 — Git workflow](docs/04-workflow.md)** — branching model, PRs, releases, Unity merge setup.
+- **[05 — Validation](docs/05-validation.md)** — how the netcode was measured under simulated latency and packet loss, and what the numbers were.
 
 ## 📈 Status
 
