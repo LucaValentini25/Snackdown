@@ -73,9 +73,11 @@ into the predicted `Move()`), but not worth the scope against the three above.
 ## Phase 5 — Polish
 
 - [ ] Network debug HUD (bandwidth, tick, RTT, reconciliation graph)
-- [ ] Edit/Play-mode tests for the prediction buffer & reconciliation math
-- [ ] Assembly definitions — for compile times and test isolation, **not** to prove the netcode layer
-      is reusable; that goal was dropped, see [ADR 0002](adr/0002-decoupling-the-netcode-layer.md)
+- [x] ~~Edit-mode tests for the simulation, prediction buffer and interpolator~~ — **done early**;
+      36 unit tests, they needed no refactor and could have been written from day one
+- [x] ~~Assembly definitions~~ — **done early**, one per system. Deferring them was the mistake:
+      an assembly is created when a system is, or retrofitting becomes a migration. Doing it here
+      is what made the `Netcode ↔ Gameplay` cycle visible at all
 - [ ] Final architecture diagrams; a runnable build
 
 ---

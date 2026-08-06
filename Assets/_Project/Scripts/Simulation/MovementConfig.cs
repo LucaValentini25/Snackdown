@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Snackdown.Gameplay.Player
+namespace Snackdown.Simulation
 {
     /// <summary>
     /// Every tunable the predicted simulation reads. Lives in an asset so movement can be

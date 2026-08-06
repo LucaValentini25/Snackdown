@@ -1,0 +1,9 @@
+{
+    "name": "Snackdown.Input",
+    "rootNamespace": "Snackdown.Input",
+    "references": [
+        "Unity.InputSystem"
+    ],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

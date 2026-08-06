@@ -57,9 +57,9 @@ namespace Snackdown.UI
         /// </remarks>
         void ExportRun()
         {
-            foreach (PredictedPlayer player in NetworkSimulationLoop.ActivePlayers)
+            foreach (IPredictedPeer peer in NetworkSimulationLoop.ActivePlayers)
             {
-                if (player == null) continue;
+                if (peer is not PredictedPlayer player) continue;
 
                 string path = player.WriteRunMetrics(RunDirectory, BuildFileName(), DescribeConditions());
                 if (path == null) continue;
@@ -140,9 +140,12 @@ namespace Snackdown.UI
 
             _text.AppendLine();
 
-            foreach (PredictedPlayer player in NetworkSimulationLoop.ActivePlayers)
+            // The loop only knows peers as IPredictedPeer. This overlay is a debug view of the
+            // concrete character, so it asks for the concrete type — UI sits above gameplay and is
+            // allowed to. A peer that is not a PredictedPlayer has nothing to report here.
+            foreach (IPredictedPeer peer in NetworkSimulationLoop.ActivePlayers)
             {
-                if (player == null) continue;
+                if (peer is not PredictedPlayer player) continue;
 
                 string tag = player.IsOwner ? "you" : $"#{player.OwnerClientId}";
 
