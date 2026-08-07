@@ -43,6 +43,18 @@ namespace Snackdown.Connection
 
         bool _listening;
 
+        /// <summary>
+        /// The approval currently vetting connections on this peer, or null when none is.
+        /// </summary>
+        /// <remarks>
+        /// Scene objects like <see cref="SessionRoster"/> spawn long after whoever constructed this,
+        /// and have no reference to hand. A static pointer is the smallest thing that closes that
+        /// gap: it is set while vetting is active and cleared when it stops, so it cannot outlive
+        /// the session it describes — unlike the <c>DontDestroyOnLoad</c> singletons in the original
+        /// project, which survived scene loads and answered for sessions that no longer existed.
+        /// </remarks>
+        public static ConnectionApproval Current { get; private set; }
+
         /// <summary>How many character skins exist. Requests outside this range are clamped.</summary>
         public int CharacterCount { get; set; } = 4;
 
@@ -73,6 +85,7 @@ namespace Snackdown.Connection
             _networkManager.ConnectionApprovalCallback += Approve;
             _networkManager.OnClientDisconnectCallback += Forget;
             _listening = true;
+            Current = this;
         }
 
         public void Disable()
@@ -84,6 +97,9 @@ namespace Snackdown.Connection
             _approvedNicknames.Clear();
             _approvedCharacters.Clear();
             _listening = false;
+
+            // Only clear the pointer if it still refers to us; a newer approval may already own it.
+            if (ReferenceEquals(Current, this)) Current = null;
         }
 
         void Forget(ulong clientId)

@@ -406,6 +406,7 @@ GameObject:
   - component: {fileID: 283214383}
   - component: {fileID: 283214382}
   - component: {fileID: 283214384}
+  - component: {fileID: 283214385}
   m_Layer: 0
   m_Name: NetworkSimulation
   m_TagString: Untagged
@@ -465,6 +466,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f322b0d27fa21447b15aeff42cf9854, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Snackdown.Netcode.NetworkSimulationLoop
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &283214385
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 283214381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a1101cdcc02b4143b253e7946ca630c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Connection::Snackdown.Connection.SessionRoster
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &655504201
 GameObject:
@@ -559,6 +573,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Snackdown.Core.NetTestBootstrap
   _address: 127.0.0.1
   _port: 7777
+  _nickname: Player
 --- !u!4 &757315494
 Transform:
   m_ObjectHideFlags: 0
