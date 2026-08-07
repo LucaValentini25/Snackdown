@@ -17,6 +17,21 @@ namespace Snackdown.Core
     /// </remarks>
     public class NetTestBootstrap : MonoBehaviour
     {
+        /// <summary>
+        /// Ceiling enforced by approval, matching the four-player decision in <c>docs/01</c>.
+        /// </summary>
+        const int MaxPlayers = 4;
+
+        /// <summary>
+        /// The build's version, refused by a host running a different one.
+        /// </summary>
+        /// <remarks>
+        /// Read from <c>Application.version</c> rather than hardcoded, so it is the same string
+        /// <c>docs/04</c> already requires be kept in step with the release tag. A constant here
+        /// would be a second place to forget.
+        /// </remarks>
+        static string GameVersion => Application.version;
+
         [SerializeField] string _address = "127.0.0.1";
         [SerializeField] ushort _port = 7777;
         [SerializeField] string _nickname = "Player";
@@ -42,7 +57,10 @@ namespace Snackdown.Core
             get
             {
                 if (_provider == null && NetworkManager.Singleton != null)
-                    _provider = new DirectConnectionProvider(NetworkManager.Singleton, _port);
+                {
+                    var approval = new ConnectionApproval(NetworkManager.Singleton, GameVersion, MaxPlayers);
+                    _provider = new DirectConnectionProvider(NetworkManager.Singleton, _port, approval, GameVersion);
+                }
 
                 return _provider;
             }

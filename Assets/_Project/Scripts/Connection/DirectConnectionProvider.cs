@@ -34,17 +34,28 @@ namespace Snackdown.Connection
 
         readonly NetworkManager _networkManager;
         readonly ushort _port;
+        readonly ConnectionApproval _approval;
+        readonly string _gameVersion;
 
         public string DisplayName => "Direct / LAN";
         public bool JoinsByCode => false;
 
-        public DirectConnectionProvider(NetworkManager networkManager, ushort port = 7777)
+        /// <summary>Who was admitted under what name. Null when hosting without approval.</summary>
+        public ConnectionApproval Approval => _approval;
+
+        public DirectConnectionProvider(
+            NetworkManager networkManager,
+            ushort port = 7777,
+            ConnectionApproval approval = null,
+            string gameVersion = "")
         {
             _networkManager = networkManager != null
                 ? networkManager
                 : throw new ArgumentNullException(nameof(networkManager));
 
             _port = port;
+            _approval = approval;
+            _gameVersion = gameVersion ?? string.Empty;
         }
 
         public Task<ConnectionResult> HostAsync(ConnectionRequest request, CancellationToken cancellationToken = default)
@@ -60,8 +71,15 @@ namespace Snackdown.Connection
             // loopback and fail for everyone else.
             transport.SetConnectionData("0.0.0.0", _port, "0.0.0.0");
 
+            // Vetting has to be armed before the socket opens: NGO reads ConnectionApproval when
+            // the server starts, so enabling it afterwards would let the first joiner in unchecked.
+            _approval?.Enable();
+
             if (!_networkManager.StartHost())
+            {
+                _approval?.Disable();
                 return Task.FromResult(ConnectionResult.Failed(ConnectionFailure.Error, "StartHost refused; is the port already bound?"));
+            }
 
             return Task.FromResult(ConnectionResult.Ok(LocalAddress()));
         }
@@ -85,6 +103,14 @@ namespace Snackdown.Connection
                 return ConnectionResult.Failed(ConnectionFailure.InvalidAddress, $"'{request.Target}' is not an address this transport accepts");
 
             transport.SetConnectionData(address, _port);
+
+            // Travels with the handshake, so the server can refuse us before we cost it anything.
+            _networkManager.NetworkConfig.ConnectionData = new ConnectionPayload
+            {
+                GameVersion = _gameVersion,
+                Nickname = Truncate(request.Nickname, ConnectionApproval.MaxNicknameLength),
+                CharacterIndex = request.CharacterIndex
+            }.ToBytes();
 
             var outcome = new TaskCompletionSource<ConnectionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -145,6 +171,11 @@ namespace Snackdown.Connection
         /// </remarks>
         public async Task LeaveAsync()
         {
+            // Unhooked even when nothing is running: Enable() may have been called by a HostAsync
+            // whose StartHost then failed, and a stale callback would vet the next session with a
+            // policy nobody chose.
+            _approval?.Disable();
+
             if (_networkManager == null || !_networkManager.IsListening) return;
 
             _networkManager.Shutdown();
@@ -204,6 +235,21 @@ namespace Snackdown.Connection
             }
 
             return (false, null);
+        }
+
+        /// <summary>
+        /// Caps the nickname before it is written into the payload.
+        /// </summary>
+        /// <remarks>
+        /// <c>FixedString32Bytes</c> throws when handed more than it can hold, so an over-long name
+        /// typed into the menu would fail on the sender rather than being politely shortened by the
+        /// server. The server sanitizes independently — this is not a substitute for that, since a
+        /// hostile client does not run this code at all.
+        /// </remarks>
+        static string Truncate(string value, int maxLength)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
         }
 
         /// <summary>True when the text is made only of digits and dots — an attempt at an address
