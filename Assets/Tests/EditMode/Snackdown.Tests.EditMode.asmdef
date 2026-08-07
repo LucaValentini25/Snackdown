@@ -4,9 +4,11 @@
     "references": [
         "Snackdown.Simulation",
         "Snackdown.Netcode",
+        "Snackdown.Connection",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Unity.Netcode.Runtime"
+        "Unity.Netcode.Runtime",
+        "Unity.Collections"
     ],
     "includePlatforms": [
         "Editor"
