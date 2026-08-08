@@ -35,7 +35,7 @@ under [Assemblies](#assemblies-one-per-system).
 Assets/
 ├── _Project/                 ← everything we write lives here
 │   ├── Scripts/
-│   │   ├── Core/             FrameRatePolicy, NetTestBootstrap (Phase 2: app state machine)
+│   │   ├── Core/             FrameRatePolicy (Phase 2: app state machine, scene flow)
 │   │   ├── Connection/       IConnectionProvider, DirectProvider, RelayProvider, approval
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
 │   │   │                     MovementConfig — the state, the input, the pure step
@@ -46,8 +46,9 @@ Assets/
 │   │   │   ├── Player/       PredictedPlayer, PlayerSpawnPoints
 │   │   │   ├── Fruits/       Spawner, fruit pickup
 │   │   │   └── Combat/       Head-bounce, stun
-│   │   ├── UI/               NetDebugOverlay (Phase 2: menu, lobby, HUD, end screen)
+│   │   ├── UI/               NetDebugOverlay, MainMenuController
 │   │   └── Input/            InputReader
+│   ├── UI/                   MainMenu.uxml, Snackdown.uss, MenuPanelSettings
 │   ├── Scenes/               NetTest
 │   ├── Prefabs/              Player
 │   ├── Art/                  placeholder primitives for the test arena

@@ -480,6 +480,76 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Snackdown.Connection::Snackdown.Connection.SessionRoster
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!1 &559191155
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 559191158}
+  - component: {fileID: 559191157}
+  - component: {fileID: 559191156}
+  m_Layer: 0
+  m_Name: MainMenu
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &559191156
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559191155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2fbf1ebfdcd6b6a4589165ea502b17c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.UI::Snackdown.UI.MainMenuController
+  _port: 7777
+  _maxPlayers: 4
+--- !u!114 &559191157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559191155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 93cc4f7f5f0e2ef45ab25b101387d0f7, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 9eaba4489ec33f44fa19992425a3fbb9, type: 3}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &559191158
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 559191155}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &655504201
 GameObject:
   m_ObjectHideFlags: 0
@@ -520,7 +590,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 757315494}
-  - component: {fileID: 757315493}
   - component: {fileID: 757315492}
   - component: {fileID: 757315491}
   m_Layer: 0
@@ -559,21 +628,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e78a8fc9c6a97474c8adf9348101bbab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Snackdown.UI.NetDebugOverlay
---- !u!114 &757315493
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 757315490}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8eea1f8571800d04fa0bba37cd6b77c9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Snackdown.Core.NetTestBootstrap
-  _address: 127.0.0.1
-  _port: 7777
-  _nickname: Player
 --- !u!4 &757315494
 Transform:
   m_ObjectHideFlags: 0
@@ -1540,3 +1594,4 @@ SceneRoots:
   - {fileID: 1664336103}
   - {fileID: 283214383}
   - {fileID: 757315494}
+  - {fileID: 559191158}
