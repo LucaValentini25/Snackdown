@@ -45,12 +45,14 @@ The predicted local player stays responsive at both.
 
 ## Phase 2 — Connection layer
 
-- [ ] `IConnectionProvider` interface
-- [ ] `DirectProvider` (UnityTransport, host + join by IP)
-- [ ] `RelayProvider` (UGS Relay + Lobby, join by code) — needs a **fresh UGS project**; the inherited one from the original project is unlinked
-- [ ] `ConnectionApproval` with payload (nickname, **chosen character**, version check)
-- [ ] Character select (4 Pixel Adventure skins, mechanically identical)
-- [ ] Main menu → mode select → host/join → lobby, wired to the abstraction
+- [x] `IConnectionProvider` interface — async throughout, failures as return values
+- [x] `DirectProvider` (UnityTransport, host + join by IP)
+- [ ] `RelayProvider` (Sessions API, join by code) — needs a **fresh UGS project**; the inherited one from the original project is unlinked
+- [x] `ConnectionApproval` with payload (nickname, chosen character, version check)
+- [x] `SessionRoster` — replicated player list with names, skins and ready state
+- [x] Main menu → host/join → lobby, built with **UI Toolkit**, wired to the abstraction
+- [ ] Character select (4 Pixel Adventure skins, mechanically identical) — the index already
+      travels through approval and the roster; what is missing is applying it to the sprite
 
 ## Phase 3 — Gameplay core
 

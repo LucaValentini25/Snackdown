@@ -1,0 +1,170 @@
+/*
+ * Shared styling for the menu and lobby.
+ *
+ * Deliberately built from a handful of variables rather than per-element values: the palette and
+ * spacing are the two things that change when placeholder art is replaced with real art, and having
+ * them in one block is the difference between editing five lines and hunting through the file.
+ */
+
+:root {
+    --bg: rgb(24, 22, 32);
+    --panel: rgb(38, 35, 50);
+    --panel-edge: rgb(62, 57, 82);
+    --ink: rgb(232, 230, 240);
+    --ink-dim: rgb(150, 146, 168);
+    --accent: rgb(238, 108, 92);
+    --accent-ink: rgb(28, 24, 30);
+    --ok: rgb(126, 200, 130);
+    --bad: rgb(232, 112, 112);
+
+    --gap: 12px;
+    --radius: 6px;
+}
+
+.screen {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg);
+}
+
+.panel {
+    width: 420px;
+    padding: 24px;
+    background-color: var(--panel);
+    border-width: 2px;
+    border-color: var(--panel-edge);
+    border-radius: var(--radius);
+}
+
+.title {
+    font-size: 34px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    -unity-text-align: middle-center;
+    margin-bottom: 4px;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: var(--ink-dim);
+    -unity-text-align: middle-center;
+    margin-bottom: 20px;
+    white-space: normal;
+}
+
+/* ── fields ─────────────────────────────────────────────────────────────────────── */
+
+.field {
+    margin-bottom: var(--gap);
+}
+
+.field > .unity-base-field__label {
+    min-width: 78px;
+    color: var(--ink-dim);
+    font-size: 13px;
+}
+
+.field > .unity-base-text-field__input {
+    background-color: var(--bg);
+    border-color: var(--panel-edge);
+    border-width: 1px;
+    border-radius: 4px;
+    color: var(--ink);
+    padding: 6px 8px;
+}
+
+/* ── buttons ────────────────────────────────────────────────────────────────────── */
+
+.button {
+    height: 38px;
+    margin: 4px 0 0 0;
+    padding: 0 16px;
+    background-color: var(--panel-edge);
+    border-width: 0;
+    border-radius: 4px;
+    color: var(--ink);
+    font-size: 15px;
+    -unity-font-style: bold;
+}
+
+.button:hover {
+    background-color: rgb(78, 72, 102);
+}
+
+.button:disabled {
+    opacity: 0.4;
+}
+
+.button--primary {
+    background-color: var(--accent);
+    color: var(--accent-ink);
+}
+
+.button--primary:hover {
+    background-color: rgb(248, 128, 112);
+}
+
+/* ── status line ────────────────────────────────────────────────────────────────── */
+
+.status {
+    min-height: 20px;
+    margin-top: var(--gap);
+    font-size: 13px;
+    color: var(--ink-dim);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+.status--error {
+    color: var(--bad);
+}
+
+/* ── roster ─────────────────────────────────────────────────────────────────────── */
+
+.roster {
+    margin: 4px 0 var(--gap) 0;
+    min-height: 140px;
+}
+
+.roster-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    background-color: var(--bg);
+    border-radius: 4px;
+}
+
+.roster-row__name {
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.roster-row__you {
+    color: var(--accent);
+}
+
+.roster-row__state {
+    font-size: 12px;
+    color: var(--ink-dim);
+}
+
+.roster-row__state--ready {
+    color: var(--ok);
+}
+
+.join-code {
+    margin-bottom: var(--gap);
+    padding: 10px;
+    background-color: var(--bg);
+    border-radius: 4px;
+    font-size: 15px;
+    color: var(--ink);
+    -unity-text-align: middle-center;
+}
+
+.hidden {
+    display: none;
+}
