@@ -567,6 +567,30 @@ namespace Snackdown.Gameplay.Player
                 _smoother.AbsorbMovement(previous - transform.position);
         }
 
+        /// <summary>
+        /// Takes control away from this character for a while. Server-only.
+        /// </summary>
+        /// <remarks>
+        /// Written into the simulation state rather than sent as its own message, so it travels in
+        /// the snapshot the owner already reconciles against. The owner never predicted the stun —
+        /// it could not, since it depends on where another player was — so it arrives as an
+        /// ordinary correction and the replay carries it forward across the ticks since.
+        /// </remarks>
+        public void ServerApplyStun(float seconds)
+        {
+            if (!IsServer || seconds <= 0f) return;
+            _state.StunTimer = Mathf.Max(_state.StunTimer, seconds);
+        }
+
+        /// <summary>Launches this character upward, for the player who landed the stomp. Server-only.</summary>
+        public void ServerBounce(float upwardVelocity)
+        {
+            if (!IsServer) return;
+
+            _state.Velocity.y = upwardVelocity;
+            _state.Grounded = false;
+        }
+
         /// <summary>Server-side teleport that every peer will follow through the next snapshot.</summary>
         /// <remarks>
         /// The next few snapshots announce this as a teleport rather than letting owners discover

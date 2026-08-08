@@ -25,6 +25,18 @@ namespace Snackdown.Simulation
         /// <summary>Time left for a jump pressed in mid-air to fire on landing.</summary>
         public float JumpBufferTimer;
 
+        /// <summary>Seconds left of being stunned by a head bounce. Input is ignored while positive.</summary>
+        /// <remarks>
+        /// Part of the simulation state, not a separate flag on the component, for the reason
+        /// stated above: <see cref="PlayerMotor"/> reads it, so a rewind that restored position and
+        /// velocity but not this would replay the stunned ticks as if the player had been in
+        /// control — and the client would end up somewhere the server never agreed to.
+        /// </remarks>
+        public float StunTimer;
+
+        /// <summary>True while a head bounce has taken control away.</summary>
+        public bool IsStunned => StunTimer > 0f;
+
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
             serializer.SerializeValue(ref Position);
@@ -32,6 +44,7 @@ namespace Snackdown.Simulation
             serializer.SerializeValue(ref Grounded);
             serializer.SerializeValue(ref CoyoteTimer);
             serializer.SerializeValue(ref JumpBufferTimer);
+            serializer.SerializeValue(ref StunTimer);
         }
 
         /// <summary>
