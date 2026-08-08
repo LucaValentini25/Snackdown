@@ -1,5 +1,6 @@
 using System.Threading;
 using Snackdown.Connection;
+using Snackdown.Gameplay.Match;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -326,8 +327,24 @@ namespace Snackdown.UI
 
         void OnReadyClicked() => _roster?.ToggleReady();
 
+        /// <remarks>
+        /// Only the host reaches this — the button is hidden for everyone else — and the director
+        /// checks server authority again anyway. The UI hiding a control is a courtesy; it is not
+        /// what stops a client from starting a match.
+        /// </remarks>
         void OnStartClicked()
-            => SetStatus(_lobbyStatus, "Match start lands with Phase 3.", isError: false);
+        {
+            MatchDirector director = MatchDirector.Current;
+
+            if (director == null)
+            {
+                SetStatus(_lobbyStatus, "No match director in the session.", isError: true);
+                return;
+            }
+
+            SetStatus(_lobbyStatus, "Loading the arena…", isError: false);
+            director.ServerStartMatch(0);
+        }
 
         async void OnLeaveClicked()
         {
