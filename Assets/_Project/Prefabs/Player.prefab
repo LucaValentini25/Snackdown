@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 4554657384183880355}
   - component: {fileID: 838318824538910524}
   - component: {fileID: 1562002156203323003}
+  - component: {fileID: 5465756218927698481}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -167,6 +168,21 @@ MonoBehaviour:
   _smoother: {fileID: 9028665257944954121}
   _authoritativeGhost: {fileID: 458019021432641632}
   _interpolationDelay: 0.1
+--- !u!114 &5465756218927698481
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2013773515545727018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daca430d996150d41a289e0e110be656, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Player.CharacterAppearance
+  ShowTopMostFoldoutHeaderGroup: 1
+  _catalog: {fileID: 11400000, guid: 92853318d586d664da8d82fdcc66ac3a, type: 2}
+  _renderer: {fileID: 4105351198079194983}
 --- !u!1 &2749927767453833265
 GameObject:
   m_ObjectHideFlags: 0
@@ -286,7 +302,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.9, z: 1}
+  m_LocalScale: {x: 3, y: 3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8862574261528351772}
@@ -341,7 +357,7 @@ SpriteRenderer:
   m_SortingOrder: 10
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: dd7e99c2674d4c645b27c5b434010dd9, type: 3}
-  m_Color: {r: 0.36, g: 0.78, b: 0.45, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0

@@ -43,6 +43,23 @@ namespace Snackdown.Connection
 
         bool _listening;
 
+        string _localNickname = string.Empty;
+        int _localCharacterIndex;
+
+        /// <summary>
+        /// Tells approval who the local player is, for the case where they are the host.
+        /// </summary>
+        /// <remarks>
+        /// A host has no payload to read — its details never travel — so they have to be handed
+        /// over directly. Sanitation still applies: the host is not hostile, but a name that is too
+        /// long or blank breaks a lobby row just as thoroughly whoever typed it.
+        /// </remarks>
+        public void SetLocalPlayer(string nickname, int characterIndex)
+        {
+            _localNickname = nickname ?? string.Empty;
+            _localCharacterIndex = characterIndex;
+        }
+
         /// <summary>
         /// The approval currently vetting connections on this peer, or null when none is.
         /// </summary>
@@ -110,11 +127,16 @@ namespace Snackdown.Connection
 
         void Approve(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
-            // The host approves itself. It never crossed a wire, so there is nothing to validate,
-            // and refusing it would mean refusing the session it is about to create.
+            // The host approves itself. Its details never crossed a wire, so there is nothing to
+            // validate against a hostile sender — but they still have to be its own. Admitting it
+            // as a fixed "Host" playing character 0 meant whoever started the game silently lost
+            // the name and skin they had chosen.
             if (request.ClientNetworkId == _networkManager.LocalClientId)
             {
-                Admit(response, request.ClientNetworkId, "Host", 0);
+                Admit(response,
+                    request.ClientNetworkId,
+                    SanitizeNickname(_localNickname, request.ClientNetworkId),
+                    Mathf.Clamp(_localCharacterIndex, 0, Mathf.Max(0, CharacterCount - 1)));
                 return;
             }
 

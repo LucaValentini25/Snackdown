@@ -64,7 +64,9 @@ namespace Snackdown.Connection
 
             // Armed before the session starts the transport, for the same reason as on a LAN: NGO
             // reads ConnectionApproval when the server comes up, so enabling it later would let the
-            // first joiner through unchecked.
+            // first joiner through unchecked. The host's own details go with it, since they never
+            // travel as a payload.
+            _approval?.SetLocalPlayer(request.Nickname, request.CharacterIndex);
             _approval?.Enable();
 
             try

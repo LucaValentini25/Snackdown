@@ -2,6 +2,7 @@
     "name": "Snackdown.Gameplay",
     "rootNamespace": "Snackdown.Gameplay",
     "references": [
+        "Snackdown.Connection",
         "Snackdown.Simulation",
         "Snackdown.Netcode",
         "Snackdown.Input",

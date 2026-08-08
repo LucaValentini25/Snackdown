@@ -52,8 +52,9 @@ The predicted local player stays responsive at both.
 - [x] `ConnectionApproval` with payload (nickname, chosen character, version check)
 - [x] `SessionRoster` — replicated player list with names, skins and ready state
 - [x] Main menu → host/join → lobby, built with **UI Toolkit**, wired to the abstraction
-- [ ] Character select (4 Pixel Adventure skins, mechanically identical) — the index already
-      travels through approval and the roster; what is missing is applying it to the sprite
+- [x] Character select (4 Pixel Adventure skins, mechanically identical) — index travels in the
+      connection payload, is clamped by approval, lives in the roster, and dresses the sprite.
+      The picker UI itself is cosmetic and lands with the lobby polish
 
 ## Phase 3 — Gameplay core
 
