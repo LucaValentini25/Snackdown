@@ -43,13 +43,14 @@ Assets/
 │   │   │                     SnapshotFrame, SnapshotInterpolator, VisualSmoother,
 │   │   │                     ReconciliationStats, RunRecorder
 │   │   ├── Gameplay/
-│   │   │   ├── Player/       PredictedPlayer, PlayerSpawnPoints
+│   │   │   ├── Match/        MatchDirector, MatchPhase, ArenaCatalog
+│   │   │   ├── Player/       PredictedPlayer, PlayerSpawnPoints, CharacterAppearance
 │   │   │   ├── Fruits/       Spawner, fruit pickup
 │   │   │   └── Combat/       Head-bounce, stun
 │   │   ├── UI/               NetDebugOverlay, MainMenuController
 │   │   └── Input/            InputReader
 │   ├── UI/                   MainMenu.uxml, Snackdown.uss, MenuPanelSettings
-│   ├── Scenes/               NetTest
+│   ├── Scenes/               Bootstrap, Lobby, Arena01
 │   ├── Prefabs/              Player
 │   ├── Art/                  placeholder primitives for the test arena
 │   └── Settings/             ScriptableObject configs (movement, match, spawn tables)
@@ -60,6 +61,25 @@ Assets/
 ```
 
 Third-party art sits at the `Assets/` root (as it shipped); **all authored code is under `_Project/`.**
+
+## Scenes load additively on top of Bootstrap
+
+Three scenes, and the split is what makes several arenas possible:
+
+| Scene | Holds | Lifetime |
+|---|---|---|
+| **Bootstrap** | `NetworkManager`, `MatchDirector`, `SessionRoster`, the tick loop | The whole session |
+| **Lobby** | Menu and lobby UI | Between matches |
+| **Arena01** | Geometry, spawn points, camera | During a match |
+
+Bootstrap is loaded first and **never unloaded**; the lobby and arenas come and go on top of it
+with `LoadSceneMode.Additive`. Loading them as `Single` would unload bootstrap along with
+everything else — taking the connection, the roster and the director with it, which are precisely
+the things that have to survive a match starting.
+
+Arenas are content, not code: they live in an `ArenaCatalog` asset, so adding one is authoring.
+As with the character catalog, the index is what crosses the network, so entries are appended and
+never reordered.
 
 ## Authority rules (the contract)
 
