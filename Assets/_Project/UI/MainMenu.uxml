@@ -32,7 +32,10 @@
             <ui:Label text="Lobby" class="title" />
             <ui:Label name="lobby-subtitle" text="Waiting for players…" class="subtitle" />
 
-            <ui:Label name="join-code" class="join-code" />
+            <ui:VisualElement name="join-code-row" class="join-code-row">
+                <ui:Label name="join-code" class="join-code" />
+                <ui:Button name="copy-code-button" text="Copy" class="button button--compact" />
+            </ui:VisualElement>
 
             <!-- Rows are built in code: the roster is replicated and its length changes at runtime,
                  so laying out four fixed slots here would mean hiding and showing them instead. -->

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Snackdown.Gameplay.Match;
 using Snackdown.Input;
 using Snackdown.Netcode;
 using Snackdown.Simulation;
@@ -105,6 +106,30 @@ namespace Snackdown.Gameplay.Player
 
         // --- remote -----------------------------------------------------------------------
         readonly SnapshotInterpolator _interpolator = new SnapshotInterpolator();
+
+        /// <summary>
+        /// True once there is an arena to stand in.
+        /// </summary>
+        /// <remarks>
+        /// Gravity does not care that the level has not loaded. Simulating in the lobby — where
+        /// this character exists but the ground does not — meant players fell continuously from
+        /// the moment they connected; by the time the arena appeared they were hundreds of units
+        /// below it, still falling. Countdown counts as simulating so they settle onto the floor
+        /// before the match begins rather than snapping down at zero.
+        /// </remarks>
+        bool ShouldSimulate
+        {
+            get
+            {
+                MatchDirector director = MatchDirector.Current;
+
+                // No director means no match system at all — a bare test scene, where simulating
+                // is the only sensible default.
+                if (director == null) return true;
+
+                return director.Phase == MatchPhase.Countdown || director.Phase == MatchPhase.Playing;
+            }
+        }
 
         /// <summary>
         /// Global kill switch for client-side prediction, flipped from the debug overlay.
@@ -236,6 +261,7 @@ namespace Snackdown.Gameplay.Player
         /// </summary>
         public void OwnerPredictTick(uint tick)
         {
+            if (!ShouldSimulate) return;
             if (PredictionEnabled != _predictionWasEnabled) OnPredictionToggled();
 
             InputCommand input = SampleInput(tick);
@@ -349,6 +375,8 @@ namespace Snackdown.Gameplay.Player
         /// </summary>
         public void ServerSimulateTick(uint serverTick)
         {
+            if (!ShouldSimulate) return;
+
             InputCommand input;
 
             if (IsOwner)

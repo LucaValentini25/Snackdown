@@ -155,8 +155,14 @@
     color: var(--ok);
 }
 
-.join-code {
+.join-code-row {
+    flex-direction: row;
+    align-items: center;
     margin-bottom: var(--gap);
+}
+
+.join-code {
+    flex-grow: 1;
     padding: 10px;
     background-color: var(--bg);
     border-radius: 4px;
@@ -165,6 +171,62 @@
     -unity-text-align: middle-center;
 }
 
+/* Sits next to the code rather than below it, so the pair reads as one control. */
+.button--compact {
+    height: 34px;
+    margin: 0 0 0 8px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
 .hidden {
     display: none;
+}
+
+/* ── loading screen ─────────────────────────────────────────────────────────────── */
+
+.loading-root {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(12, 11, 16);
+}
+
+.loading-title {
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    margin-bottom: 6px;
+}
+
+.loading-detail {
+    font-size: 13px;
+    color: var(--ink-dim);
+    margin-bottom: 18px;
+}
+
+.progress-track {
+    width: 380px;
+    height: 10px;
+    background-color: var(--panel);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+/* Width is set from code as a percentage; the transition is what keeps it from snapping
+   between the coarse steps a per-player count produces. */
+.progress-fill {
+    height: 100%;
+    width: 0;
+    background-color: var(--accent);
+    border-radius: 5px;
+    transition-property: width;
+    transition-duration: 0.25s;
+}
+
+.countdown {
+    margin-top: 20px;
+    font-size: 44px;
+    -unity-font-style: bold;
+    color: var(--accent);
 }

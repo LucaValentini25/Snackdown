@@ -61,7 +61,8 @@ The predicted local player stays responsive at both.
 - [x] Life timer (server-authoritative, ~1 Hz replication) — drains continuously server-side,
       publishes once a second, clients drain locally between updates. Measured at 1 write/s where
       the original did ~60
-- [ ] Fruit spawner (rarity table as ScriptableObject) + networked pickup
+- [x] Fruit spawner (rarity table as ScriptableObject) + networked pickup — 8 fruit from 35% common
+      to 1% legendary, worth 3s to 20s; distribution verified over 100k rolls
 - [ ] Head-bounce detection + stun (server-authoritative)
 - [ ] Death → spectator; last-alive / timeout win conditions; end screen
 

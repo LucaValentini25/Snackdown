@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shown while the arena loads and during the countdown.
+
+    Its own document rather than a third screen inside MainMenu.uxml, because it lives in the
+    bootstrap scene: the lobby is unloaded the moment loading starts, and a loading screen that
+    disappears with the thing it is covering for would defeat the purpose.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="loading-root" class="loading-root hidden">
+        <ui:Label name="loading-title" text="Loading arena" class="loading-title" />
+        <ui:Label name="loading-detail" text="" class="loading-detail" />
+
+        <ui:VisualElement class="progress-track">
+            <ui:VisualElement name="progress-fill" class="progress-fill" />
+        </ui:VisualElement>
+
+        <ui:Label name="countdown" text="" class="countdown" />
+    </ui:VisualElement>
+</ui:UXML>
