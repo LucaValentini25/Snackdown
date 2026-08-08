@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 838318824538910524}
   - component: {fileID: 1562002156203323003}
   - component: {fileID: 5465756218927698481}
+  - component: {fileID: 2435491872447036562}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -183,6 +184,20 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   _catalog: {fileID: 11400000, guid: 92853318d586d664da8d82fdcc66ac3a, type: 2}
   _renderer: {fileID: 4105351198079194983}
+--- !u!114 &2435491872447036562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2013773515545727018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69d2a97dfd0fb22469b2f5e828ced9e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Player.PlayerLife
+  ShowTopMostFoldoutHeaderGroup: 1
+  _config: {fileID: 11400000, guid: f0c5d336e0e603a48a6e4b1112a396f1, type: 2}
 --- !u!1 &2749927767453833265
 GameObject:
   m_ObjectHideFlags: 0

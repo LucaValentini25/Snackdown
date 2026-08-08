@@ -58,7 +58,9 @@ The predicted local player stays responsive at both.
 
 ## Phase 3 — Gameplay core
 
-- [ ] Life timer (server-authoritative, ~1 Hz replication)
+- [x] Life timer (server-authoritative, ~1 Hz replication) — drains continuously server-side,
+      publishes once a second, clients drain locally between updates. Measured at 1 write/s where
+      the original did ~60
 - [ ] Fruit spawner (rarity table as ScriptableObject) + networked pickup
 - [ ] Head-bounce detection + stun (server-authoritative)
 - [ ] Death → spectator; last-alive / timeout win conditions; end screen
