@@ -73,6 +73,8 @@ namespace Snackdown.Connection
 
             // Vetting has to be armed before the socket opens: NGO reads ConnectionApproval when
             // the server starts, so enabling it afterwards would let the first joiner in unchecked.
+            // The host's own details go with it, since they never travel as a payload.
+            _approval?.SetLocalPlayer(request.Nickname, request.CharacterIndex);
             _approval?.Enable();
 
             if (!_networkManager.StartHost())
