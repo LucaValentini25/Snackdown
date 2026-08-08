@@ -25,12 +25,10 @@ namespace Snackdown.Core
         {
             if (string.IsNullOrWhiteSpace(_firstScene)) return;
 
-            // Guard against loading it twice: entering play mode from the lobby scene itself is a
-            // normal thing to do while developing, and a second copy means two menus and two
-            // cameras fighting over the screen.
-            if (!SceneManager.GetSceneByName(_firstScene).isLoaded)
-                SceneManager.LoadScene(_firstScene, LoadSceneMode.Additive);
-
+            // Deliberately does NOT load the menu. LoadingScreenController owns that scene: it
+            // decides when the menu should be up based on the match phase, and two components
+            // loading the same scene is how two lobbies ended up stacked on top of each other.
+            // This one only keeps it out of NGO's synchronization.
             if (NetworkManager.Singleton != null)
             {
                 NetworkManager.Singleton.OnServerStarted += ExcludeMenuFromSync;

@@ -114,20 +114,55 @@ namespace Snackdown.UI
 
         void SetFill(float value01) => _fill.style.width = Length.Percent(Mathf.Clamp01(value01) * 100f);
 
+        /// <summary>A scene load or unload this component started and is still waiting on.</summary>
         /// <remarks>
-        /// Both of these are safe to call every frame: each checks the scene's actual state first,
-        /// which is what makes reconciling cheap enough to do continuously.
+        /// The missing piece in the first reconciler. Loading a scene additively does not finish
+        /// within the frame that asks for it, so "is the menu loaded?" keeps answering no while a
+        /// load is already on its way — and a reconciler that only compares desired against actual
+        /// fires another one every frame until the first lands. That produced two lobby scenes,
+        /// and unloading then removed only one of them, leaving the other covering the arena.
+        /// <para>Reconciling has to account for corrections that are already in flight, not just
+        /// for the difference between where things are and where they should be.</para>
         /// </remarks>
+        AsyncOperation _sceneOperation;
+
+        bool SceneOperationInFlight => _sceneOperation != null && !_sceneOperation.isDone;
+
         void EnsureMenuUnloaded()
         {
-            Scene menu = SceneManager.GetSceneByName(_menuScene);
-            if (menu.IsValid() && menu.isLoaded) SceneManager.UnloadSceneAsync(menu);
+            if (SceneOperationInFlight) return;
+
+            // Every copy, not the first: GetSceneByName returns one, and an earlier version of this
+            // file could leave more than one loaded.
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded || scene.name != _menuScene) continue;
+
+                _sceneOperation = SceneManager.UnloadSceneAsync(scene);
+                return;
+            }
         }
 
         void EnsureMenuLoaded()
         {
-            if (!SceneManager.GetSceneByName(_menuScene).isLoaded)
-                SceneManager.LoadScene(_menuScene, LoadSceneMode.Additive);
+            if (SceneOperationInFlight) return;
+            if (CountLoaded(_menuScene) > 0) return;
+
+            _sceneOperation = SceneManager.LoadSceneAsync(_menuScene, LoadSceneMode.Additive);
+        }
+
+        static int CountLoaded(string sceneName)
+        {
+            int count = 0;
+
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene.name == sceneName) count++;
+            }
+
+            return count;
         }
     }
 }
