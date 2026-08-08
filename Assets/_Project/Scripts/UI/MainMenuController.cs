@@ -28,6 +28,9 @@ namespace Snackdown.UI
         [Tooltip("Players allowed in one session. Enforced by connection approval.")]
         [SerializeField] int _maxPlayers = 4;
 
+        [Tooltip("Start on Relay (join by code) instead of direct LAN (join by address).")]
+        [SerializeField] bool _useRelay = true;
+
         UIDocument _document;
         IConnectionProvider _provider;
         ConnectionApproval _approval;
@@ -75,7 +78,12 @@ namespace Snackdown.UI
             _rosterList = root.Q<VisualElement>("roster-list");
 
             _nickname.value = DefaultNickname();
-            _target.value = "127.0.0.1";
+
+            // Deferred a frame rather than read here: the provider needs NetworkManager.Singleton,
+            // which is assigned in its own Awake with no ordering against this one. Without the
+            // delay the field kept its LAN label until the first click built the provider — so the
+            // menu asked for an address while the game was about to ask Relay for a code.
+            _document.rootVisualElement.schedule.Execute(ApplyProviderLabels);
 
             _host.clicked += OnHostClicked;
             _join.clicked += OnJoinClicked;
@@ -113,10 +121,43 @@ namespace Snackdown.UI
                 if (_provider == null && NetworkManager.Singleton != null)
                 {
                     _approval = new ConnectionApproval(NetworkManager.Singleton, GameVersion, _maxPlayers);
-                    _provider = new DirectConnectionProvider(NetworkManager.Singleton, _port, _approval, GameVersion);
+
+                    // The one line that knows there is more than one way to connect. Everything
+                    // below this point talks to the interface and cannot tell them apart.
+                    _provider = _useRelay
+                        ? new RelayConnectionProvider(NetworkManager.Singleton, _approval, GameVersion, _maxPlayers)
+                        : new DirectConnectionProvider(NetworkManager.Singleton, _port, _approval, GameVersion);
                 }
 
                 return _provider;
+            }
+        }
+
+        /// <summary>
+        /// Relabels the address field for whichever provider is in use.
+        /// </summary>
+        /// <remarks>
+        /// This is the entire visible difference between playing over a LAN and playing over Relay:
+        /// one field is called "Address" and holds an IP, the other is called "Code" and holds six
+        /// characters. If adding Relay had required more of this file than a label and a constructor
+        /// call, <see cref="IConnectionProvider"/> would not have been worth having.
+        /// </remarks>
+        void ApplyProviderLabels()
+        {
+            // Touches the property so the provider is built if it can be; called on a schedule from
+            // OnEnable, by which point NetworkManager has woken.
+            if (Provider == null || _target == null) return;
+
+            _target.label = _provider.JoinsByCode ? "Code" : "Address";
+
+            if (_provider.JoinsByCode)
+            {
+                _target.value = string.Empty;
+                _target.textEdition.placeholder = "ABC123";
+            }
+            else if (string.IsNullOrEmpty(_target.value))
+            {
+                _target.value = "127.0.0.1";
             }
         }
 

@@ -47,7 +47,8 @@ The predicted local player stays responsive at both.
 
 - [x] `IConnectionProvider` interface — async throughout, failures as return values
 - [x] `DirectProvider` (UnityTransport, host + join by IP)
-- [ ] `RelayProvider` (Sessions API, join by code) — needs a **fresh UGS project**; the inherited one from the original project is unlinked
+- [x] `RelayProvider` (Sessions API, join by code) — the project is linked as **Snackdown** under
+      Luca's organization, with Relay and Lobby enabled; verified by hosting a real session
 - [x] `ConnectionApproval` with payload (nickname, chosen character, version check)
 - [x] `SessionRoster` — replicated player list with names, skins and ready state
 - [x] Main menu → host/join → lobby, built with **UI Toolkit**, wired to the abstraction
