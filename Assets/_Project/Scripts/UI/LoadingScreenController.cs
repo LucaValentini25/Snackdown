@@ -6,19 +6,21 @@ using UnityEngine.UIElements;
 namespace Snackdown.UI
 {
     /// <summary>
-    /// Covers the screen while the arena loads, and takes the lobby down with it.
+    /// Keeps what is on screen agreeing with the match phase: the menu during the lobby, a loading
+    /// screen while the arena loads, and neither once play begins.
     /// </summary>
     /// <remarks>
-    /// <para>Lives in the bootstrap scene, which is what lets it outlast both the lobby and the
-    /// arena. A loading screen inside the lobby would be unloaded by the very transition it exists
-    /// to cover.</para>
-    /// <para>It also owns unloading the menu. The lobby scene is deliberately excluded from NGO's
-    /// scene synchronization — it is local interface, not match state — which means nothing on the
-    /// network will ever unload it. Without this, starting a match left the menu sitting on top of
-    /// the arena saying "Loading the arena…" forever, which is exactly what happened.</para>
-    /// <para>Progress comes from the server's count of who has finished loading, not from this
-    /// peer's own load. A bar showing local progress would sit full while waiting for someone
-    /// else, which reads as a freeze rather than as waiting for another player.</para>
+    /// <para>Written as a reconciler, not as a listener. An earlier version reacted to phase
+    /// <i>changes</i> — <c>if (phase != lastPhase)</c> — and a client that missed the moment stayed
+    /// wrong forever: it sat in the lobby with the match already running underneath, its character
+    /// moving on the host's screen. A transition can be missed in ordinary operation. The director
+    /// is a networked object that does not exist until the session spawns it, so a client can meet
+    /// it already several phases in; two changes can also land in one frame.</para>
+    /// <para>So nothing here asks what changed. Every frame it asks what the phase is and makes the
+    /// screen match, which is the same reasoning as reconciliation in the netcode layer: how you
+    /// arrived does not matter, only where you should be.</para>
+    /// <para>It lives in the bootstrap scene, which is what lets it outlast both the lobby it
+    /// unloads and the arena it waits for.</para>
     /// </remarks>
     [RequireComponent(typeof(UIDocument))]
     public class LoadingScreenController : MonoBehaviour
@@ -33,9 +35,6 @@ namespace Snackdown.UI
         Label _countdown;
         VisualElement _fill;
 
-        MatchDirector _director;
-        MatchPhase _lastPhase = MatchPhase.Lobby;
-
         void Awake() => _document = GetComponent<UIDocument>();
 
         void OnEnable()
@@ -47,88 +46,85 @@ namespace Snackdown.UI
             _detail = root.Q<Label>("loading-detail");
             _countdown = root.Q<Label>("countdown");
             _fill = root.Q<VisualElement>("progress-fill");
-
-            Hide();
         }
 
         void Update()
         {
-            // The director is a networked object, so it does not exist until a session starts.
-            if (_director == null)
+            MatchDirector director = MatchDirector.Current;
+
+            // No session, or none yet: the menu is the right thing to be looking at.
+            if (director == null)
             {
-                _director = MatchDirector.Current;
-                if (_director == null) return;
+                SetLoadingVisible(false);
+                EnsureMenuLoaded();
+                return;
             }
 
-            if (_director.Phase != _lastPhase)
+            switch (director.Phase)
             {
-                OnPhaseChanged(_director.Phase);
-                _lastPhase = _director.Phase;
-            }
+                case MatchPhase.Lobby:
+                case MatchPhase.Ended:
+                    SetLoadingVisible(false);
+                    EnsureMenuLoaded();
+                    break;
 
-            if (_director.Phase == MatchPhase.Loading) UpdateProgress();
-            else if (_director.Phase == MatchPhase.Countdown) UpdateCountdown();
-        }
-
-        void OnPhaseChanged(MatchPhase phase)
-        {
-            switch (phase)
-            {
                 case MatchPhase.Loading:
-                    Show();
-                    UnloadMenu();
+                    SetLoadingVisible(true);
+                    ShowProgress(director);
+
+                    // The menu is left alone here on purpose. Unloading a scene by hand while NGO
+                    // is synchronizing a networked load interferes with that operation, and the
+                    // loading screen already covers it.
+                    break;
+
+                case MatchPhase.Countdown:
+                    SetLoadingVisible(true);
+                    ShowCountdown(director);
+                    EnsureMenuUnloaded();
                     break;
 
                 case MatchPhase.Playing:
-                    Hide();
-                    break;
-
-                case MatchPhase.Lobby:
-                    Hide();
-                    ReloadMenu();
+                    SetLoadingVisible(false);
+                    EnsureMenuUnloaded();
                     break;
             }
         }
 
-        void Show()
+        void SetLoadingVisible(bool visible) => _root.EnableInClassList("hidden", !visible);
+
+        void ShowProgress(MatchDirector director)
         {
-            _root.RemoveFromClassList("hidden");
             _title.text = "Loading arena";
             _countdown.text = string.Empty;
-            SetFill(0f);
-        }
+            SetFill(director.LoadProgress);
 
-        void Hide() => _root.AddToClassList("hidden");
-
-        void UpdateProgress()
-        {
-            SetFill(_director.LoadProgress);
-
-            _detail.text = _director.ExpectedPeers > 1
-                ? $"{_director.LoadedPeers} of {_director.ExpectedPeers} players ready"
+            _detail.text = director.ExpectedPeers > 1
+                ? $"{director.LoadedPeers} of {director.ExpectedPeers} players ready"
                 : string.Empty;
         }
 
-        void UpdateCountdown()
+        void ShowCountdown(MatchDirector director)
         {
-            // Full bar, because loading is done — the wait is now the countdown, and a bar stuck
-            // short of the end would suggest something is still missing.
+            // Full bar: loading is done, and a bar stuck short of the end would suggest otherwise.
             SetFill(1f);
             _title.text = "Starting";
             _detail.text = string.Empty;
-
-            _countdown.text = Mathf.CeilToInt(_director.CountdownRemaining).ToString();
+            _countdown.text = Mathf.CeilToInt(director.CountdownRemaining).ToString();
         }
 
         void SetFill(float value01) => _fill.style.width = Length.Percent(Mathf.Clamp01(value01) * 100f);
 
-        void UnloadMenu()
+        /// <remarks>
+        /// Both of these are safe to call every frame: each checks the scene's actual state first,
+        /// which is what makes reconciling cheap enough to do continuously.
+        /// </remarks>
+        void EnsureMenuUnloaded()
         {
             Scene menu = SceneManager.GetSceneByName(_menuScene);
             if (menu.IsValid() && menu.isLoaded) SceneManager.UnloadSceneAsync(menu);
         }
 
-        void ReloadMenu()
+        void EnsureMenuLoaded()
         {
             if (!SceneManager.GetSceneByName(_menuScene).isLoaded)
                 SceneManager.LoadScene(_menuScene, LoadSceneMode.Additive);
