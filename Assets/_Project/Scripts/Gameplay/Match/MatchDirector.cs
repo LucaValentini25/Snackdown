@@ -51,6 +51,23 @@ namespace Snackdown.Gameplay.Match
         /// <summary>True while the simulation should accept input and run match rules.</summary>
         public bool IsPlaying => _phase.Value == MatchPhase.Playing;
 
+        /// <summary>How many peers have finished loading, and how many are expected.</summary>
+        /// <remarks>
+        /// Replicated rather than computed locally: only the server sees the reports coming in, and
+        /// a loading screen that showed each client its own progress would sit at 1 of 1 while
+        /// waiting for someone else — which looks like a freeze rather than like waiting.
+        /// </remarks>
+        readonly NetworkVariable<int> _loadedCount = new NetworkVariable<int>(0);
+        readonly NetworkVariable<int> _expectedCount = new NetworkVariable<int>(0);
+
+        public int LoadedPeers => _loadedCount.Value;
+        public int ExpectedPeers => _expectedCount.Value;
+
+        /// <summary>Load progress from 0 to 1, for a bar.</summary>
+        public float LoadProgress => _expectedCount.Value <= 0
+            ? 0f
+            : Mathf.Clamp01(_loadedCount.Value / (float)_expectedCount.Value);
+
         /// <summary>Raised on every peer when the phase changes.</summary>
         public event Action<MatchPhase> PhaseChanged;
 
@@ -109,6 +126,8 @@ namespace Snackdown.Gameplay.Match
 
             _arenaIndex.Value = Mathf.Clamp(arenaIndex, 0, _arenas.Count - 1);
             _loaded.Clear();
+            _loadedCount.Value = 0;
+            _expectedCount.Value = NetworkManager.ConnectedClientsIds.Count;
             _phase.Value = MatchPhase.Loading;
 
             // Additive, not Single. Single would unload the bootstrap scene along with everything
@@ -144,6 +163,7 @@ namespace Snackdown.Gameplay.Match
             if (!IsServer || _phase.Value != MatchPhase.Loading) return;
 
             _loaded.Add(clientId);
+            _loadedCount.Value = _loaded.Count;
 
             // Everyone, not just the server. See the type remarks.
             foreach (ulong connected in NetworkManager.ConnectedClientsIds)

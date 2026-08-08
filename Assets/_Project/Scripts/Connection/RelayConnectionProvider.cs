@@ -106,6 +106,10 @@ namespace Snackdown.Connection
             ConnectionResult ready = await PrepareAsync(cancellationToken);
             if (!ready.Success) return ready;
 
+            // Must match the host, or the request message it sends and the one the server expects
+            // to read are different shapes. See ConnectionApproval.EnableOnClient.
+            ConnectionApproval.EnableOnClient(_networkManager);
+
             // The payload rides the handshake exactly as it does on a LAN. Relay changes how the
             // packets travel, not what approval gets to inspect.
             _networkManager.NetworkConfig.ConnectionData = new ConnectionPayload
@@ -175,7 +179,10 @@ namespace Snackdown.Connection
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (!AuthenticationService.Instance.IsSignedIn)
+                {
+                    AuthenticationService.Instance.SwitchProfile(LocalProfileName());
                     await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                }
 
                 cancellationToken.ThrowIfCancellationRequested();
                 return ConnectionResult.Ok();
@@ -191,6 +198,27 @@ namespace Snackdown.Connection
                 return ConnectionResult.Failed(ConnectionFailure.Error,
                     $"Unity Services unavailable — is the project linked and Relay enabled? ({e.Message})");
             }
+        }
+
+        /// <summary>
+        /// An authentication profile unique to this running instance.
+        /// </summary>
+        /// <remarks>
+        /// <para>Anonymous sign-in caches one identity per <i>profile</i>, and the default profile
+        /// is shared. Two peers on one machine — which is every Multiplayer Play Mode session, and
+        /// the only way this project is developed — therefore signed in as the same player, and
+        /// Sessions refuses to admit a player who is already in the session. The failure surfaced
+        /// as "Unexpected exception processing network metadata", which says nothing about identity
+        /// at all.</para>
+        /// <para>Derived from <c>Application.dataPath</c> because a virtual player runs out of its
+        /// own cloned project folder, so the path differs per instance and stays the same across
+        /// restarts — a random profile would work too, but would make every run a brand new player
+        /// and throw away the cached credentials each time.</para>
+        /// </remarks>
+        static string LocalProfileName()
+        {
+            int hash = Application.dataPath.GetHashCode() & 0x7FFFFFFF;
+            return "peer_" + hash.ToString("x8");
         }
 
         /// <summary>Maps the SDK's error codes onto the outcomes the menu knows how to render.</summary>

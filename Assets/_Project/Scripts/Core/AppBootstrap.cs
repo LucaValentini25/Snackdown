@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,9 +28,43 @@ namespace Snackdown.Core
             // Guard against loading it twice: entering play mode from the lobby scene itself is a
             // normal thing to do while developing, and a second copy means two menus and two
             // cameras fighting over the screen.
-            if (SceneManager.GetSceneByName(_firstScene).isLoaded) return;
+            if (!SceneManager.GetSceneByName(_firstScene).isLoaded)
+                SceneManager.LoadScene(_firstScene, LoadSceneMode.Additive);
 
-            SceneManager.LoadScene(_firstScene, LoadSceneMode.Additive);
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.OnServerStarted += ExcludeMenuFromSync;
+                NetworkManager.Singleton.OnClientStarted += ExcludeMenuFromSync;
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (NetworkManager.Singleton == null) return;
+
+            NetworkManager.Singleton.OnServerStarted -= ExcludeMenuFromSync;
+            NetworkManager.Singleton.OnClientStarted -= ExcludeMenuFromSync;
+        }
+
+        /// <summary>
+        /// Keeps the menu scene out of NGO's scene synchronization.
+        /// </summary>
+        /// <remarks>
+        /// <para>On connecting, NGO makes a client load whatever scenes the server has. The server
+        /// has the menu loaded — every peer loads it on startup, before there is any session — so a
+        /// joining client was told to load a scene it already had. The result was two menus, two
+        /// cameras and two controllers in one process, and a handshake that failed while
+        /// reconciling them.</para>
+        /// <para>The menu is local interface, not match state. Nothing in it is shared, so nothing
+        /// in it should be synchronized. Arenas still go through NGO, which is where synchronized
+        /// loading genuinely matters.</para>
+        /// </remarks>
+        void ExcludeMenuFromSync()
+        {
+            NetworkManager manager = NetworkManager.Singleton;
+            if (manager == null || manager.SceneManager == null) return;
+
+            manager.SceneManager.VerifySceneBeforeLoading = (index, sceneName, mode) => sceneName != _firstScene;
         }
     }
 }

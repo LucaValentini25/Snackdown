@@ -93,6 +93,23 @@ namespace Snackdown.Connection
         public int CharacterOf(ulong clientId)
             => _approvedCharacters.TryGetValue(clientId, out int index) ? index : 0;
 
+        /// <summary>
+        /// Turns on the approval half of <c>NetworkConfig</c> without registering the server's
+        /// callback. Clients must call this, and only this.
+        /// </summary>
+        /// <remarks>
+        /// <c>ConnectionApproval</c> is part of the config both peers must agree on: it decides
+        /// whether the connection request message carries a payload. A server expecting one from a
+        /// client that did not send it cannot even deserialize the request — NGO reports
+        /// "Incomplete connection request message given config", the client is dropped, and with
+        /// Sessions on top the whole thing surfaces as an unexplained metadata failure. Enabling it
+        /// only on the host is a mismatch that makes every join fail.
+        /// </remarks>
+        public static void EnableOnClient(NetworkManager networkManager)
+        {
+            if (networkManager != null) networkManager.NetworkConfig.ConnectionApproval = true;
+        }
+
         /// <summary>Starts vetting connections. Must be called before the server starts listening.</summary>
         public void Enable()
         {

@@ -235,6 +235,7 @@ MonoBehaviour:
   _port: 7777
   _maxPlayers: 4
   _useRelay: 1
+  _minPlayersToStart: 1
 --- !u!114 &559191157
 MonoBehaviour:
   m_ObjectHideFlags: 0

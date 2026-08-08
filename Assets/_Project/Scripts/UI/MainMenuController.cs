@@ -32,6 +32,10 @@ namespace Snackdown.UI
         [Tooltip("Start on Relay (join by code) instead of direct LAN (join by address).")]
         [SerializeField] bool _useRelay = true;
 
+        [Tooltip("Players needed before a match can start. Set to 1 to test the arena alone.")]
+        [Min(1)]
+        [SerializeField] int _minPlayersToStart = 2;
+
         UIDocument _document;
         IConnectionProvider _provider;
         ConnectionApproval _approval;
@@ -52,7 +56,11 @@ namespace Snackdown.UI
         Label _lobbyStatus;
         Label _lobbySubtitle;
         Label _joinCode;
+        Button _copyCode;
         VisualElement _rosterList;
+
+        /// <summary>The bare code, without the sentence wrapped around it for display.</summary>
+        string _rawJoinTarget = string.Empty;
 
         static string GameVersion => Application.version;
 
@@ -76,6 +84,7 @@ namespace Snackdown.UI
             _lobbyStatus = root.Q<Label>("lobby-status");
             _lobbySubtitle = root.Q<Label>("lobby-subtitle");
             _joinCode = root.Q<Label>("join-code");
+            _copyCode = root.Q<Button>("copy-code-button");
             _rosterList = root.Q<VisualElement>("roster-list");
 
             _nickname.value = DefaultNickname();
@@ -92,6 +101,7 @@ namespace Snackdown.UI
             _ready.clicked += OnReadyClicked;
             _start.clicked += OnStartClicked;
             _leave.clicked += OnLeaveClicked;
+            _copyCode.clicked += OnCopyCodeClicked;
 
             ShowMenu();
         }
@@ -104,6 +114,7 @@ namespace Snackdown.UI
             _ready.clicked -= OnReadyClicked;
             _start.clicked -= OnStartClicked;
             _leave.clicked -= OnLeaveClicked;
+            _copyCode.clicked -= OnCopyCodeClicked;
 
             DetachRoster();
 
@@ -244,10 +255,17 @@ namespace Snackdown.UI
             _menuScreen.AddToClassList("hidden");
             _lobbyScreen.RemoveFromClassList("hidden");
 
+            _rawJoinTarget = joinTarget ?? string.Empty;
+
             _joinCode.text = string.IsNullOrEmpty(joinTarget)
                 ? string.Empty
                 : $"Others join at  {joinTarget}";
-            _joinCode.EnableInClassList("hidden", string.IsNullOrEmpty(joinTarget));
+
+            // The whole row goes, not just the label: a lone Copy button with nothing beside it
+            // would offer to copy nothing.
+            bool hasTarget = !string.IsNullOrEmpty(joinTarget);
+            _joinCode.EnableInClassList("hidden", !hasTarget);
+            _copyCode.EnableInClassList("hidden", !hasTarget);
 
             // Only the host can start, so only the host is offered the button. Hiding it elsewhere
             // beats disabling it: a permanently greyed button invites clicking to find out why.
@@ -311,7 +329,12 @@ namespace Snackdown.UI
                 : $"{_roster.Count} of {_maxPlayers} players";
 
             _ready.text = IsLocalReady() ? "Not ready" : "Ready";
-            _start.SetEnabled(_roster.EveryoneReady && _roster.Count > 1);
+
+            // Serialized rather than hardcoded to 2 so the arena can be walked around alone while
+            // developing. It gates a button, not the match: MatchDirector does not care how many
+            // players there are, so lowering it cannot put the session into a state the server
+            // disagrees with.
+            _start.SetEnabled(_roster.EveryoneReady && _roster.Count >= _minPlayersToStart);
         }
 
         bool IsLocalReady()
@@ -326,6 +349,22 @@ namespace Snackdown.UI
         }
 
         void OnReadyClicked() => _roster?.ToggleReady();
+
+        /// <summary>
+        /// Puts the bare join code on the clipboard, so it can be pasted into a chat.
+        /// </summary>
+        /// <remarks>
+        /// Copies <see cref="_rawJoinTarget"/> rather than the label's text, which reads "Others
+        /// join at ABC123" — pasting that sentence into a code field would fail, and the player
+        /// would blame the code.
+        /// </remarks>
+        void OnCopyCodeClicked()
+        {
+            if (string.IsNullOrEmpty(_rawJoinTarget)) return;
+
+            GUIUtility.systemCopyBuffer = _rawJoinTarget;
+            SetStatus(_lobbyStatus, $"Copied  {_rawJoinTarget}", isError: false);
+        }
 
         /// <remarks>
         /// Only the host reaches this — the button is hidden for everyone else — and the director

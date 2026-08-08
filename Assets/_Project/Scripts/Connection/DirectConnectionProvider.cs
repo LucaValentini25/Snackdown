@@ -106,6 +106,10 @@ namespace Snackdown.Connection
 
             transport.SetConnectionData(address, _port);
 
+            // Must match the host, or the request message this client sends and the one the server
+            // expects to read are different shapes. See ConnectionApproval.EnableOnClient.
+            ConnectionApproval.EnableOnClient(_networkManager);
+
             // Travels with the handshake, so the server can refuse us before we cost it anything.
             _networkManager.NetworkConfig.ConnectionData = new ConnectionPayload
             {
