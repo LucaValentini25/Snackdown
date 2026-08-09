@@ -65,6 +65,9 @@ The predicted local player stays responsive at both.
       to 1% legendary, worth 3s to 20s; distribution verified over 100k rolls
 - [x] Head-bounce detection + stun (server-authoritative) — 2s stun and a bounce, no life stolen,
       matching the original. Stun lives in PlayerState so reconciliation replays through it
+- [x] Players are solid to each other — predicted client-side against past peer positions, not
+      decided by the host. Also the point where `PlayerMotor` became ordered steps, so later
+      mechanics are insertions rather than rewrites
 - [ ] Death → spectator; last-alive / timeout win conditions; end screen
 
 ## Phase 4 — Extended features
