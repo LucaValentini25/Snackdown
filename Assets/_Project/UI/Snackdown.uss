@@ -293,17 +293,25 @@
 }
 
 .nameplate__name {
-    font-size: 34px;
+    font-size: 30px;
     -unity-font-style: bold;
     color: var(--ink);
     -unity-text-outline-width: 2px;
     -unity-text-outline-color: rgb(12, 11, 16);
     margin-bottom: 4px;
+    flex-shrink: 1;
 }
 
+/*
+ * flex-shrink: 0 is the load-bearing line. The name and the bar together can ask for more height
+ * than the plate has, and flexbox resolves that by shrinking whatever it is allowed to -- which
+ * squeezed the bar to four pixels and its fill to zero, leaving a black sliver that looked like a
+ * bar that never moved. The name may compress; the bar may not, because the bar is the readout.
+ */
 .nameplate__track {
     width: 100%;
     height: 16px;
+    flex-shrink: 0;
     background-color: rgba(12, 11, 16, 0.75);
     border-radius: 8px;
     border-width: 2px;
