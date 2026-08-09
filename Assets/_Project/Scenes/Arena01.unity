@@ -1037,6 +1037,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1254257853}
+  - component: {fileID: 1254257854}
   m_Layer: 0
   m_Name: Arena
   m_TagString: Untagged
@@ -1065,6 +1066,20 @@ Transform:
   - {fileID: 1222561745}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1254257854
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1254257852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 727e13c76fd03f64890f3c2e0208dd97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Match.ArenaBounds
+  _center: {x: 0, y: 0.5}
+  _size: {x: 26, y: 9}
 --- !u!1 &1313540486
 GameObject:
   m_ObjectHideFlags: 0
@@ -1541,6 +1556,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1899188068}
   - component: {fileID: 1899188067}
+  - component: {fileID: 1899188069}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1614,6 +1630,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1899188069
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1899188066}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bccb4c3a1f36e94090eb3a1b4b4ee70, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Match.SpectatorCamera
+  _panSpeed: 12
+  _smoothing: 0.15
+  _input: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

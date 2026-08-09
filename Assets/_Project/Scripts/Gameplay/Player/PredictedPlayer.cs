@@ -113,6 +113,9 @@ namespace Snackdown.Gameplay.Player
         // --- remote -----------------------------------------------------------------------
         readonly SnapshotInterpolator _interpolator = new SnapshotInterpolator();
 
+        /// <summary>This character's life, if the match system is present. Null in a bare test scene.</summary>
+        PlayerLife _life;
+
         /// <summary>
         /// True once there is an arena to stand in.
         /// </summary>
@@ -127,6 +130,12 @@ namespace Snackdown.Gameplay.Player
         {
             get
             {
+                // A player who is out stops moving everywhere at once, because everywhere reads the
+                // same replicated flag. Letting the owner keep simulating a corpse would have them
+                // predicting a character the server no longer advances, and every snapshot would
+                // arrive as a correction.
+                if (_life != null && !_life.IsAlive) return false;
+
                 MatchDirector director = MatchDirector.Current;
 
                 // No director means no match system at all — a bare test scene, where simulating
@@ -136,6 +145,9 @@ namespace Snackdown.Gameplay.Player
                 return director.Phase == MatchPhase.Countdown || director.Phase == MatchPhase.Playing;
             }
         }
+
+        /// <summary>Whether this character counts as a body other players can walk into.</summary>
+        public bool IsSolid => _life == null || _life.IsAlive;
 
         /// <summary>
         /// Global kill switch for client-side prediction, flipped from the debug overlay.
@@ -236,6 +248,9 @@ namespace Snackdown.Gameplay.Player
             _tickDelta = 1f / NetworkManager.NetworkConfig.TickRate;
             _state = PlayerState.AtPosition(transform.position);
             _inputReader = GetComponent<InputReader>();
+            _life = GetComponent<PlayerLife>();
+
+            if (_life != null) _life.AliveChanged += OnAliveChanged;
 
             // Only the owner's device drives this character. On every other peer the reader would
             // enable its InputActions and latch the local keyboard's jumps into a character that
@@ -255,7 +270,29 @@ namespace Snackdown.Gameplay.Player
             NetworkSimulationLoop.Register(this);
         }
 
-        public override void OnNetworkDespawn() => NetworkSimulationLoop.Unregister(this);
+        public override void OnNetworkDespawn()
+        {
+            if (_life != null) _life.AliveChanged -= OnAliveChanged;
+
+            NetworkSimulationLoop.Unregister(this);
+        }
+
+        /// <summary>
+        /// Shows or hides the character as it enters and leaves the round.
+        /// </summary>
+        /// <remarks>
+        /// The visual is hidden rather than the object despawned. Despawning would take the roster
+        /// entry, the life readout and the owner's connection to this object with it, and all three
+        /// are still needed — by the scoreboard, by the end screen, and by the next round, which
+        /// reuses the same character rather than negotiating a new one.
+        /// </remarks>
+        void OnAliveChanged(PlayerLife life)
+        {
+            if (_smoother == null) return;
+
+            _smoother.gameObject.SetActive(life.IsAlive);
+            if (life.IsAlive) _smoother.Snap();
+        }
 
         // ==================================================================================
         //  Owner — predict
@@ -618,6 +655,10 @@ namespace Snackdown.Gameplay.Player
             {
                 if (count >= WorldSnapshotBuffer.MaxBodies) break;
                 if (peer is not PredictedPlayer other || other == this) continue;
+
+                // A player who is out stops being an obstacle. Leaving them solid would let a
+                // corpse block a doorway, and worse, would be a body nobody can see.
+                if (!other.IsSolid) continue;
 
                 _worldScratch[count++] = new PeerBody
                 {

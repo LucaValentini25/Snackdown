@@ -68,7 +68,9 @@ The predicted local player stays responsive at both.
 - [x] Players are solid to each other — predicted client-side against past peer positions, not
       decided by the host. Also the point where `PlayerMotor` became ordered steps, so later
       mechanics are insertions rather than rewrites
-- [ ] Death → spectator; last-alive / timeout win conditions; end screen
+- [x] Death → spectator; last-alive / timeout win conditions; end screen. A player who is out is
+      hidden rather than despawned and their owner gets a free camera, clamped per arena by
+      `ArenaBounds`. The referee replicates a verdict, not the numbers behind it
 
 ## Phase 4 — Extended features
 

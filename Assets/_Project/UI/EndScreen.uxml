@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Shown over the finished arena, not instead of it.
+
+    A translucent panel rather than a full cover, because the match is still on screen behind it:
+    the spectator camera stays live while the result is up, so covering the arena would hide the
+    thing the result is about.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="end-root" class="end-root hidden">
+        <ui:VisualElement class="panel end-panel">
+            <ui:Label name="end-title" text="" class="title" />
+            <ui:Label name="end-detail" text="" class="subtitle" />
+
+            <ui:Button name="return-button" text="Return to lobby" class="button button--primary" />
+            <ui:Label name="end-hint" text="" class="status" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

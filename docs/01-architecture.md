@@ -68,7 +68,7 @@ Three scenes, and the split is what makes several arenas possible:
 
 | Scene | Holds | Lifetime |
 |---|---|---|
-| **Bootstrap** | `NetworkManager`, `MatchDirector`, `SessionRoster`, the tick loop | The whole session |
+| **Bootstrap** | `NetworkManager`, `MatchDirector`, `RoundReferee`, `SessionRoster`, the tick loop, the loading and end screens | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
 | **Arena01** | Geometry, spawn points, camera | During a match |
 
@@ -80,6 +80,12 @@ the things that have to survive a match starting.
 Arenas are content, not code: they live in an `ArenaCatalog` asset, so adding one is authoring.
 As with the character catalog, the index is what crosses the network, so entries are appended and
 never reordered.
+
+**The lobby scene has exactly one owner**, the reconciler in the UI layer, which brings it up
+whenever the phase says it should be there — including before any session exists. When a match ends
+the director unloads the arena and stops; it does not load the lobby back. Two owners of an additive
+load is what once produced two lobby scenes stacked on top of each other: a load takes frames to
+land, so the second owner looks, correctly concludes the scene is not there yet, and starts another.
 
 ## Authority rules (the contract)
 
@@ -102,7 +108,38 @@ These are the invariants every system must respect. If a change would break one 
 | Topology | **Host** (listen server), written so a headless server stays possible | See [02 — Netcode](02-netcode.md#topology). |
 | Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
 | Player-vs-player contact | Solid, and **predicted** — resolved in the motor against past positions | Waiting for the server to decide it would cost a round trip on every bump. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
+| Ending a round | **Last one standing**, or the most life left when the 3-minute clock runs out | Both were already implied by `MatchConfig`; a shared top value at the clock is reported as a draw rather than broken by client id, because `MaxLife` makes an exact tie reachable. |
+| A player who is out | **Hidden, not despawned** — and free to pan the camera around the arena | Despawning would take the roster entry and the life readout with it, and both are still needed by the end screen and the next round. |
 | Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
+
+## Who decides a round is over
+
+`MatchDirector` owns the phase and the arena. `RoundReferee` owns the rules. They are separate
+because they change for different reasons: adding a game mode rewrites the referee and leaves scene
+loading alone, and adding an arena does the reverse.
+
+The referee replicates a **verdict** — a winner and a reason — not the ingredients it used. A client
+holding the raw life values could reach a different conclusion from the same numbers and disagree
+about who won; a client holding the verdict cannot.
+
+Two things follow from a player being out, and both are replicated as one flag rather than derived:
+
+- They stop simulating, stop being solid, and stop being stompable.
+- Their owner gets the camera.
+
+The flag matters because life is *interpolated* on clients — it drains locally between the
+server's once-a-second updates and can reach zero a fraction early. Deriving death from that number
+would let a client bury a player the server still considers alive, and hand their owner a spectator
+camera mid-match.
+
+### The camera is never replicated
+
+Where a spectator is looking changes no outcome, so it stays local. `ArenaBounds` — a rectangle
+authored per arena — clamps the pan, and when a map is smaller than the camera view the clamp
+collapses to its centre and the camera simply holds still. One component covers both kinds of map
+without asking the level designer which kind they built. **Arena01 is the small kind**: it is 26×9
+against a 24.9×14 view, so a spectator there gets about half a unit of horizontal slack and nothing
+vertical. Panning becomes visible on the first arena that is bigger than the screen.
 
 ## Configuration lives in data, not code
 

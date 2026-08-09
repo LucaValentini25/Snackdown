@@ -63,9 +63,15 @@ namespace Snackdown.UI
             switch (director.Phase)
             {
                 case MatchPhase.Lobby:
-                case MatchPhase.Ended:
                     SetLoadingVisible(false);
                     EnsureMenuLoaded();
+                    break;
+
+                // The arena stays up and the menu stays away: the end screen is shown over the
+                // finished match, which is what lets a spectator keep looking around while the
+                // result is on screen. The lobby comes back when the phase does.
+                case MatchPhase.Ended:
+                    SetLoadingVisible(false);
                     break;
 
                 case MatchPhase.Loading:

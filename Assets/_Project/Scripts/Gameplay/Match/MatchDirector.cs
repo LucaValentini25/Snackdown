@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Snackdown.Connection;
+using Snackdown.Gameplay.Player;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -28,9 +29,6 @@ namespace Snackdown.Gameplay.Match
 
         [Tooltip("Seconds between the arena being ready and play starting.")]
         [SerializeField] float _countdownSeconds = 3f;
-
-        [Tooltip("Scene returned to when a match ends. Must be in Build Settings.")]
-        [SerializeField] string _lobbySceneName = "Lobby";
 
         readonly NetworkVariable<MatchPhase> _phase = new NetworkVariable<MatchPhase>(MatchPhase.Lobby);
         readonly NetworkVariable<int> _arenaIndex = new NetworkVariable<int>(0);
@@ -171,15 +169,21 @@ namespace Snackdown.Gameplay.Match
         /// </remarks>
         void UnloadCurrentSceneThen(string sceneName)
         {
-            if (!string.IsNullOrEmpty(_loadedSceneName))
-            {
-                Scene previous = SceneManager.GetSceneByName(_loadedSceneName);
-                if (previous.IsValid() && previous.isLoaded)
-                    NetworkManager.SceneManager.UnloadScene(previous);
-            }
+            UnloadCurrentScene();
 
             _loadedSceneName = sceneName;
             NetworkManager.SceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
+        }
+
+        void UnloadCurrentScene()
+        {
+            if (string.IsNullOrEmpty(_loadedSceneName)) return;
+
+            Scene previous = SceneManager.GetSceneByName(_loadedSceneName);
+            if (previous.IsValid() && previous.isLoaded)
+                NetworkManager.SceneManager.UnloadScene(previous);
+
+            _loadedSceneName = null;
         }
 
         void OnLoadComplete(ulong clientId, string sceneName, LoadSceneMode mode)
@@ -238,19 +242,29 @@ namespace Snackdown.Gameplay.Match
             _phase.Value = MatchPhase.Ended;
         }
 
-        /// <summary>Sends everyone back to the lobby scene and resets ready flags.</summary>
+        /// <summary>Drops the arena and puts the session back in the lobby phase.</summary>
+        /// <remarks>
+        /// It unloads the arena and stops there — it does not load the lobby scene back. The lobby
+        /// has exactly one owner, the reconciler in the UI layer that already brings it up whenever
+        /// the phase says it should be there, including before any session exists. Loading it here
+        /// as well would give it two, and two owners of an additive load is what produced two lobby
+        /// scenes stacked on top of each other the first time around: a networked load takes frames
+        /// to land, so the second owner looks and correctly concludes the scene is not there yet.
+        /// </remarks>
         public void ServerReturnToLobby()
         {
             if (!IsServer) return;
 
             _loaded.Clear();
+            _loadedCount.Value = 0;
             _phase.Value = MatchPhase.Lobby;
 
             SessionRoster roster = FindFirstObjectByType<SessionRoster>();
             if (roster != null) roster.ServerClearReady();
 
-            if (!string.IsNullOrWhiteSpace(_lobbySceneName))
-                UnloadCurrentSceneThen(_lobbySceneName);
+            foreach (PlayerLife life in PlayerLife.All) life.ServerReset();
+
+            UnloadCurrentScene();
         }
     }
 }

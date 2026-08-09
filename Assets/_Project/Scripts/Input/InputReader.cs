@@ -5,7 +5,7 @@ namespace Snackdown.Input
 {
     /// <summary>
     /// Turns raw device input into the two values the simulation understands: a quantized
-    /// horizontal axis and a jump button. Nothing else in the project talks to the Input System.
+    /// horizontal axis and a jump button. Nothing outside this assembly talks to the Input System.
     /// </summary>
     /// <remarks>
     /// <para><b>Why the latch matters.</b> Rendering runs at 60+ fps while the network tick runs at
@@ -13,10 +13,9 @@ namespace Snackdown.Input
     /// polled the device at tick time. <see cref="ConsumeJumpPressed"/> latches the press as it
     /// happens and holds it until the next tick collects it — the difference between a
     /// responsive character and one that eats your inputs.</para>
-    /// <para>Actions are built in code rather than loaded from an .inputactions asset: Phase 1 has
-    /// no menus and no rebinding, and keeping them here means the movement demo has no asset
-    /// dependencies at all. Everything talks to this class, so swapping in a real action asset in
-    /// Phase 2 touches this file only.</para>
+    /// <para>Actions are built in code rather than loaded from an .inputactions asset: there is no
+    /// rebinding yet, and keeping them here means no asset dependency at all. Everything reaches
+    /// input through this assembly, so swapping in a real action asset stays a one-folder change.</para>
     /// </remarks>
     public class InputReader : MonoBehaviour
     {
