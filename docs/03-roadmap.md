@@ -7,9 +7,9 @@ working core.
 | Phase | Focus | Done when… |
 |:---:|---|---|
 | **0** | Scaffold + docs | ✅ Clean project opens; architecture & netcode documented |
-| **1** | **Netcode core** — predicted character | Two clients move fluidly under simulated 150 ms latency; reconciliation visible in overlay, not felt |
-| **2** | Connection layer | Join a real match by **Relay code** or **LAN IP**, same flow; nickname via approval |
-| **3** | Gameplay core | Life timer, fruit spawn/collect, head-bounce stun — all server-authoritative; win conditions |
+| **1** | **Netcode core** — predicted character | ✅ Two clients move fluidly under simulated 150 ms latency; reconciliation visible in overlay, not felt |
+| **2** | Connection layer | ✅ Join a real match by **Relay code** or **LAN IP**, same flow; nickname via approval |
+| **3** | Gameplay core | ✅ Life timer, fruit spawn/collect, head-bounce stun — all server-authoritative; win conditions |
 | **4** | Extended features | Power-ups, extra map(s), scoreboard, polished spectator |
 | **5** | Polish | Network debug tooling, tests, assembly split, final diagrams, a build |
 
