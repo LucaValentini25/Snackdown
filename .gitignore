@@ -70,6 +70,10 @@ crashlytics-build.properties
 # Packed Addressables
 /[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
+# Local-only documentation views (HTML renders of docs/*.md). The markdown is the
+# source of truth and is tracked; these are throwaway visualizations for local reading.
+/docs/local/
+
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*

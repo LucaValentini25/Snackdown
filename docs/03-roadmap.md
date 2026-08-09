@@ -7,9 +7,9 @@ working core.
 | Phase | Focus | Done when… |
 |:---:|---|---|
 | **0** | Scaffold + docs | ✅ Clean project opens; architecture & netcode documented |
-| **1** | **Netcode core** — predicted character | Two clients move fluidly under simulated 150 ms latency; reconciliation visible in overlay, not felt |
-| **2** | Connection layer | Join a real match by **Relay code** or **LAN IP**, same flow; nickname via approval |
-| **3** | Gameplay core | Life timer, fruit spawn/collect, head-bounce stun — all server-authoritative; win conditions |
+| **1** | **Netcode core** — predicted character | ✅ Two clients move fluidly under simulated 150 ms latency; reconciliation visible in overlay, not felt |
+| **2** | Connection layer | ✅ Join a real match by **Relay code** or **LAN IP**, same flow; nickname via approval |
+| **3** | Gameplay core | ✅ Life timer, fruit spawn/collect, head-bounce stun — all server-authoritative; win conditions |
 | **4** | Extended features | Power-ups, extra map(s), scoreboard, polished spectator |
 | **5** | Polish | Network debug tooling, tests, assembly split, final diagrams, a build |
 
@@ -17,46 +17,80 @@ working core.
 
 The one phase that matters most. Everything else is scaffolding around it.
 
-- [ ] Fixed network tick wired to `NetworkTickSystem`
-- [ ] `InputCommand` (tick, moveX, jump) sampled on the owner and sent to the server
-- [ ] Shared `Move()` simulation used identically by client and server
-- [ ] Client prediction — owner applies input locally, buffers `(tick, input, state)`
-- [ ] `StateSnapshot` broadcast from server with `lastProcessedInputTick`
-- [ ] Reconciliation — rewind to snapshot, replay pending inputs
-- [ ] Snapshot interpolation for remote players
-- [ ] Debug overlay: predicted vs authoritative, reconciliation count, RTT, tick
-- [ ] Validated against NGO Network Simulator (latency + loss)
+- [x] Fixed network tick wired to `NetworkTickSystem` — 30 Hz, phases ordered in `NetworkSimulationLoop`
+- [x] `InputCommand` (tick, moveX, jump) sampled on the owner and sent to the server
+- [x] Shared `Move()` simulation used identically by client and server — `PlayerMotor.Simulate`
+- [x] Client prediction — owner applies input locally, buffers `(tick, input, state)`
+- [x] `StateSnapshot` broadcast from server with `lastProcessedInputTick`
+- [x] Reconciliation — rewind to snapshot, replay pending inputs
+- [x] Snapshot interpolation for remote players
+- [x] Debug overlay: predicted vs authoritative, reconciliation count, RTT, tick
+- [x] **Validated against NGO Network Simulator (latency + loss)** — host + client under simulated
+      impairment, measured and written up in [05 — Validation](05-validation.md). Under 20% packet
+      loss (≈3× the worst real-world profile Unity models) the median prediction error was 0.302
+      units. One scenario still lacks a recorded run; see the open items there.
+
+### Verified so far
+
+Host session in `NetTest.unity`: spawn placement, collision (stops exactly at the wall face and
+rests exactly on the ground surface), jump arc, and the tick/snapshot loop all behave. Plus the
+property everything else depends on — **40 ticks of mixed input, simulated twice from the same
+state, produce bit-identical results**. Without that, replay would be fiction.
 
 **Acceptance:** with 150 ms simulated latency, the local player feels instant; a watcher sees smooth
-remote motion; forced desyncs self-correct within a tick or two.
+remote motion; forced desyncs self-correct within a tick or two. **Met** — see
+[05 — Validation](05-validation.md) for the measurements. The one caveat worth carrying forward:
+remote smoothness holds at 150 ms but not at 520 ms, where the 100 ms interpolation buffer runs dry.
+The predicted local player stays responsive at both.
 
 ## Phase 2 — Connection layer
 
-- [ ] `IConnectionProvider` interface
-- [ ] `DirectProvider` (UnityTransport, host + join by IP)
-- [ ] `RelayProvider` (UGS Relay + Lobby, join by code)
-- [ ] `ConnectionApproval` with payload (nickname, version check)
-- [ ] Main menu → mode select → host/join → lobby, wired to the abstraction
+- [x] `IConnectionProvider` interface — async throughout, failures as return values
+- [x] `DirectProvider` (UnityTransport, host + join by IP)
+- [x] `RelayProvider` (Sessions API, join by code) — the project is linked as **Snackdown** under
+      Luca's organization, with Relay and Lobby enabled; verified by hosting a real session
+- [x] `ConnectionApproval` with payload (nickname, chosen character, version check)
+- [x] `SessionRoster` — replicated player list with names, skins and ready state
+- [x] Main menu → host/join → lobby, built with **UI Toolkit**, wired to the abstraction
+- [x] Character select (4 Pixel Adventure skins, mechanically identical) — index travels in the
+      connection payload, is clamped by approval, lives in the roster, and dresses the sprite.
+      The picker UI itself is cosmetic and lands with the lobby polish
 
 ## Phase 3 — Gameplay core
 
-- [ ] Life timer (server-authoritative, ~1 Hz replication)
-- [ ] Fruit spawner (rarity table as ScriptableObject) + networked pickup
-- [ ] Head-bounce detection + stun (server-authoritative)
-- [ ] Death → spectator; last-alive / timeout win conditions; end screen
+- [x] Life timer (server-authoritative, ~1 Hz replication) — drains continuously server-side,
+      publishes once a second, clients drain locally between updates. Measured at 1 write/s where
+      the original did ~60
+- [x] Fruit spawner (rarity table as ScriptableObject) + networked pickup — 8 fruit from 35% common
+      to 1% legendary, worth 3s to 20s; distribution verified over 100k rolls
+- [x] Head-bounce detection + stun (server-authoritative) — 2s stun and a bounce, no life stolen,
+      matching the original. Stun lives in PlayerState so reconciliation replays through it
+- [x] Players are solid to each other — predicted client-side against past peer positions, not
+      decided by the host. Also the point where `PlayerMotor` became ordered steps, so later
+      mechanics are insertions rather than rewrites
+- [x] Death → spectator; last-alive / timeout win conditions; end screen. A player who is out is
+      hidden rather than despawned and their owner gets a free camera, clamped per arena by
+      `ArenaBounds`. The referee replicates a verdict, not the numbers behind it
 
 ## Phase 4 — Extended features
 
-- [ ] Power-ups (networked spawn + timed effects)
-- [ ] A second arena
-- [ ] Live scoreboard
-- [ ] Spectator camera polish
+Ordered by value-per-effort; each is independently droppable.
+
+1. [ ] **Live scoreboard** — `NetworkVariable` + events over data Phase 3 already computes. Cheapest, and it's what makes a recorded demo readable.
+2. [ ] **Spectator camera polish** — follow + target switching on death; exercises late-join, already part of the model.
+3. [ ] **A second arena** — mostly level design; the networked scene load comes free from Phase 3.
+
+*Power-ups are cut* — the most netcode-interesting item here (timed authoritative effects feeding
+into the predicted `Move()`), but not worth the scope against the three above.
 
 ## Phase 5 — Polish
 
 - [ ] Network debug HUD (bandwidth, tick, RTT, reconciliation graph)
-- [ ] Edit/Play-mode tests for the prediction buffer & reconciliation math
-- [ ] Assembly definitions (Netcode core as a standalone assembly)
+- [x] ~~Edit-mode tests for the simulation, prediction buffer and interpolator~~ — **done early**;
+      36 unit tests, they needed no refactor and could have been written from day one
+- [x] ~~Assembly definitions~~ — **done early**, one per system. Deferring them was the mistake:
+      an assembly is created when a system is, or retrofitting becomes a migration. Doing it here
+      is what made the `Netcode ↔ Gameplay` cycle visible at all
 - [ ] Final architecture diagrams; a runnable build
 
 ---

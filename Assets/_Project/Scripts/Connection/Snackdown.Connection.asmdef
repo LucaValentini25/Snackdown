@@ -1,0 +1,14 @@
+{
+    "name": "Snackdown.Connection",
+    "rootNamespace": "Snackdown.Connection",
+    "references": [
+        "Unity.Netcode.Runtime",
+        "Unity.Networking.Transport",
+        "Unity.Collections",
+        "Unity.Services.Multiplayer",
+        "Unity.Services.Authentication",
+        "Unity.Services.Core"
+    ],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

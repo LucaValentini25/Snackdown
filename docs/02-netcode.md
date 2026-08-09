@@ -28,9 +28,81 @@ correction is applied without throwing away the player's more recent actions.
 
 ## The tick
 
-Everything is quantized to a fixed **network tick** (e.g. 30 Hz) from NGO's `NetworkTickSystem`.
+Everything is quantized to a fixed **network tick of 30 Hz** (33.3 ms) from NGO's `NetworkTickSystem`.
 Inputs, snapshots, and buffers are all keyed by an integer tick number — never wall-clock time.
 A fixed tick is what makes "replay inputs since tick N" well-defined.
+
+30 Hz over 60 Hz on purpose: it halves bandwidth, keeps the prediction buffer small, and — the part
+that matters for a project *about* netcode — it makes remote interpolation genuinely necessary.
+At 60 Hz raw snapshots already look almost smooth, which hides the very layer we're building.
+Rendering still runs at whatever the display allows; it just reads interpolated state.
+
+## Topology
+
+**Host** (listen server): one player's machine is both server and client. This is what Relay assumes,
+and it forces an honest treatment of a case a dedicated server would let us ignore — the host's own
+player is `IsOwner && IsServer`, has zero latency, and must **not** be predicted or reconciled.
+Code branches on *roles*, never on "am I the host", so a headless dedicated build stays possible
+(Phase 5) without a rewrite.
+
+## The simulation is kinematic, by necessity
+
+The character is a **kinematic controller written by hand** — `Rigidbody2D` in `Kinematic` mode,
+collisions resolved with casts/overlaps — never a dynamic `Rigidbody2D`.
+
+This is not a style preference; **prediction requires it**. Reconciliation means re-simulating one
+player across N ticks on demand, and Box2D can't do that: `Physics2D.Simulate` steps the *entire*
+world, and its contact ordering and float accumulation don't reproduce identically across machines.
+A pure function `Move(state, input, world, dt) → state` re-runs 10 ticks in a loop and yields the
+same answer every time, on every machine. That determinism is the whole foundation.
+
+> **We are still using Unity's physics.** Collisions go through `Physics2D.BoxCast` — the same
+> engine, layers and colliders as anything else. What is not used is the *dynamic solver*:
+> rigidbodies, forces and contact resolution. `NetworkRigidbody` was rejected for the same reason:
+> it replicates the result of a simulation instead of predicting it, so an owner sees its own
+> movement a round trip late. That is the defect [00 — Legacy analysis](00-legacy-analysis.md)
+> records against the original project, which used `NetworkRigidbody2D`.
+
+### The simulation is a sequence of steps
+
+`PlayerMotor.Simulate` is not one method but an ordered list of them:
+
+```
+Stun → Horizontal → FeelTimers → Jump → Gravity → MoveAndCollide
+```
+
+Adding a mechanic — double jump, wall slide, dash — means writing a step and inserting it at a
+defined point, without touching the ones already working. **The order is fixed**, because two
+machines running the same steps in a different order stop agreeing, and agreement is what makes
+replay possible.
+
+This structure is the answer to a real limit: a single monolithic method stops being safe to extend
+at around the third mechanic.
+
+### Characters collide with each other, and it is predicted
+
+Players are solid to one another: they cannot pass through, and they can stand on each other's
+heads. This does **not** go through the physics solver either.
+
+Other characters reach the simulation through a `SimulationContext` — plain boxes with a position
+and a size, never live object references. The distinction matters: a replay of tick 40 must see
+where everyone was *at tick 40*, and a live object would answer with where it is now, producing a
+state the server never computed.
+
+That is what `WorldSnapshotBuffer` holds: everyone's position, tick by tick, so reconciliation can
+re-run contact against the world as it was. It is the same ring-buffer idea as `PredictionBuffer`,
+applied to the rest of the world instead of to oneself.
+
+Two rules fall out of this, and they decide where any future mechanic belongs:
+
+| The mechanic depends on… | Where it lives | Examples |
+|---|---|---|
+| Only your own state and input | A step in `PlayerMotor`, predicted | double jump, wall jump, dash |
+| Other players, or the server's judgement | Server-side, arriving as replicated state | head bounce, weapon damage, a trap someone triggered |
+
+The head bounce follows the second row: the server decides it and the result reaches owners as a
+`StunTimer` inside the state they already reconcile against. They never predicted it and could not
+have — but the replay carries it forward correctly, because it is part of `PlayerState`.
 
 ## Owner client — per tick
 
@@ -75,6 +147,27 @@ works if both sides simulate identically.
                         state = Move(state, buffer[t].input)
                    3. buffer[t].predictedState = state  (updated)
 ```
+
+### What the player sees during a correction
+
+The **simulated state snaps** — the logic never runs on a position neither side believes in.
+The **visual** doesn't: the sprite lives on a child transform that absorbs the positional error and
+decays it to zero over ~100 ms. So corrections are logically instant and visually invisible, and the
+debug overlay can draw both the corrected and the smoothed position at once.
+
+Interpolating the *simulated* state instead would be the tempting shortcut and the wrong one: errors
+would compound tick over tick instead of closing.
+
+## Wire format
+
+| Direction | Mechanism | Why |
+|---|---|---|
+| Input (owner → server) | `[Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable)]` carrying the **last 3 `InputCommand`s** | Redundancy beats retransmission: a dropped packet is covered by the next one, with no head-of-line blocking. The server ignores ticks it already consumed. |
+| Snapshot (server → all) | one **unreliable** `Rpc` per tick with every player's state | One packet per tick, not one per player. Stale snapshots are worthless, so reliability would only add latency. |
+
+`NetworkVariable` is deliberately **not** used for input: it replicates *latest value*, collapsing
+intermediate ones — and a gap in the input sequence makes replay impossible. It stays where it fits:
+slow, state-like data (life timer, match state).
 
 ## Remote players — interpolation
 

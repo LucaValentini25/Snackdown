@@ -1,0 +1,10 @@
+﻿<Solution>
+  <Project Path="Snackdown.Simulation.csproj" />
+  <Project Path="Snackdown.Connection.csproj" />
+  <Project Path="Snackdown.Gameplay.csproj" />
+  <Project Path="Snackdown.Netcode.csproj" />
+  <Project Path="Snackdown.Tests.EditMode.csproj" />
+  <Project Path="Snackdown.Core.csproj" />
+  <Project Path="Snackdown.UI.csproj" />
+  <Project Path="Snackdown.Input.csproj" />
+</Solution>

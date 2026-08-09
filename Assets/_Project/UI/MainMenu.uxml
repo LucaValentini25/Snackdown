@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Menu and lobby in one document, one screen visible at a time.
+
+    Two screens rather than two documents because they share the connection attempt: the menu starts
+    it and the lobby is what you land in when it succeeds. Swapping documents mid-attempt would mean
+    rebuilding the controller's element references at the least convenient moment.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <!-- ── menu ────────────────────────────────────────────────────────────────── -->
+    <ui:VisualElement name="menu-screen" class="screen">
+        <ui:VisualElement class="panel">
+            <ui:Label text="Snackdown" class="title" />
+            <ui:Label name="menu-subtitle" text="Last one standing wins." class="subtitle" />
+
+            <ui:TextField name="nickname-field" label="Name" max-length="16" class="field" />
+            <ui:TextField name="target-field" label="Address" class="field" />
+
+            <ui:Button name="host-button" text="Host a game" class="button button--primary" />
+            <ui:Button name="join-button" text="Join a game" class="button" />
+            <ui:Button name="cancel-button" text="Cancel" class="button hidden" />
+
+            <ui:Label name="menu-status" class="status" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- ── lobby ───────────────────────────────────────────────────────────────── -->
+    <ui:VisualElement name="lobby-screen" class="screen hidden">
+        <ui:VisualElement class="panel">
+            <ui:Label text="Lobby" class="title" />
+            <ui:Label name="lobby-subtitle" text="Waiting for players…" class="subtitle" />
+
+            <ui:VisualElement name="join-code-row" class="join-code-row">
+                <ui:Label name="join-code" class="join-code" />
+                <ui:Button name="copy-code-button" text="Copy" class="button button--compact" />
+            </ui:VisualElement>
+
+            <!-- Rows are built in code: the roster is replicated and its length changes at runtime,
+                 so laying out four fixed slots here would mean hiding and showing them instead. -->
+            <ui:VisualElement name="roster-list" class="roster" />
+
+            <ui:Button name="ready-button" text="Ready" class="button button--primary" />
+            <ui:Button name="start-button" text="Start match" class="button hidden" />
+            <ui:Button name="leave-button" text="Leave" class="button" />
+
+            <ui:Label name="lobby-status" class="status" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

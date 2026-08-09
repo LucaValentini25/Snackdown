@@ -1,0 +1,10 @@
+{
+    "name": "Snackdown.Netcode",
+    "rootNamespace": "Snackdown.Netcode",
+    "references": [
+        "Snackdown.Simulation",
+        "Unity.Netcode.Runtime"
+    ],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}
