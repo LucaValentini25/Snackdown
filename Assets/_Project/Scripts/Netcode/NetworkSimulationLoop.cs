@@ -27,6 +27,19 @@ namespace Snackdown.Netcode
         static readonly List<IPredictedPeer> Players = new List<IPredictedPeer>();
 
         public static IReadOnlyList<IPredictedPeer> ActivePlayers => Players;
+
+        /// <summary>
+        /// Raised on the server each tick, after every character has moved and before the snapshot
+        /// goes out. Carries the tick delta.
+        /// </summary>
+        /// <remarks>
+        /// The hook exists so rules about characters interacting — the head bounce, and whatever
+        /// Phase 4 adds — run at a defined point in the tick rather than in <c>Update</c>. Judged
+        /// from <c>Update</c>, a fast fall crosses another player entirely between two frames and
+        /// the contact is simply never seen. Running here also means the result is part of the
+        /// same snapshot as the movement that caused it.
+        /// </remarks>
+        public static event System.Action<float> AfterServerSimulation;
         public static NetworkSimulationLoop Instance { get; private set; }
 
         PlayerSnapshot[] _snapshotScratch;
@@ -75,7 +88,12 @@ namespace Snackdown.Netcode
             for (int i = 0; i < Players.Count; i++)
                 Players[i].ServerSimulateTick(serverTick);
 
-            // --- phase 3: publish, once, after every character has moved -------------------
+            // --- phase 3: resolve interactions between characters --------------------------
+            // After everyone has moved and before anything is published, so contact is judged
+            // against one consistent set of positions and its results ship in the same snapshot.
+            AfterServerSimulation?.Invoke(1f / NetworkManager.NetworkConfig.TickRate);
+
+            // --- phase 4: publish, once, after every character has moved -------------------
             BroadcastSnapshot(serverTick);
         }
 

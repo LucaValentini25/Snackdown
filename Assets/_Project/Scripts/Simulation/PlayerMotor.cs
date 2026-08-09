@@ -31,6 +31,12 @@ namespace Snackdown.Simulation
         /// </summary>
         public static PlayerState Simulate(PlayerState state, InputCommand input, MovementConfig cfg, float dt)
         {
+            // A stunned player keeps falling, sliding and colliding — they have lost control, not
+            // their place in the world. Discarding the input rather than skipping the step is what
+            // makes that distinction: everything below still runs, it just runs on no intent.
+            state.StunTimer = Mathf.Max(0f, state.StunTimer - dt);
+            if (state.IsStunned) input = default;
+
             // --- horizontal intent ----------------------------------------------------------
             float target = input.MoveX * cfg.MoveSpeed;
             float acceleration = state.Grounded ? cfg.GroundAcceleration : cfg.AirAcceleration;

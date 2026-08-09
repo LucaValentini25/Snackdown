@@ -63,7 +63,8 @@ The predicted local player stays responsive at both.
       the original did ~60
 - [x] Fruit spawner (rarity table as ScriptableObject) + networked pickup — 8 fruit from 35% common
       to 1% legendary, worth 3s to 20s; distribution verified over 100k rolls
-- [ ] Head-bounce detection + stun (server-authoritative)
+- [x] Head-bounce detection + stun (server-authoritative) — 2s stun and a bounce, no life stolen,
+      matching the original. Stun lives in PlayerState so reconciliation replays through it
 - [ ] Death → spectator; last-alive / timeout win conditions; end screen
 
 ## Phase 4 — Extended features

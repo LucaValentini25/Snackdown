@@ -470,6 +470,7 @@ GameObject:
   - component: {fileID: 757315491}
   - component: {fileID: 757315495}
   - component: {fileID: 757315496}
+  - component: {fileID: 757315497}
   m_Layer: 0
   m_Name: Systems
   m_TagString: Untagged
@@ -571,6 +572,24 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
+--- !u!114 &757315497
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 757315490}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52387077b0398fb40b871b84ebdd4e2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Combat.HeadBounce
+  ShowTopMostFoldoutHeaderGroup: 1
+  _stunSeconds: 2
+  _bounceVelocity: 12
+  _horizontalReach: 0.6
+  _verticalReach: 0.9
+  _minimumFallSpeed: 1
 --- !u!1 &808732833
 GameObject:
   m_ObjectHideFlags: 0
