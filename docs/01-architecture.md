@@ -101,6 +101,7 @@ These are the invariants every system must respect. If a change would break one 
 | Players per match | **4** | Enough that a client interpolates 3 remotes at once and bandwidth scales for real; matches the 4 Pixel Adventure characters; fits Relay's free tier and Multiplayer Play Mode on one machine. |
 | Topology | **Host** (listen server), written so a headless server stays possible | See [02 — Netcode](02-netcode.md#topology). |
 | Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
+| Player-vs-player contact | Solid, and **predicted** — resolved in the motor against past positions | Waiting for the server to decide it would cost a round trip on every bump. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
 | Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
 
 ## Configuration lives in data, not code
@@ -128,17 +129,15 @@ phase: an assembly is created when a system is, because retrofitting them is a m
 starting with them is free.
 
 ```
-Snackdown.Simulation   →  (nothing)
+Snackdown.Simulation   →  (nothing of ours)
 Snackdown.Netcode      →  Simulation
-Snackdown.Input        →  (nothing)
-Snackdown.Gameplay     →  Simulation, Netcode, Input
-Snackdown.Core         →  (nothing of ours)
-Snackdown.UI           →  Netcode, Gameplay
-Snackdown.Tests.EditMode  →  Simulation, Netcode          (Editor only)
+Snackdown.Input        →  (nothing of ours)
+Snackdown.Connection   →  (nothing of ours)
+Snackdown.Gameplay     →  Simulation, Netcode, Input, Connection
+Snackdown.Core         →  Connection
+Snackdown.UI           →  Netcode, Gameplay, Connection
+Snackdown.Tests.EditMode  →  Simulation, Netcode, Gameplay, Connection   (Editor only)
 ```
-
-`Connection/` has no assembly yet because it has no code yet. It gets one in Phase 2, when there is
-something to put in it.
 
 **This is what caught the cycle.** `Netcode/` imported `PlayerState` and `InputCommand` while
 `Gameplay/` imported the buffer and interpolator — each layer depending on the other, in flat
@@ -146,8 +145,9 @@ contradiction of the rule stated at the top of this document. Inside a single `A
 is legal and invisible. Across two assemblies it does not compile.
 
 Breaking it needed no abstraction, only honesty about where the types belonged: `PlayerState`,
-`InputCommand`, `InputPacket`, `PlayerMotor` and `MovementConfig` were never gameplay rules, they are
-the simulation, and they now live in their own layer that both sides depend on. The one remaining
+`InputCommand`, `InputPacket`, `PlayerMotor`, `MovementConfig` and `SimulationContext` were never
+gameplay rules, they are the simulation, and they now live in their own layer that both sides depend
+on. The one remaining
 edge — the tick loop iterating the concrete character — is met by `IPredictedPeer`, an interface of
 the six members the loop actually calls.
 

@@ -53,6 +53,12 @@ namespace Snackdown.Gameplay.Player
 
         // --- owner ------------------------------------------------------------------------
         readonly PredictionBuffer _buffer = new PredictionBuffer();
+
+        /// <summary>Where the other characters were, tick by tick, so a replay can re-run collisions.</summary>
+        readonly WorldSnapshotBuffer _world = new WorldSnapshotBuffer();
+
+        /// <summary>Reused when building a context, so simulating allocates nothing.</summary>
+        readonly PeerBody[] _worldScratch = new PeerBody[WorldSnapshotBuffer.MaxBodies];
         InputCommand _previous1, _previous2;
         uint _latestPredictedTick;
         uint _lastAckedTick;
@@ -270,7 +276,10 @@ namespace Snackdown.Gameplay.Player
             // refuses to act before the server answers. That is the demo: the same character,
             // now moving a full round trip after the button was pressed.
             if (PredictionEnabled)
-                _state = PlayerMotor.Simulate(_state, input, _config, _tickDelta);
+            {
+                CaptureWorld(tick);
+                _state = PlayerMotor.Simulate(_state, input, _config, WorldAt(tick), _tickDelta);
+            }
 
             _buffer.Store(tick, input, _state);
             _latestPredictedTick = tick;
@@ -403,7 +412,8 @@ namespace Snackdown.Gameplay.Player
             }
 
             _lastConsumedInput = input;
-            _state = PlayerMotor.Simulate(_state, input, _config, _tickDelta);
+            CaptureWorld(serverTick);
+            _state = PlayerMotor.Simulate(_state, input, _config, WorldAt(serverTick), _tickDelta);
             ApplyLogicalPosition(_state.Position, smooth: true);
         }
 
@@ -521,7 +531,7 @@ namespace Snackdown.Gameplay.Player
                 // toggle. Overflow can no longer reach here; the capacity check above caught it.
                 if (!_buffer.TryGetInput(t, out InputCommand input)) continue;
 
-                replayed = PlayerMotor.Simulate(replayed, input, _config, _tickDelta);
+                replayed = PlayerMotor.Simulate(replayed, input, _config, WorldAt(t), _tickDelta);
                 _buffer.OverwriteState(t, replayed);
             }
 
@@ -590,6 +600,37 @@ namespace Snackdown.Gameplay.Player
             _state.Velocity.y = upwardVelocity;
             _state.Grounded = false;
         }
+
+        /// <summary>
+        /// Records where every other character is on this tick, so the tick can be replayed later.
+        /// </summary>
+        /// <remarks>
+        /// Read from the live characters, but only ever for the tick happening <i>now</i> — the
+        /// buffer is what a replay reads from. Sampling live positions during a replay would test
+        /// tick 40 against everyone's position at tick 52 and produce a state the server never
+        /// computed.
+        /// </remarks>
+        void CaptureWorld(uint tick)
+        {
+            int count = 0;
+
+            foreach (IPredictedPeer peer in NetworkSimulationLoop.ActivePlayers)
+            {
+                if (count >= WorldSnapshotBuffer.MaxBodies) break;
+                if (peer is not PredictedPlayer other || other == this) continue;
+
+                _worldScratch[count++] = new PeerBody
+                {
+                    Id = other.NetworkObjectId,
+                    Position = other.State.Position,
+                    Size = other._config != null ? other._config.ColliderSize : Vector2.one
+                };
+            }
+
+            _world.Store(tick, _worldScratch, count);
+        }
+
+        SimulationContext WorldAt(uint tick) => _world.ContextFor(tick, NetworkObjectId, _worldScratch);
 
         /// <summary>Server-side teleport that every peer will follow through the next snapshot.</summary>
         /// <remarks>
