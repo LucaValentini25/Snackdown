@@ -77,6 +77,8 @@ namespace Snackdown.Connection
             _approval?.SetLocalPlayer(request.Nickname, request.CharacterIndex);
             _approval?.Enable();
 
+            NetworkConfigReport.Log(_networkManager, "host");
+
             if (!_networkManager.StartHost())
             {
                 _approval?.Disable();
@@ -117,6 +119,8 @@ namespace Snackdown.Connection
                 Nickname = Truncate(request.Nickname, ConnectionApproval.MaxNicknameLength),
                 CharacterIndex = request.CharacterIndex
             }.ToBytes();
+
+            NetworkConfigReport.Log(_networkManager, "client");
 
             var outcome = new TaskCompletionSource<ConnectionResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
