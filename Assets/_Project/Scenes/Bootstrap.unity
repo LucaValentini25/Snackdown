@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 283214384}
   - component: {fileID: 283214385}
   - component: {fileID: 283214386}
+  - component: {fileID: 283214387}
   m_Layer: 0
   m_Name: NetworkSimulation
   m_TagString: Untagged
@@ -220,7 +221,88 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   _arenas: {fileID: 11400000, guid: 14189454d9a1f354cbda24f3665c14f4, type: 2}
   _countdownSeconds: 3
-  _lobbySceneName: Lobby
+--- !u!114 &283214387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 283214381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 433f1f86aafa0914ab5edc63b73246e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Match.RoundReferee
+  ShowTopMostFoldoutHeaderGroup: 1
+  _config: {fileID: 11400000, guid: f0c5d336e0e603a48a6e4b1112a396f1, type: 2}
+--- !u!1 &1626085022
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1626085025}
+  - component: {fileID: 1626085024}
+  - component: {fileID: 1626085023}
+  m_Layer: 0
+  m_Name: EndScreen
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1626085023
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1626085022}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1725fc3ba368c3b49950a7579b2da7d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.UI::Snackdown.UI.EndScreenController
+--- !u!114 &1626085024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1626085022}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 93cc4f7f5f0e2ef45ab25b101387d0f7, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: 5ac684196cdb1424e9c5487d5624a3f1, type: 3}
+  m_SortingOrder: 20
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &1626085025
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1626085022}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1662972186
 GameObject:
   m_ObjectHideFlags: 0
@@ -452,3 +534,4 @@ SceneRoots:
   - {fileID: 1664336103}
   - {fileID: 283214383}
   - {fileID: 1662972189}
+  - {fileID: 1626085025}

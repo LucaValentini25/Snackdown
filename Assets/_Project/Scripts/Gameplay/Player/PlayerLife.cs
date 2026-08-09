@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Snackdown.Gameplay.Match;
 using Unity.Netcode;
 using UnityEngine;
@@ -34,7 +35,18 @@ namespace Snackdown.Gameplay.Player
         /// <summary>Client-side value that slides between published updates.</summary>
         float _displayed;
 
-        public bool IsAlive => Remaining > 0f;
+        /// <summary>Whether this player is still in the round.</summary>
+        /// <remarks>
+        /// Replicated as its own flag rather than derived from <see cref="Remaining"/>, because the
+        /// number clients hold is interpolated: it drains locally between updates and can reach
+        /// zero a fraction of a second before the server agrees. Deriving death from it would let a
+        /// client bury a player who is still alive — and stop drawing them, stop colliding with
+        /// them, and hand its owner a spectator camera — over a rounding difference. A flag the
+        /// server sets is one answer everyone shares.
+        /// </remarks>
+        readonly NetworkVariable<bool> _alive = new NetworkVariable<bool>(true);
+
+        public bool IsAlive => _alive.Value;
 
         /// <summary>Seconds left, smoothed on clients so the readout does not tick in steps.</summary>
         public float Remaining => IsServer ? _exactLife : _displayed;
@@ -47,7 +59,27 @@ namespace Snackdown.Gameplay.Player
         /// <summary>Raised on the server the moment this player runs out.</summary>
         public event Action<PlayerLife> Died;
 
+        /// <summary>Raised on every peer when this player's alive flag arrives or changes.</summary>
+        /// <remarks>
+        /// Separate from <see cref="Died"/> on purpose: that one is the server's decision, this one
+        /// is everybody's notification, and they do not happen at the same moment or on the same
+        /// machines.
+        /// </remarks>
+        public event Action<PlayerLife> AliveChanged;
+
         bool _reportedDeath;
+
+        static readonly List<PlayerLife> _all = new List<PlayerLife>();
+
+        /// <summary>Every player currently in the session, in no particular order.</summary>
+        /// <remarks>
+        /// A registry kept by spawn and despawn rather than a scene search. Deciding a round means
+        /// asking "who is left" on the server every frame, and <c>FindObjectsByType</c> at that
+        /// rate is the kind of cost that does not show up until a profiler is opened. It also
+        /// removes a whole class of bug: a player who disconnects mid-match leaves this list at
+        /// despawn, so they cannot go on counting as alive.
+        /// </remarks>
+        public static IReadOnlyList<PlayerLife> All => _all;
 
         public override void OnNetworkSpawn()
         {
@@ -58,18 +90,34 @@ namespace Snackdown.Gameplay.Player
                 return;
             }
 
+            _all.Add(this);
+
             _life.OnValueChanged += OnLifePublished;
+            _alive.OnValueChanged += OnAlivePublished;
 
             if (IsServer)
             {
                 _exactLife = _config.StartingLife;
                 _life.Value = _exactLife;
+                _alive.Value = true;
             }
 
             _displayed = _life.Value;
+
+            // Announced on spawn as well as on change, so anything watching starts from the truth
+            // instead of from whatever it assumed before this player existed.
+            AliveChanged?.Invoke(this);
         }
 
-        public override void OnNetworkDespawn() => _life.OnValueChanged -= OnLifePublished;
+        public override void OnNetworkDespawn()
+        {
+            _all.Remove(this);
+
+            _life.OnValueChanged -= OnLifePublished;
+            _alive.OnValueChanged -= OnAlivePublished;
+        }
+
+        void OnAlivePublished(bool previous, bool current) => AliveChanged?.Invoke(this);
 
         void OnLifePublished(float previous, float current)
         {
@@ -107,6 +155,7 @@ namespace Snackdown.Gameplay.Player
             if (ranOut && !_reportedDeath)
             {
                 _reportedDeath = true;
+                _alive.Value = false;
                 Died?.Invoke(this);
             }
         }
@@ -148,6 +197,7 @@ namespace Snackdown.Gameplay.Player
             _exactLife = _config.StartingLife;
             _sinceLastPublish = 0f;
             _life.Value = _exactLife;
+            _alive.Value = true;
         }
     }
 }

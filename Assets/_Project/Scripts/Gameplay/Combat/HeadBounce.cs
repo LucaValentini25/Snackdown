@@ -71,8 +71,10 @@ namespace Snackdown.Gameplay.Combat
         {
             _candidates.Clear();
 
+            // Players who are out are skipped for the same reason they stop being solid: a stomp
+            // landing on someone who has already lost is a stun nobody will ever see wear off.
             foreach (IPredictedPeer peer in NetworkSimulationLoop.ActivePlayers)
-                if (peer is PredictedPlayer player) _candidates.Add(player);
+                if (peer is PredictedPlayer player && player.IsSolid) _candidates.Add(player);
         }
 
         void Resolve(PredictedPlayer a, PredictedPlayer b, float tickDelta)
