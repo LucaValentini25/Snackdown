@@ -103,3 +103,25 @@ gameplay core (life timer, fruit, head-bounce stun, death to spectator, win cond
 
 Phase 4 is next. Targeting **PC**; WebGL is a documented future phase and needs transport work
 before it can connect at all. See the [roadmap](docs/03-roadmap.md).
+
+## 🎨 Credits
+
+Character, terrain, item and background art: **[Pixel Adventure 1](https://pixelfrog-assets.itch.io/pixel-adventure-1)**
+by [Pixel Frog](https://pixelfrog-assets.itch.io/), released under **CC0** — public domain, no
+attribution required. Credited anyway, because taking credit for someone else's pixel art in a
+portfolio is not a thing worth doing.
+
+The four playable characters are the pack's Mask Dude, Ninja Frog, Pink Man and Virtual Guy. They
+are cosmetic only: nothing in the simulation reads which one you picked, which is what makes them
+mechanically identical rather than merely intended to be.
+
+Everything else in this repository — every script, test, scene, prefab and document — is original.
+
+## 📄 License
+
+Source code, tests and documentation: **[MIT](LICENSE)**.
+
+The bundled art is covered by its own terms, above, not by the MIT grant. That distinction is why
+nothing under a licence that forbids redistribution lives in this repository: an asset you cannot
+publish does not belong in a repository whose point is being read.
+
