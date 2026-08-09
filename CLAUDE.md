@@ -8,6 +8,22 @@ log, the code style and the docs are part of what's being judged, not scaffoldin
 - Code, comments, XML docs, commit messages, PR descriptions and everything under `docs/`: **English**.
 - Conversation with Luca: **Spanish**.
 
+## Reporting back
+
+When a block, a phase, or any piece of work is finished, report it **short**. Three things, plain
+sentences, nothing else:
+
+1. **What was done** — a few lines, not a tour.
+2. **Why** — one or two sentences. The long reasoning belongs in the commit message and the XML
+   docs, which is where it is already being written.
+3. **QA** — the exact steps to test it, or "nothing to test" when there is nothing.
+
+No essays, no repeating what the commit already says, no narrating the debugging journey. If
+something genuinely needs a longer explanation, ask first instead of assuming.
+
+The detail is not lost by doing this — it lives in the commit log and the code comments, where it
+can be read on demand instead of arriving unrequested.
+
 ## Ask before deciding
 
 Do not assume. Stop and ask when a change would:
