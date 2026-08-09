@@ -42,10 +42,21 @@ namespace Snackdown.Gameplay.Combat
 
         readonly List<PredictedPlayer> _candidates = new List<PredictedPlayer>();
 
-        void Update()
+        public override void OnNetworkSpawn()
         {
-            if (!IsServer) return;
+            if (IsServer) NetworkSimulationLoop.AfterServerSimulation += ResolveAll;
+        }
 
+        public override void OnNetworkDespawn() => NetworkSimulationLoop.AfterServerSimulation -= ResolveAll;
+
+        /// <remarks>
+        /// Driven by the simulation tick rather than by <c>Update</c>. Players pass through each
+        /// other — the motor only collides with static geometry, which is what keeps it replayable
+        /// — so a falling character crosses another in roughly a single tick, and a check running
+        /// on the render loop misses it whenever a frame straddles the crossing.
+        /// </remarks>
+        void ResolveAll(float tickDelta)
+        {
             MatchDirector director = MatchDirector.Current;
             if (director == null || !director.IsPlaying) return;
 
@@ -53,7 +64,7 @@ namespace Snackdown.Gameplay.Combat
 
             for (int i = 0; i < _candidates.Count; i++)
                 for (int j = i + 1; j < _candidates.Count; j++)
-                    Resolve(_candidates[i], _candidates[j]);
+                    Resolve(_candidates[i], _candidates[j], tickDelta);
         }
 
         void Collect()
@@ -64,13 +75,13 @@ namespace Snackdown.Gameplay.Combat
                 if (peer is PredictedPlayer player) _candidates.Add(player);
         }
 
-        void Resolve(PredictedPlayer a, PredictedPlayer b)
+        void Resolve(PredictedPlayer a, PredictedPlayer b, float tickDelta)
         {
             // Whoever is higher is the one doing the stomping.
             PredictedPlayer upper = a.State.Position.y >= b.State.Position.y ? a : b;
             PredictedPlayer lower = ReferenceEquals(upper, a) ? b : a;
 
-            if (!IsStacked(upper, lower)) return;
+            if (!IsStacked(upper, lower, tickDelta)) return;
 
             // Must be coming down. Without this, two players jumping through each other on the way
             // up would stun whoever happened to be a pixel lower.
@@ -86,10 +97,19 @@ namespace Snackdown.Gameplay.Combat
             upper.ServerBounce(_bounceVelocity);
         }
 
-        bool IsStacked(PredictedPlayer upper, PredictedPlayer lower)
+        /// <remarks>
+        /// The vertical window grows with how fast the stomper is falling. At terminal velocity a
+        /// character covers most of its own height in one tick, so a fixed window would be stepped
+        /// straight over: one tick above the head, the next already below it, contact never seen.
+        /// Widening by the distance travelled this tick turns a snapshot test into a swept one.
+        /// </remarks>
+        bool IsStacked(PredictedPlayer upper, PredictedPlayer lower, float tickDelta)
         {
             Vector2 gap = upper.State.Position - lower.State.Position;
-            return Mathf.Abs(gap.x) <= _horizontalReach && gap.y > 0f && gap.y <= _verticalReach;
+            if (Mathf.Abs(gap.x) > _horizontalReach) return false;
+
+            float travelled = Mathf.Abs(upper.State.Velocity.y) * tickDelta;
+            return gap.y > -travelled && gap.y <= _verticalReach + travelled;
         }
     }
 }
