@@ -36,7 +36,7 @@ Each of these produced numbers that looked real and measured something else enti
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Stutter that follows whichever window you are *not* using | `runInBackground` off — Unity throttles an unfocused window, so the other peer stops ticking | Now on. See [ProjectSettings]. |
+| Stutter that follows whichever window you are *not* using | `runInBackground` off — Unity throttles an unfocused window, so the other peer stops ticking | Now on. See [ProjectSettings]. **Standalone only:** it is a desktop setting, so on Android, iOS or WebGL the underlying problem is unmitigated — a suspended or backgrounded host stops ticking and every client starves. Relevant the day a non-PC build exists; see [03 — Roadmap](03-roadmap.md). |
 | Correction rate ~65× too high; host reports starved ticks | Two uncapped renderers saturating one CPU, so the client never gets scheduled to send input | `FrameRatePolicy` caps to 60. |
 | `# conditions` says "no impairment" while RTT says 500 ms | The CSV is written by the client and reads its *local* simulator; impairment applied on the host is invisible to it | Read `mean_rtt_measured_ms`, not the label. |
 | First correction is several units, ~0.2 s in | The spawn placement teleport, counted as a prediction failure | `PlayerSnapshot.IsTeleport`. |

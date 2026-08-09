@@ -30,7 +30,11 @@ namespace Snackdown.Simulation
     /// </remarks>
     public static class PlayerMotor
     {
-        /// <summary>Advances one character by exactly one tick. Pure: same inputs, same output, always.</summary>
+        /// <summary>
+        /// Advances one character by exactly one tick. Deterministic: same inputs and same static
+        /// geometry, same output, always — see the remarks on the class for why terrain is the one
+        /// thing that does not arrive as an argument.
+        /// </summary>
         public static PlayerState Simulate(
             PlayerState state, InputCommand input, MovementConfig cfg, in SimulationContext world, float dt)
         {

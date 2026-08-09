@@ -82,6 +82,10 @@ If a comment is needed to explain *what* the code does, the code needs renaming,
 ## Documentation
 
 - `docs/*.md` is the **single source of truth**, tracked in git.
+- `docs/audit/` holds a dated, ten-domain audit of the project against its own claims. It is a
+  **snapshot of one commit**, not a living document: do not edit its findings to match later fixes.
+  What was remediated is recorded in its synthesis under *Remediation status*, and the fixes
+  themselves belong in the docs they correct.
 - **HTML pages live in `docs/local/` and are gitignored.** They are local views for reading and
   reviewing the work — never new content, never a deliverable. Anything worth keeping goes in the
   markdown first; two hand-written copies drift and end up contradicting each other.
@@ -132,13 +136,20 @@ The setup command (and the path to adjust) is in
 Run through this and report the result — no silent skips:
 
 1. The project **compiles**: no errors, no new warnings.
-2. The Unity **console is clean** in Play mode (use the Unity MCP; if the editor isn't open, say so
-   instead of assuming).
-3. **No leftovers:** debug `Debug.Log`, dead code, unused fields, orphaned files, unowned TODOs,
+2. The **EditMode tests pass.** They run in under a second and nothing else in this repository runs
+   them, so skipping this means nobody does. If a change makes a test fail, that is the finding —
+   report it, don't adjust the test to match.
+3. The Unity **console is clean** in Play mode (use the Unity MCP; if the editor isn't open, say so
+   instead of assuming). Note that Unity **defers script compilation while a session is live**, so a
+   change made during Play mode has not been compiled and cannot have been verified — see
+   [docs/05](docs/05-validation.md#pitfalls-that-invalidate-a-run).
+4. **No leftovers:** debug `Debug.Log`, dead code, unused fields, orphaned files, unowned TODOs,
    code made obsolete by this change and left behind.
-4. **No contradictions:** the change doesn't conflict with `README.md`, `docs/`, or another system's
-   assumptions. If it does, resolve it here — not later.
-5. The change stays **inside the current phase** of `docs/03-roadmap.md`. No drive-by refactors.
+5. **No contradictions:** the change doesn't conflict with `README.md`, `docs/`, or another system's
+   assumptions. If it does, resolve it here — not later. This includes numbers and file paths in
+   comments and XML docs, not just prose in `docs/` — a `<remarks>` block claiming a packet is 120
+   bytes when it is 176 is the same failure as a stale README.
+6. The change stays **inside the current phase** of `docs/03-roadmap.md`. No drive-by refactors.
 
 ## Off-limits
 
