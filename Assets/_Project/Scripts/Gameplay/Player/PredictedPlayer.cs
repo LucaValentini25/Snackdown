@@ -377,7 +377,14 @@ namespace Snackdown.Gameplay.Player
         /// Sent every tick, unreliable, carrying a three-command window. See <see cref="InputPacket"/>
         /// for why redundancy beats retransmission here.
         /// </summary>
-        [Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable)]
+        /// <remarks>
+        /// <see cref="RpcInvokePermission.Owner"/> is load-bearing, not decoration. NGO's default is
+        /// <c>Everyone</c>, and the permission is enforced on the receiving side — so without it any
+        /// connected client could address this RPC at any spawned character and have the server
+        /// simulate someone else's player from its own buttons. The declaration is the check: NGO
+        /// drops the message before this method runs.
+        /// </remarks>
+        [Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable, InvokePermission = RpcInvokePermission.Owner)]
         void SubmitInputRpc(InputPacket packet)
         {
             uint serverTick = (uint)NetworkManager.ServerTime.Tick;
@@ -392,10 +399,16 @@ namespace Snackdown.Gameplay.Player
         /// Admits one command from a redundancy window, if it is genuinely new and plausible.
         /// </summary>
         /// <remarks>
-        /// Tick 0 needs no special case: <see cref="_highestReceivedInputTick"/> starts at zero, so
-        /// the staleness test below already rejects it. The cost is one discarded input on the very
+        /// <para>Tick 0 needs no special case: <see cref="_highestReceivedInputTick"/> starts at zero,
+        /// so the staleness test below already rejects it. The cost is one discarded input on the very
         /// first tick of a session, before the character can have moved — which buys the absence of
-        /// a sentinel value that would have to stay true forever.
+        /// a sentinel value that would have to stay true forever.</para>
+        /// <para>The command is sanitized before it is stored, not before it is used. Clamping in
+        /// <see cref="PlayerMotor"/> would only protect the caller that happened to go through the
+        /// motor; clamping here means the invariant holds for the queue, the snapshot built from it
+        /// and every future consumer. <c>MoveX</c> is declared as -1/0/1 but arrives as a signed
+        /// byte, and <c>MoveSpeed</c> is only a ceiling while that holds: 127 on the wire is 127×
+        /// the intended speed.</para>
         /// </remarks>
         void EnqueueIfNew(in InputCommand input, uint serverTick)
         {
@@ -412,7 +425,7 @@ namespace Snackdown.Gameplay.Player
             // more than a backlog they have already moved past.
             if (_incomingInputs.Count >= MaxQueueCapacity) _incomingInputs.Dequeue();
 
-            _incomingInputs.Enqueue(input);
+            _incomingInputs.Enqueue(InputCommand.Sanitized(input));
         }
 
         /// <summary>

@@ -116,7 +116,17 @@ namespace Snackdown.Netcode
         /// re-sent snapshot arrives describing a moment that has already been superseded, so the
         /// only thing waiting for it buys is latency.
         /// </summary>
-        [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
+        /// <remarks>
+        /// <see cref="SendTo.NotServer"/> describes where the message goes, not who may send it.
+        /// Invoked from a client, NGO routes it through a proxy group and asks the server to forward
+        /// it — and the server obliges, because the default permission is <c>Everyone</c>. This is
+        /// the one message clients treat as ground truth, so a forged frame is the strongest thing a
+        /// modified client could do to everyone else: latching an acknowledged tick at
+        /// <c>uint.MaxValue</c> ends the victim's reconciliation for the rest of the session.
+        /// <see cref="RpcInvokePermission.Server"/> is what makes "authoritative" true rather than
+        /// intended.
+        /// </remarks>
+        [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable, InvokePermission = RpcInvokePermission.Server)]
         void SnapshotRpc(SnapshotFrame frame)
         {
             double snapshotTime = frame.Tick / (double)NetworkManager.NetworkConfig.TickRate;

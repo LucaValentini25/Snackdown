@@ -57,6 +57,16 @@ namespace Snackdown.Netcode
     /// </remarks>
     public struct SnapshotFrame : INetworkSerializable
     {
+        /// <summary>Largest player count a frame is allowed to claim on read.</summary>
+        /// <remarks>
+        /// Deliberately its own constant rather than a reference to
+        /// <see cref="WorldSnapshotBuffer.MaxBodies"/>: that one bounds how many <i>peers</i> a tick
+        /// remembers for collision, this one bounds how many <i>entries</i> a datagram may describe.
+        /// They happen to be the same number today and mean different things, so tying them together
+        /// would make the next change to either one wrong in a way that is hard to see.
+        /// </remarks>
+        public const int MaxPlayers = 8;
+
         public uint Tick;
         public PlayerSnapshot[] Players;
 
@@ -67,7 +77,20 @@ namespace Snackdown.Netcode
             int count = Players?.Length ?? 0;
             serializer.SerializeValue(ref count);
 
-            if (serializer.IsReader) Players = new PlayerSnapshot[count];
+            if (serializer.IsReader)
+            {
+                // A length read off the wire is a length someone else chose. Allocating first and
+                // sanity-checking afterwards turns four bytes into any array size an int can
+                // express, so the bound comes first and the frame is dropped rather than trusted.
+                if (count < 0 || count > MaxPlayers)
+                {
+                    Players = null;
+                    return;
+                }
+
+                Players = new PlayerSnapshot[count];
+            }
+
             for (int i = 0; i < count; i++)
                 Players[i].NetworkSerialize(serializer);
         }

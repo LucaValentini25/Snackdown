@@ -38,6 +38,26 @@ namespace Snackdown.Simulation
             return b;
         }
 
+        /// <summary>
+        /// The same command with every field forced back into its declared range.
+        /// </summary>
+        /// <remarks>
+        /// The declared range and the wire range are not the same thing: <see cref="MoveX"/> is
+        /// documented as -1/0/1 but travels as a signed byte, and <see cref="Buttons"/> defines two
+        /// bits out of eight. A server that trusts the declaration hands <see cref="PlayerMotor"/> a
+        /// horizontal target of <c>MoveX * MoveSpeed</c>, where <c>MoveSpeed</c> stops being a
+        /// ceiling the moment <c>MoveX</c> is not ±1.
+        /// <para>This lives on the struct rather than at the call site because it is a property of
+        /// the type: anything that receives an <see cref="InputCommand"/> from outside this process
+        /// needs it, and the next such caller should not have to rediscover why.</para>
+        /// </remarks>
+        public static InputCommand Sanitized(in InputCommand command) => new InputCommand
+        {
+            Tick = command.Tick,
+            MoveX = (sbyte)(command.MoveX > 0 ? 1 : command.MoveX < 0 ? -1 : 0),
+            Buttons = (byte)(command.Buttons & (JumpHeldBit | JumpPressedBit))
+        };
+
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
             serializer.SerializeValue(ref Tick);
