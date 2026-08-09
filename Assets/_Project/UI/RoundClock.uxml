@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The round clock, top centre.
+
+    Just the clock. Life belongs next to the character it describes, not in a table in the corner,
+    which is why the per-player rows this document used to hold live in the two life-bar views.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="clock-root" class="clock-root hidden" picking-mode="Ignore">
+        <ui:Label name="round-clock" text="" class="round-clock" />
+    </ui:VisualElement>
+</ui:UXML>

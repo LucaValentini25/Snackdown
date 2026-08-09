@@ -69,6 +69,8 @@ namespace Snackdown.Connection
             _approval?.SetLocalPlayer(request.Nickname, request.CharacterIndex);
             _approval?.Enable();
 
+            NetworkConfigReport.Log(_networkManager, "host");
+
             try
             {
                 var options = new SessionOptions
@@ -118,6 +120,8 @@ namespace Snackdown.Connection
                 Nickname = Truncate(request.Nickname, ConnectionApproval.MaxNicknameLength),
                 CharacterIndex = request.CharacterIndex
             }.ToBytes();
+
+            NetworkConfigReport.Log(_networkManager, "client");
 
             try
             {

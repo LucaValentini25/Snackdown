@@ -30,6 +30,106 @@ sim.ConnectionPreset = NetworkSimulatorPreset.Create(
     "B-stress", "150ms / 50ms jitter / 20% loss", 150, 50, 0, 20);
 ```
 
+### Driving the virtual players from the MCP
+
+The steps above are the manual route. All of them can also be driven from the MCP's `execute_code`
+tool, which is what makes a two-peer run testable during QA instead of only by hand: the players can
+be listed, activated, tagged and inspected without leaving the editor.
+
+**The API is internal.** In 6000.3.14f1 Multiplayer Play Mode ships *inside* the editor, in
+`UnityEditor.MultiplayerModule` — `com.unity.multiplayer.playmode` 2.0.2 is a documentation shell
+with no assemblies of its own. Every type below is `internal`; the single public one is
+`Unity.Multiplayer.PlayMode.CurrentPlayer`, which a clone uses to read its own tags at runtime.
+Two consequences, both of which cost time to rediscover:
+
+- It goes through **reflection**. The `unity_reflect` MCP tool will not find any of it, because that
+  tool only scans public types — it reports zero hits for `MultiplayerPlaymode` and looks like the
+  API does not exist.
+- `execute_code` compiles with CodeDom, which is **C# 6**: no `out var`, no local functions, no
+  switch expressions, and `Object` must be qualified as `UnityEngine.Object`.
+
+What is reachable, all under `Unity.Multiplayer.PlayMode.Editor` (verified 2026-08-09):
+
+| Type | What it gives |
+|---|---|
+| `MultiplayerPlaymode` | `Players`, `PlayerOne`–`PlayerFour`, `PlayerTags` |
+| `UnityPlayer` | `Activate`, `Deactivate`, `AddTag`, `RemoveTag`, `ClearTags`, `Tags`, `PlayerState`, `Name`, `Type`, `TypeDependentPlayerInfo` |
+| `ScenarioRunner` | `StartScenario`, `StopScenario`, `GetScenarioStatus`, `ActiveScenario`, `IsRunning` |
+| `MultiplayerPlaymodeLogUtility` | `PlayerLogs(PlayerIdentifier)` — **counts only** |
+| `VirtualProjectsEditor` | `IsClone`, `CloneIdentifier`, `MainEditorProcessId` |
+
+Reading the state of every player:
+
+```csharp
+System.Type mpp = null;
+foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+{
+    mpp = a.GetType("Unity.Multiplayer.PlayMode.Editor.MultiplayerPlaymode", false);
+    if (mpp != null) break;
+}
+var sflags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+var iflags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
+           | System.Reflection.BindingFlags.Instance;
+
+var sb = new System.Text.StringBuilder();
+foreach (var p in (System.Collections.IEnumerable)mpp.GetProperty("Players", sflags).GetValue(null, null))
+{
+    var t = p.GetType();
+    sb.AppendLine(t.GetProperty("Name", iflags).GetValue(p, null)
+        + " | " + t.GetProperty("Type", iflags).GetValue(p, null)
+        + " | " + t.GetProperty("PlayerState", iflags).GetValue(p, null));
+}
+return sb.ToString();
+```
+
+The mutating members return `bool` and report the reason through an **out parameter**, so under
+reflection they take an `object[]` whose trailing slot comes back filled:
+
+```csharp
+object player = mpp.GetProperty("PlayerThree", sflags).GetValue(null, null);
+object[] args = new object[] { "predicting-client", null };   // tag, out TagError
+bool ok = (bool)player.GetType().GetMethod("AddTag", iflags).Invoke(player, args);
+// args[1] holds the TagError when ok is false
+```
+
+`Activate` and `Deactivate` follow the same shape (`Activate` also takes a `List<string>` of extra
+launch arguments). They start and stop a full editor process, so they are slow and not something to
+call speculatively — and the first activation of a player clones the whole project.
+
+**Reading a clone's console needs the log file, not `read_console`.** The MCP bridge lives in the
+main editor, so `read_console` only ever returns the main editor's messages, and
+`MultiplayerPlaymodeLogUtility.PlayerLogs` returns a `LogCounts` — the number of logs, warnings and
+errors, not their text. The messages themselves are on disk, under the clone's own identifier:
+
+```
+Library/VP/<VirtualProjectIdentifier>/Logs/Editor.log
+```
+
+which is reachable from the player object as
+`player.TypeDependentPlayerInfo.VirtualProjectIdentifier`.
+
+> **This is internal API and can break on any editor upgrade**, without a changelog entry, because
+> Unity owes no compatibility on it. That is an acceptable trade for a QA aid — it is not acceptable
+> for anything the game itself depends on. Code that touches it belongs in the editor-only tooling
+> path, and must fail into a readable message rather than a `NullReferenceException` when a member
+> moves.
+
+### The sandbox scene
+
+`_Project/Scenes/Sandbox.unity` starts a host and drives the match to *Playing* the moment Play is
+pressed — no menu, no lobby, no network service. It is for looking at art and layout on a character
+**spawned the way NGO spawns it**: a harness that instantiated the prefab directly would be quicker
+and would have hidden every sizing bug this was built to find, since all of them were only visible
+on the spawned copy.
+
+It is a copy of Bootstrap rather than a hand-built scene, so it cannot drift from the one that
+ships, and it runs under `SandboxMatchConfig` — no life drain, no round clock — so nothing expires
+while you are looking at it. It shuts the host down on disable, because leaving one running leaks
+the socket and costs an editor restart.
+
+**One peer only.** Anything that crosses the wire still needs two; see the two-peer rule in
+[CLAUDE.md](../CLAUDE.md).
+
 ### Pitfalls that invalidate a run
 
 Each of these produced numbers that looked real and measured something else entirely.
@@ -41,6 +141,8 @@ Each of these produced numbers that looked real and measured something else enti
 | `# conditions` says "no impairment" while RTT says 500 ms | The CSV is written by the client and reads its *local* simulator; impairment applied on the host is invisible to it | Read `mean_rtt_measured_ms`, not the label. |
 | First correction is several units, ~0.2 s in | The spawn placement teleport, counted as a prediction failure | `PlayerSnapshot.IsTeleport`. |
 | `Failed to bind UDP socket` on the next run | Code recompiled while a session was live; the native socket leaks until the process exits | Never edit scripts with a session running. Restart the editor. |
+| `NetworkConfig mismatch`, surfacing through Sessions as an unrelated metadata error | Two peers disagreeing on one of the seven values NGO hashes — in practice a prefab whose `GlobalObjectIdHash` on disk differs from the one the editor computes | Each peer logs those values on connect (`NetworkConfigReport`); diff the two. Re-save the prefab so the file carries the computed hash. |
+| The MCP bridge drops every time Play mode is entered from a tool call | The domain reload takes the WebSocket with it | Drive Play mode by hand. Measure through `execute_code` once it is already running. |
 
 **Do not change code while a session is live.** It ends the run, leaks the socket, and costs an
 editor restart.

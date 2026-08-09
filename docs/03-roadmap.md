@@ -101,7 +101,12 @@ The predicted local player stays responsive at both.
 
 Ordered by value-per-effort; each is independently droppable.
 
-1. [ ] **Live scoreboard** — `NetworkVariable` + events over data Phase 3 already computes. Cheapest, and it's what makes a recorded demo readable.
+1. [x] **Life bars and round clock** — not a scoreboard: this game shows each player's own draining
+   life, the way the original does. Built **both** ways so the better one can be picked by looking
+   at it — floating over each character (UI Toolkit world-space panels) or along the bottom in the
+   fighting-game arrangement — with `F3` swapping between them at runtime. Either way it puts
+   **nothing new on the wire**: every number shown already crossed the network for its own reason,
+   so these are views rather than second copies of facts that can disagree with the first.
 2. [ ] **Decide how peer contact is predicted** — today a client resolves contact against
    *interpolated* peer positions, so it is offset from the server by the interpolation delay plus its
    own lead, and close contact between two moving players reliably corrects. The documented options are

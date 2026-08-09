@@ -1,5 +1,5 @@
 /*
- * Shared styling for the menu and lobby.
+ * Shared styling for every screen: menu, lobby, loading, in-match HUD and end screen.
  *
  * Deliberately built from a handful of variables rather than per-element values: the palette and
  * spacing are the two things that change when placeholder art is replaced with real art, and having
@@ -253,3 +253,161 @@
 .end-panel .subtitle {
     -unity-text-align: middle-center;
 }
+
+/* ── round clock ────────────────────────────────────────────────────── */
+
+.clock-root {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.round-clock {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    padding: 2px 12px;
+    background-color: rgba(12, 11, 16, 0.55);
+    border-radius: 4px;
+}
+
+/* Red under the threshold, so running out is felt before it is read. */
+.round-clock--urgent {
+    color: var(--bad);
+}
+
+/* ── option A: nameplate over the character (world space) ────────────────────── */
+
+/*
+ * Sizes here are in the panel's authored pixels, and the panel is 160 of them wide standing for
+ * 1.6 world units -- so 100 authored pixels to the metre, and a character is 70 wide. What makes
+ * the text legible is that ratio, not these numbers on their own: author the same layout at four
+ * times the resolution and every glyph gets squeezed into a quarter of the space on screen.
+ */
+.nameplate {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.nameplate__name {
+    font-size: 30px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    -unity-text-outline-width: 2px;
+    -unity-text-outline-color: rgb(12, 11, 16);
+    margin-bottom: 4px;
+    flex-shrink: 1;
+}
+
+/*
+ * flex-shrink: 0 is the load-bearing line. The name and the bar together can ask for more height
+ * than the plate has, and flexbox resolves that by shrinking whatever it is allowed to -- which
+ * squeezed the bar to four pixels and its fill to zero, leaving a black sliver that looked like a
+ * bar that never moved. The name may compress; the bar may not, because the bar is the readout.
+ */
+.nameplate__track {
+    width: 100%;
+    height: 16px;
+    flex-shrink: 0;
+    background-color: rgba(12, 11, 16, 0.75);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(12, 11, 16);
+    overflow: hidden;
+}
+
+.nameplate__fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--ok);
+}
+
+.nameplate__fill--low {
+    background-color: var(--bad);
+}
+
+/* ── option B: life bars along the bottom ───────────────────────────────── */
+
+.lifebars-root {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    align-items: center;
+    padding: 10px;
+}
+
+.lifebars-row {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.lifebar {
+    flex-direction: row;
+    align-items: center;
+    margin: 0 6px;
+    padding: 6px 10px;
+    background-color: rgba(12, 11, 16, 0.72);
+    border-radius: var(--radius);
+    border-width: 1px;
+    border-color: var(--panel-edge);
+}
+
+/* Cropped to the head: the pack's frames are full-body, and a full body shrunk to 40px is a smudge. */
+.lifebar__portrait {
+    width: 40px;
+    height: 40px;
+    margin-right: 8px;
+    background-color: var(--panel);
+    border-radius: 4px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.lifebar__column {
+    min-width: 130px;
+}
+
+.lifebar__name {
+    font-size: 12px;
+    color: var(--ink);
+    margin-bottom: 3px;
+}
+
+.lifebar__name--you {
+    color: var(--accent);
+}
+
+.lifebar__track {
+    height: 12px;
+    background-color: var(--bg);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.lifebar__fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--ok);
+}
+
+.lifebar__fill--low {
+    background-color: var(--bad);
+}
+
+.lifebar__seconds {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    margin-left: 10px;
+    min-width: 46px;
+    -unity-text-align: middle-right;
+}
+
+/* Out, not gone: the entry stays so nobody else shifts position. */
+.lifebar--out {
+    opacity: 0.45;
+}
+
