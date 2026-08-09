@@ -64,17 +64,21 @@ Assets/
 │   │   │                     VisualSmoother, ReconciliationStats, RunRecorder
 │   │   ├── Gameplay/
 │   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchOutcome,
-│   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera
+│   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera,
+│   │   │                 SandboxRunner
 │   │   │   ├── Player/       PredictedPlayer, PlayerLife, PlayerSpawnPoints,
 │   │   │   │                 CharacterAppearance, CharacterCatalog
 │   │   │   ├── Fruits/       Fruit, FruitSpawner, FruitTable
 │   │   │   └── Combat/       HeadBounce
 │   │   ├── UI/               MainMenuController, LoadingScreenController,
-│   │   │                     EndScreenController, NetDebugOverlay
+│   │   │                     EndScreenController, RoundClockController,
+│   │   │                     LifeBarsController, PlayerNameplate, LifeBarStyle,
+│   │   │                     LifeText, NetDebugOverlay
 │   │   └── Input/            InputReader, SpectatorInput
 │   ├── UI/                   MainMenu.uxml, LoadingScreen.uxml, EndScreen.uxml,
-│   │                         Snackdown.uss, MenuPanelSettings
-│   ├── Scenes/               Bootstrap, Lobby, Arena01
+│   │                         RoundClock.uxml, LifeBars.uxml, Nameplate.uxml,
+│   │                         Snackdown.uss, MenuPanelSettings, WorldSpacePanelSettings
+│   ├── Scenes/               Bootstrap, Lobby, Arena01, Sandbox
 │   ├── Prefabs/              Player, Fruit
 │   ├── Art/                  placeholder primitives
 │   └── Settings/             ScriptableObject configs (movement, match, arenas,
@@ -98,6 +102,7 @@ Three scenes, and the split is what makes several arenas possible:
 | **Bootstrap** | `NetworkManager`, `MatchDirector`, `RoundReferee`, `SessionRoster`, the tick loop, the loading screen, the round clock, the life bars and the end screen | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
 | **Arena01** | Geometry, spawn points, camera | During a match |
+| **Sandbox** | A copy of Bootstrap that hosts and starts a match on Play | Never in a build; opened by hand |
 
 Bootstrap is loaded first and **never unloaded**; the lobby and arenas come and go on top of it
 with `LoadSceneMode.Additive`. Loading them as `Single` would unload bootstrap along with
@@ -177,6 +182,31 @@ vertical. Panning becomes visible on the first arena that is bigger than the scr
 Movement tuning, jump feel, match length, fruit spawn tables, rarity weights → **ScriptableObjects**
 under `_Project/Settings/`. Designers (and future-you) tune the game without recompiling, and the
 netcode code stays free of magic numbers.
+
+**Match rules hang off `MatchDirector`**, not off each thing that reads them. The referee and every
+player used to hold their own reference to the same asset, which is three chances for one of them
+to point somewhere else and no way to see from the Inspector that it had. Each keeps its own field
+as a fallback for a scene with no director. That is also what lets the sandbox run under its own
+rules — drain at zero, round at zero, which the referee reads as *no clock* rather than as a round
+that ends immediately — without a second player prefab to carry the difference.
+
+## Art has a size; it is not scaled to one
+
+**Pixel art is sized through its import settings, never by scaling a transform.** Characters import
+at 32 pixels per unit, so a 32×32 sprite is exactly one world unit; fruit at 64, so a pickup is half
+of one. Both prefabs sit at scale 1.
+
+This is not tidiness. A scaled parent multiplies everything underneath it, and the life bar over the
+character is authored in world units — it silently came out three times its size, and then, once
+that was compensated for, a *second* conversion shrank it to a sliver. Numbers that mean what they
+say are what makes that class of bug impossible rather than merely fixed.
+
+The arena keeps its scaling and should: it is a white square standing in for geometry, and
+stretching it into a platform is the entire point. The rule is about art with pixels in it.
+
+> **World-space UI has its own conversion.** `PanelSettings.pixelsPerUnit` already turns a panel's
+> authored pixels into metres, so scaling its transform on top applies a second one. `PlayerNameplate`
+> keeps its transform at 1 and drives the document's pixel size from a width in metres instead.
 
 ## The netcode layer is built for this game, not for reuse
 
