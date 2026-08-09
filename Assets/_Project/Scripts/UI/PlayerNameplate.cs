@@ -26,6 +26,9 @@ namespace Snackdown.UI
         [Tooltip("How wide the plate should be in world units. The character is about 0.7 wide.")]
         [SerializeField] float _widthInWorldUnits = 1.6f;
 
+        [Tooltip("How far above the character's centre it floats, in world units. The character is 0.9 tall.")]
+        [SerializeField] float _heightInWorldUnits = 0.75f;
+
         [Tooltip("Life this player has, in seconds, at which the bar turns red.")]
         [SerializeField] float _lowLifeSeconds = 10f;
 
@@ -48,14 +51,19 @@ namespace Snackdown.UI
         /// Sizes the panel from a width in world units rather than a scale factor.
         /// </summary>
         /// <remarks>
-        /// A world-space panel has two sizes that both matter and mean different things: how many
-        /// UI pixels it is authored at, and how big that rectangle is in metres. Only the second is
-        /// something anyone can reason about — "as wide as two characters" — while the scale factor
-        /// that connects them is a number nobody can sanity-check by looking at it. So the scale is
-        /// derived here and the authored resolution stays a detail of the layout.
+        /// <para>A world-space panel has two sizes that both matter and mean different things: how
+        /// many UI pixels it is authored at, and how big that rectangle is in metres. Only the
+        /// second is something anyone can reason about — "as wide as two characters" — while the
+        /// scale factor that connects them is a number nobody can sanity-check by looking at it. So
+        /// the scale is derived here and the authored resolution stays a detail of the layout.</para>
         /// <para>The ratio between the two is also what decides whether the text is legible: it
         /// fixes how many UI pixels fall on one world unit, and therefore how much the rasterized
         /// text is squeezed when the panel is drawn on a small window.</para>
+        /// <para><b>The parent's scale is divided out.</b> This hangs off the character's visual
+        /// child so it inherits the correction smoothing, and that child is scaled up to size the
+        /// sprite — so a plate authored as "1.6 units wide, 0.75 up" silently came out three times
+        /// both. Compensating here is what lets the two fields above keep meaning world units no
+        /// matter what the art needs the sprite scaled to.</para>
         /// </remarks>
         void ApplyWorldSize()
         {
@@ -64,7 +72,12 @@ namespace Snackdown.UI
             Vector2 authored = _document.worldSpaceSize;
             if (authored.x <= 0f) return;
 
-            transform.localScale = Vector3.one * (_widthInWorldUnits / authored.x);
+            Transform parent = transform.parent;
+            float parentScale = parent != null ? parent.lossyScale.x : 1f;
+            if (Mathf.Approximately(parentScale, 0f)) return;
+
+            transform.localScale = Vector3.one * (_widthInWorldUnits / authored.x / parentScale);
+            transform.localPosition = new Vector3(0f, _heightInWorldUnits / parentScale, 0f);
         }
 
         /// <remarks>Lets the width be dragged in the Inspector and seen at once, rather than tuned by restart.</remarks>
