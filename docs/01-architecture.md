@@ -95,7 +95,7 @@ Three scenes, and the split is what makes several arenas possible:
 
 | Scene | Holds | Lifetime |
 |---|---|---|
-| **Bootstrap** | `NetworkManager`, `MatchDirector`, `RoundReferee`, `SessionRoster`, the tick loop, the loading screen, the scoreboard and the end screen | The whole session |
+| **Bootstrap** | `NetworkManager`, `MatchDirector`, `RoundReferee`, `SessionRoster`, the tick loop, the loading screen, the round clock, the life bars and the end screen | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
 | **Arena01** | Geometry, spawn points, camera | During a match |
 

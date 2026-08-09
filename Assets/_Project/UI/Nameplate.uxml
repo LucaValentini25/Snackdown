@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Option A: the nickname and life bar that float above a character, rendered in world space.
+
+    One document per character, living on the character. That is the whole point of the world-space
+    panel: the bar follows its owner because it *is* attached to them, rather than because something
+    reprojects a screen-space element onto their head every frame.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="nameplate-root" class="nameplate" picking-mode="Ignore">
+        <ui:Label name="nameplate-name" text="" class="nameplate__name" />
+
+        <ui:VisualElement class="nameplate__track">
+            <ui:VisualElement name="nameplate-fill" class="nameplate__fill" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

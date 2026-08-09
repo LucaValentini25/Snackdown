@@ -235,7 +235,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Match.RoundReferee
   ShowTopMostFoldoutHeaderGroup: 1
   _config: {fileID: 11400000, guid: f0c5d336e0e603a48a6e4b1112a396f1, type: 2}
---- !u!1 &579965715
+--- !u!1 &553306926
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -243,37 +243,121 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 579965718}
-  - component: {fileID: 579965717}
-  - component: {fileID: 579965716}
+  - component: {fileID: 553306930}
+  - component: {fileID: 553306929}
+  - component: {fileID: 553306928}
+  - component: {fileID: 553306927}
   m_Layer: 0
-  m_Name: Scoreboard
+  m_Name: LifeBars
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &579965716
+--- !u!114 &553306927
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 579965715}
+  m_GameObject: {fileID: 553306926}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 586e73d7b2ee15f4b8a1e5d5894da6ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.UI::Snackdown.UI.LifeBarStyle
+  _placement: 1
+  _toggleKey: 96
+--- !u!114 &553306928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 553306926}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fdd5d42376d3064996ab1cbeddb72ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.UI::Snackdown.UI.LifeBarsController
+  _catalog: {fileID: 11400000, guid: 92853318d586d664da8d82fdcc66ac3a, type: 2}
+  _lowLifeSeconds: 10
+--- !u!114 &553306929
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 553306926}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: 93cc4f7f5f0e2ef45ab25b101387d0f7, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 9197481963319205126, guid: bc3b4770be3d67c4c8fcf213504571ce, type: 3}
+  m_SortingOrder: 6
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!4 &553306930
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 553306926}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &778144812
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 778144815}
+  - component: {fileID: 778144814}
+  - component: {fileID: 778144813}
+  m_Layer: 0
+  m_Name: RoundClock
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &778144813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 778144812}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6be6dc6e6bb4bdd41903c79e15c144ac, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Snackdown.UI::Snackdown.UI.ScoreboardController
+  m_EditorClassIdentifier: Snackdown.UI::Snackdown.UI.RoundClockController
   _urgentBelowSeconds: 30
-  _lowLifeSeconds: 10
---- !u!114 &579965717
+--- !u!114 &778144814
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 579965715}
+  m_GameObject: {fileID: 778144812}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
@@ -290,13 +374,13 @@ MonoBehaviour:
   m_PivotReferenceSize: 0
   m_Pivot: 0
   m_WorldSpaceCollider: {fileID: 0}
---- !u!4 &579965718
+--- !u!4 &778144815
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 579965715}
+  m_GameObject: {fileID: 778144812}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -605,4 +689,5 @@ SceneRoots:
   - {fileID: 283214383}
   - {fileID: 1662972189}
   - {fileID: 1626085025}
-  - {fileID: 579965718}
+  - {fileID: 778144815}
+  - {fileID: 553306930}

@@ -254,72 +254,151 @@
     -unity-text-align: middle-center;
 }
 
-/* ── in-match scoreboard ────────────────────────────────────────────── */
+/* ── round clock ────────────────────────────────────────────────────── */
 
-/* Top-left and out of the way: the match is the thing being watched, not this. */
-.scoreboard-root {
+.clock-root {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    align-items: flex-start;
+    top: 10px;
+    left: 0;
+    right: 0;
+    align-items: center;
 }
 
 .round-clock {
     font-size: 22px;
     -unity-font-style: bold;
     color: var(--ink);
-    margin-bottom: 6px;
-    padding: 2px 8px;
+    padding: 2px 12px;
     background-color: rgba(12, 11, 16, 0.55);
     border-radius: 4px;
 }
 
-/* Turns amber under half a minute, so running out is felt before it is read. */
+/* Red under the threshold, so running out is felt before it is read. */
 .round-clock--urgent {
     color: var(--bad);
 }
 
-.scoreboard {
-    min-width: 190px;
+/* ── option A: nameplate over the character (world space) ────────────────────── */
+
+/*
+ * Sizes here are in the panel's own units, not screen pixels: the document is rendered onto a quad
+ * in the world, so what decides how big this looks on screen is the quad's size and the camera --
+ * not these numbers. They set the proportions.
+ */
+.nameplate {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: flex-end;
 }
 
-.score-row {
+.nameplate__name {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgb(12, 11, 16);
+    margin-bottom: 2px;
+}
+
+.nameplate__track {
+    width: 90%;
+    height: 12px;
+    background-color: rgba(12, 11, 16, 0.75);
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgb(12, 11, 16);
+    overflow: hidden;
+}
+
+.nameplate__fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--ok);
+}
+
+.nameplate__fill--low {
+    background-color: var(--bad);
+}
+
+/* ── option B: life bars along the bottom ───────────────────────────────── */
+
+.lifebars-root {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    align-items: center;
+    padding: 10px;
+}
+
+.lifebars-row {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.lifebar {
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-    padding: 3px 8px;
-    margin-bottom: 2px;
-    background-color: rgba(12, 11, 16, 0.55);
+    margin: 0 6px;
+    padding: 6px 10px;
+    background-color: rgba(12, 11, 16, 0.72);
+    border-radius: var(--radius);
+    border-width: 1px;
+    border-color: var(--panel-edge);
+}
+
+/* Cropped to the head: the pack's frames are full-body, and a full body shrunk to 40px is a smudge. */
+.lifebar__portrait {
+    width: 40px;
+    height: 40px;
+    margin-right: 8px;
+    background-color: var(--panel);
     border-radius: 4px;
+    -unity-background-scale-mode: scale-to-fit;
 }
 
-.score-row__name {
-    font-size: 13px;
+.lifebar__column {
+    min-width: 130px;
+}
+
+.lifebar__name {
+    font-size: 12px;
     color: var(--ink);
-    margin-right: 12px;
+    margin-bottom: 3px;
 }
 
-.score-row__you {
+.lifebar__name--you {
     color: var(--accent);
 }
 
-.score-row__life {
-    font-size: 13px;
+.lifebar__track {
+    height: 12px;
+    background-color: var(--bg);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.lifebar__fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--ok);
+}
+
+.lifebar__fill--low {
+    background-color: var(--bad);
+}
+
+.lifebar__seconds {
+    font-size: 14px;
     -unity-font-style: bold;
     color: var(--ink);
+    margin-left: 10px;
+    min-width: 46px;
+    -unity-text-align: middle-right;
 }
 
-.score-row__life--low {
-    color: var(--bad);
-}
-
-/* A player who is out stays on the board, dimmed. Removing the row would shuffle everyone
-   else's position at the exact moment the reader is looking for what changed. */
-.score-row--out {
+/* Out, not gone: the entry stays so nobody else shifts position. */
+.lifebar--out {
     opacity: 0.45;
-}
-
-.score-row--out .score-row__life {
-    color: var(--ink-dim);
 }
 

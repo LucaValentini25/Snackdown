@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Option B: one entry per player along the bottom of the screen — portrait, nickname, life bar.
+
+    Entries are built from code because how many there are is a property of the session, not of the
+    layout. The template lives in the controller, next to what fills it.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="lifebars-root" class="lifebars-root hidden" picking-mode="Ignore">
+        <ui:VisualElement name="lifebars-row" class="lifebars-row" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>
