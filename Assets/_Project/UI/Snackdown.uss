@@ -281,9 +281,10 @@
 /* ── option A: nameplate over the character (world space) ────────────────────── */
 
 /*
- * Sizes here are in the panel's own units, not screen pixels: the document is rendered onto a quad
- * in the world, so what decides how big this looks on screen is the quad's size and the camera --
- * not these numbers. They set the proportions.
+ * Sizes here are in the panel's authored pixels, and the panel is 160 of them wide standing for
+ * 1.6 world units -- so 100 authored pixels to the metre, and a character is 70 wide. What makes
+ * the text legible is that ratio, not these numbers on their own: author the same layout at four
+ * times the resolution and every glyph gets squeezed into a quarter of the space on screen.
  */
 .nameplate {
     flex-grow: 1;
@@ -292,19 +293,19 @@
 }
 
 .nameplate__name {
-    font-size: 22px;
+    font-size: 34px;
     -unity-font-style: bold;
     color: var(--ink);
-    -unity-text-outline-width: 1px;
+    -unity-text-outline-width: 2px;
     -unity-text-outline-color: rgb(12, 11, 16);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 .nameplate__track {
-    width: 90%;
-    height: 12px;
+    width: 100%;
+    height: 16px;
     background-color: rgba(12, 11, 16, 0.75);
-    border-radius: 6px;
+    border-radius: 8px;
     border-width: 2px;
     border-color: rgb(12, 11, 16);
     overflow: hidden;

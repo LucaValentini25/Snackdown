@@ -23,6 +23,9 @@ namespace Snackdown.UI
     [RequireComponent(typeof(UIDocument))]
     public class PlayerNameplate : MonoBehaviour
     {
+        [Tooltip("How wide the plate should be in world units. The character is about 0.7 wide.")]
+        [SerializeField] float _widthInWorldUnits = 1.6f;
+
         [Tooltip("Life this player has, in seconds, at which the bar turns red.")]
         [SerializeField] float _lowLifeSeconds = 10f;
 
@@ -37,6 +40,38 @@ namespace Snackdown.UI
         {
             _document = GetComponent<UIDocument>();
             _life = GetComponentInParent<PlayerLife>();
+
+            ApplyWorldSize();
+        }
+
+        /// <summary>
+        /// Sizes the panel from a width in world units rather than a scale factor.
+        /// </summary>
+        /// <remarks>
+        /// A world-space panel has two sizes that both matter and mean different things: how many
+        /// UI pixels it is authored at, and how big that rectangle is in metres. Only the second is
+        /// something anyone can reason about — "as wide as two characters" — while the scale factor
+        /// that connects them is a number nobody can sanity-check by looking at it. So the scale is
+        /// derived here and the authored resolution stays a detail of the layout.
+        /// <para>The ratio between the two is also what decides whether the text is legible: it
+        /// fixes how many UI pixels fall on one world unit, and therefore how much the rasterized
+        /// text is squeezed when the panel is drawn on a small window.</para>
+        /// </remarks>
+        void ApplyWorldSize()
+        {
+            if (_document == null || _widthInWorldUnits <= 0f) return;
+
+            Vector2 authored = _document.worldSpaceSize;
+            if (authored.x <= 0f) return;
+
+            transform.localScale = Vector3.one * (_widthInWorldUnits / authored.x);
+        }
+
+        /// <remarks>Lets the width be dragged in the Inspector and seen at once, rather than tuned by restart.</remarks>
+        void OnValidate()
+        {
+            if (_document == null) _document = GetComponent<UIDocument>();
+            ApplyWorldSize();
         }
 
         void OnEnable()
