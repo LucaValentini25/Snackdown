@@ -55,6 +55,14 @@ namespace Snackdown.Gameplay.Match
         public MatchOutcome Outcome => _outcome.Value;
         public bool HasWinner => _winner.Value != NoWinnerId;
 
+        /// <summary>Whether this round ends on a clock at all.</summary>
+        /// <remarks>
+        /// False in the sandbox, where a round that never times out is the point. Anything that
+        /// draws the clock should ask this first rather than render the sentinel deadline, which
+        /// would read as a match with several billion seconds left.
+        /// </remarks>
+        public bool HasTimeLimit => _roundEndsAtServerTime.Value < double.MaxValue;
+
         /// <summary>Seconds left in the round, derived locally from the shared clock.</summary>
         public float RoundRemaining
         {
@@ -64,6 +72,11 @@ namespace Snackdown.Gameplay.Match
                 return Mathf.Max(0f, (float)(_roundEndsAtServerTime.Value - NetworkManager.ServerTime.Time));
             }
         }
+
+        /// <summary>The rules in force, preferring the match's copy over this component's own.</summary>
+        MatchConfig Rules => MatchDirector.Current != null && MatchDirector.Current.Rules != null
+            ? MatchDirector.Current.Rules
+            : _config;
 
         public static RoundReferee Current { get; private set; }
 
@@ -125,8 +138,14 @@ namespace Snackdown.Gameplay.Match
             _outcome.Value = MatchOutcome.Undecided;
             _startingPlayers = PlayerLife.All.Count;
 
-            float seconds = _config != null ? _config.RoundSeconds : FallbackRoundSeconds;
-            _roundEndsAtServerTime.Value = NetworkManager.ServerTime.Time + seconds;
+            MatchConfig rules = Rules;
+            float seconds = rules != null ? rules.RoundSeconds : FallbackRoundSeconds;
+
+            // A round of zero seconds means no clock at all, which is what the sandbox runs under.
+            // Expressing "untimed" as data keeps it out of the rules themselves.
+            _roundEndsAtServerTime.Value = seconds > 0f
+                ? NetworkManager.ServerTime.Time + seconds
+                : double.MaxValue;
         }
 
         void Decide(ulong winner, MatchOutcome outcome)

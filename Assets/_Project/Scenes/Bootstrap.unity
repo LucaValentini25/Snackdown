@@ -221,6 +221,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   _arenas: {fileID: 11400000, guid: 14189454d9a1f354cbda24f3665c14f4, type: 2}
   _countdownSeconds: 3
+  _rules: {fileID: 11400000, guid: f0c5d336e0e603a48a6e4b1112a396f1, type: 2}
 --- !u!114 &283214387
 MonoBehaviour:
   m_ObjectHideFlags: 0

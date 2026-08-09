@@ -23,11 +23,14 @@ namespace Snackdown.UI
     [RequireComponent(typeof(UIDocument))]
     public class PlayerNameplate : MonoBehaviour
     {
-        [Tooltip("How wide the plate should be in world units. The character is about 0.7 wide.")]
-        [SerializeField] float _widthInWorldUnits = 1.6f;
+        [Tooltip("How wide the plate is, in world units. The character sprite is 1 unit wide.")]
+        [SerializeField] float _widthInWorldUnits = 1.4f;
 
-        [Tooltip("How far above the character's centre it floats, in world units. The character is 0.9 tall.")]
-        [SerializeField] float _heightInWorldUnits = 0.75f;
+        [Tooltip("How tall the plate is, in world units — the name and the bar together.")]
+        [SerializeField] float _heightInWorldUnits = 0.56f;
+
+        [Tooltip("How far above the character's centre it floats, in world units.")]
+        [SerializeField] float _offsetAboveCharacter = 0.85f;
 
         [Tooltip("Life this player has, in seconds, at which the bar turns red.")]
         [SerializeField] float _lowLifeSeconds = 10f;
@@ -51,40 +54,68 @@ namespace Snackdown.UI
         /// Sizes the panel from a width in world units rather than a scale factor.
         /// </summary>
         /// <remarks>
-        /// <para>A world-space panel has two sizes that both matter and mean different things: how
-        /// many UI pixels it is authored at, and how big that rectangle is in metres. Only the
-        /// second is something anyone can reason about — "as wide as two characters" — while the
-        /// scale factor that connects them is a number nobody can sanity-check by looking at it. So
-        /// the scale is derived here and the authored resolution stays a detail of the layout.</para>
-        /// <para>The ratio between the two is also what decides whether the text is legible: it
-        /// fixes how many UI pixels fall on one world unit, and therefore how much the rasterized
-        /// text is squeezed when the panel is drawn on a small window.</para>
-        /// <para><b>The parent's scale is divided out.</b> This hangs off the character's visual
-        /// child so it inherits the correction smoothing, and that child is scaled up to size the
-        /// sprite — so a plate authored as "1.6 units wide, 0.75 up" silently came out three times
-        /// both. Compensating here is what lets the two fields above keep meaning world units no
-        /// matter what the art needs the sprite scaled to.</para>
+        /// <para><b>The transform is left at scale 1 and the panel is authored at its real size.</b>
+        /// A world-space panel already converts its pixels to metres through
+        /// <c>PanelSettings.pixelsPerUnit</c>, so scaling the transform on top applies a second
+        /// conversion to something Unity has already converted. Doing both is what produced a plate
+        /// 0.014 units wide — a bar a couple of pixels tall — from numbers that read like they asked
+        /// for 1.4.</para>
+        /// <para>So the size in metres drives the document's size in pixels, and nothing is scaled.
+        /// One consequence worth knowing when editing the USS: at 100 pixels per unit, every 100
+        /// pixels there is one world unit, which is what makes a 34px name 0.34 units tall against a
+        /// character of 1.</para>
+        /// <para>The parent's scale is still divided out of the offset. This hangs off the
+        /// character's visual child so it inherits the correction smoothing, and if that child is
+        /// ever scaled again the offset would silently move with it.</para>
         /// </remarks>
         void ApplyWorldSize()
         {
-            if (_document == null || _widthInWorldUnits <= 0f) return;
+            if (_document == null || _widthInWorldUnits <= 0f || _heightInWorldUnits <= 0f) return;
 
-            Vector2 authored = _document.worldSpaceSize;
-            if (authored.x <= 0f) return;
+            _document.worldSpaceSizeMode = UIDocument.WorldSpaceSizeMode.Fixed;
+            _document.worldSpaceSize = new Vector2(
+                _widthInWorldUnits * PanelPixelsPerUnit,
+                _heightInWorldUnits * PanelPixelsPerUnit);
 
             Transform parent = transform.parent;
             float parentScale = parent != null ? parent.lossyScale.x : 1f;
             if (Mathf.Approximately(parentScale, 0f)) return;
 
-            transform.localScale = Vector3.one * (_widthInWorldUnits / authored.x / parentScale);
-            transform.localPosition = new Vector3(0f, _heightInWorldUnits / parentScale, 0f);
+            transform.localScale = Vector3.one / parentScale;
+            transform.localPosition = new Vector3(0f, _offsetAboveCharacter / parentScale, 0f);
         }
 
-        /// <remarks>Lets the width be dragged in the Inspector and seen at once, rather than tuned by restart.</remarks>
+        /// <summary>
+        /// Pixels the panel puts in one world unit. Must match <c>WorldSpacePanelSettings</c>.
+        /// </summary>
+        /// <remarks>
+        /// A constant because <c>PanelSettings.pixelsPerUnit</c> is internal to UI Toolkit and not
+        /// readable from game code. <see cref="OnValidate"/> compares it against the asset in the
+        /// editor, so the two cannot drift apart quietly — which is the only real danger in copying
+        /// a number that lives somewhere else.
+        /// </remarks>
+        const float PanelPixelsPerUnit = 100f;
+
+        /// <remarks>Lets the size be dragged in the Inspector and seen at once, rather than tuned by restart.</remarks>
         void OnValidate()
         {
             if (_document == null) _document = GetComponent<UIDocument>();
             ApplyWorldSize();
+
+#if UNITY_EDITOR
+            if (_document == null || _document.panelSettings == null) return;
+
+            var settings = new UnityEditor.SerializedObject(_document.panelSettings);
+            UnityEditor.SerializedProperty ppu = settings.FindProperty("m_PixelsPerUnit");
+
+            if (ppu != null && !Mathf.Approximately(ppu.floatValue, PanelPixelsPerUnit))
+            {
+                Debug.LogWarning(
+                    $"[Snackdown] {_document.panelSettings.name} is set to {ppu.floatValue} pixels per unit, "
+                    + $"but {nameof(PlayerNameplate)} assumes {PanelPixelsPerUnit}. The nameplate will be "
+                    + $"{ppu.floatValue / PanelPixelsPerUnit:0.##}x the size asked for.", this);
+            }
+#endif
         }
 
         void OnEnable()

@@ -43,6 +43,7 @@ namespace Snackdown.UI
 
             bool visible = director != null
                            && referee != null
+                           && referee.HasTimeLimit
                            && (director.Phase == MatchPhase.Playing || director.Phase == MatchPhase.Ended);
 
             _root.EnableInClassList("hidden", !visible);

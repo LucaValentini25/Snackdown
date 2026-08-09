@@ -30,6 +30,18 @@ namespace Snackdown.Gameplay.Match
         [Tooltip("Seconds between the arena being ready and play starting.")]
         [SerializeField] float _countdownSeconds = 3f;
 
+        [Tooltip("The rules this match runs under. Everything that reads them should read them here.")]
+        [SerializeField] MatchConfig _rules;
+
+        /// <summary>The numbers this match is being played with.</summary>
+        /// <remarks>
+        /// Held once, by the match, instead of separately by every player and by the referee. Three
+        /// copies of the same reference is three chances for one of them to point at a different
+        /// asset, and no way to tell from the Inspector that they had. It is also what lets the
+        /// sandbox scene run under its own rules without a second player prefab.
+        /// </remarks>
+        public MatchConfig Rules => _rules;
+
         readonly NetworkVariable<MatchPhase> _phase = new NetworkVariable<MatchPhase>(MatchPhase.Lobby);
         readonly NetworkVariable<int> _arenaIndex = new NetworkVariable<int>(0);
 

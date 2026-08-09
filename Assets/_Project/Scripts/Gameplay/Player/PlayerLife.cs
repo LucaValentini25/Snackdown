@@ -48,12 +48,24 @@ namespace Snackdown.Gameplay.Player
 
         public bool IsAlive => _alive.Value;
 
+        /// <summary>
+        /// The rules in force, preferring the match's copy over this prefab's own.
+        /// </summary>
+        /// <remarks>
+        /// The prefab reference stays as the fallback for a bare test scene with no director. When
+        /// there is one, its asset wins — which is what lets the sandbox run with the drain off
+        /// without needing a second player prefab to carry that difference.
+        /// </remarks>
+        MatchConfig Rules => MatchDirector.Current != null && MatchDirector.Current.Rules != null
+            ? MatchDirector.Current.Rules
+            : _config;
+
         /// <summary>Seconds left, smoothed on clients so the readout does not tick in steps.</summary>
         public float Remaining => IsServer ? _exactLife : _displayed;
 
         /// <summary>Fraction of <see cref="MatchConfig.MaxLife"/> remaining, for a bar.</summary>
-        public float Fraction => _config != null && _config.MaxLife > 0f
-            ? Mathf.Clamp01(Remaining / _config.MaxLife)
+        public float Fraction => Rules != null && Rules.MaxLife > 0f
+            ? Mathf.Clamp01(Remaining / Rules.MaxLife)
             : 0f;
 
         /// <summary>Raised on the server the moment this player runs out.</summary>
@@ -97,7 +109,7 @@ namespace Snackdown.Gameplay.Player
 
             if (IsServer)
             {
-                _exactLife = _config.StartingLife;
+                _exactLife = Rules.StartingLife;
                 _life.Value = _exactLife;
                 _alive.Value = true;
             }
@@ -138,7 +150,7 @@ namespace Snackdown.Gameplay.Player
             if (director == null || !director.IsPlaying) return;
             if (!IsAlive) return;
 
-            _exactLife = Mathf.Max(0f, _exactLife - _config.DrainPerSecond * Time.deltaTime);
+            _exactLife = Mathf.Max(0f, _exactLife - Rules.DrainPerSecond * Time.deltaTime);
 
             _sinceLastPublish += Time.deltaTime;
 
@@ -146,7 +158,7 @@ namespace Snackdown.Gameplay.Player
             // the round, and up to a second of everyone believing a dead player is alive is a
             // second of shots landing on someone who has already lost.
             bool ranOut = _exactLife <= 0f;
-            if (_sinceLastPublish >= _config.ReplicationInterval || ranOut)
+            if (_sinceLastPublish >= Rules.ReplicationInterval || ranOut)
             {
                 _sinceLastPublish = 0f;
                 _life.Value = _exactLife;
@@ -168,7 +180,7 @@ namespace Snackdown.Gameplay.Player
             // Between updates the client drains at the same rate the server does, so the readout
             // moves continuously instead of stepping once a second. The published value is still
             // the truth: it snaps this back into line on arrival.
-            _displayed = Mathf.Max(0f, _displayed - _config.DrainPerSecond * Time.deltaTime);
+            _displayed = Mathf.Max(0f, _displayed - Rules.DrainPerSecond * Time.deltaTime);
         }
 
         // ==================================================================================
@@ -180,7 +192,7 @@ namespace Snackdown.Gameplay.Player
         {
             if (!IsServer || seconds <= 0f || !IsAlive) return;
 
-            _exactLife = Mathf.Min(_config.MaxLife, _exactLife + seconds);
+            _exactLife = Mathf.Min(Rules.MaxLife, _exactLife + seconds);
 
             // Published at once so the pickup reads as instant. Waiting for the interval would make
             // fruit feel unresponsive in the one moment the player is looking for feedback.
@@ -194,7 +206,7 @@ namespace Snackdown.Gameplay.Player
             if (!IsServer) return;
 
             _reportedDeath = false;
-            _exactLife = _config.StartingLife;
+            _exactLife = Rules.StartingLife;
             _sinceLastPublish = 0f;
             _life.Value = _exactLife;
             _alive.Value = true;
