@@ -48,8 +48,17 @@ namespace Snackdown.Connection
             }
         }
 
+        /// <summary>The roster for the running session, if there is one.</summary>
+        /// <remarks>
+        /// The same ambient-static pattern as <c>MatchDirector.Current</c>, and here for a concrete
+        /// reason: the in-match HUD reads names every frame, and a scene search at that rate is a
+        /// cost that only shows up once a profiler is open.
+        /// </remarks>
+        public static SessionRoster Current { get; private set; }
+
         public override void OnNetworkSpawn()
         {
+            Current = this;
             _slots.OnListChanged += OnSlotsChanged;
 
             if (IsServer)
@@ -74,6 +83,8 @@ namespace Snackdown.Connection
                 NetworkManager.OnClientConnectedCallback -= AddPlayer;
                 NetworkManager.OnClientDisconnectCallback -= RemovePlayer;
             }
+
+            if (ReferenceEquals(Current, this)) Current = null;
         }
 
         void OnSlotsChanged(NetworkListEvent<PlayerSlot> _) => Changed?.Invoke();

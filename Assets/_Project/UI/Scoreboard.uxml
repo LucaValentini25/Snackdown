@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The in-match HUD: the round clock, and who has how much life left.
+
+    Rows are built from code rather than declared here, because how many there are is a property of
+    the session, not of the layout. The template row lives in the controller next to the code that
+    fills it.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="scoreboard-root" class="scoreboard-root hidden" picking-mode="Ignore">
+        <ui:Label name="round-clock" text="" class="round-clock" />
+        <ui:VisualElement name="scoreboard-rows" class="scoreboard" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

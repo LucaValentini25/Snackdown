@@ -1,5 +1,5 @@
 /*
- * Shared styling for the menu and lobby.
+ * Shared styling for every screen: menu, lobby, loading, in-match HUD and end screen.
  *
  * Deliberately built from a handful of variables rather than per-element values: the palette and
  * spacing are the two things that change when placeholder art is replaced with real art, and having
@@ -253,3 +253,73 @@
 .end-panel .subtitle {
     -unity-text-align: middle-center;
 }
+
+/* ── in-match scoreboard ────────────────────────────────────────────── */
+
+/* Top-left and out of the way: the match is the thing being watched, not this. */
+.scoreboard-root {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    align-items: flex-start;
+}
+
+.round-clock {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--ink);
+    margin-bottom: 6px;
+    padding: 2px 8px;
+    background-color: rgba(12, 11, 16, 0.55);
+    border-radius: 4px;
+}
+
+/* Turns amber under half a minute, so running out is felt before it is read. */
+.round-clock--urgent {
+    color: var(--bad);
+}
+
+.scoreboard {
+    min-width: 190px;
+}
+
+.score-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 8px;
+    margin-bottom: 2px;
+    background-color: rgba(12, 11, 16, 0.55);
+    border-radius: 4px;
+}
+
+.score-row__name {
+    font-size: 13px;
+    color: var(--ink);
+    margin-right: 12px;
+}
+
+.score-row__you {
+    color: var(--accent);
+}
+
+.score-row__life {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--ink);
+}
+
+.score-row__life--low {
+    color: var(--bad);
+}
+
+/* A player who is out stays on the board, dimmed. Removing the row would shuffle everyone
+   else's position at the exact moment the reader is looking for what changed. */
+.score-row--out {
+    opacity: 0.45;
+}
+
+.score-row--out .score-row__life {
+    color: var(--ink-dim);
+}
+

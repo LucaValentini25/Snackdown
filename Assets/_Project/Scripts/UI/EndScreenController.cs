@@ -91,7 +91,7 @@ namespace Snackdown.UI
 
         static string NameOf(ulong clientId)
         {
-            SessionRoster roster = FindFirstObjectByType<SessionRoster>();
+            SessionRoster roster = SessionRoster.Current;
             if (roster == null) return $"Player {clientId}";
 
             for (int i = 0; i < roster.Count; i++)

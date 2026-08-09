@@ -101,7 +101,9 @@ The predicted local player stays responsive at both.
 
 Ordered by value-per-effort; each is independently droppable.
 
-1. [ ] **Live scoreboard** — `NetworkVariable` + events over data Phase 3 already computes. Cheapest, and it's what makes a recorded demo readable.
+1. [x] **Live scoreboard** — round clock and everyone's life, in the corner. It puts **nothing new
+   on the wire**: every number it shows already crossed the network for its own reason, so it is a
+   view rather than a second copy of facts that can disagree with the first.
 2. [ ] **Decide how peer contact is predicted** — today a client resolves contact against
    *interpolated* peer positions, so it is offset from the server by the interpolation delay plus its
    own lead, and close contact between two moving players reliably corrects. The documented options are
