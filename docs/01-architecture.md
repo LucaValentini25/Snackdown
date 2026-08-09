@@ -14,15 +14,32 @@ layer doesn't know there's a game at all.
 │                interpolation                             │
 ├─────────────────────────────────────────────────────────┤
 │  Simulation    PlayerState, InputCommand, PlayerMotor    │
-│                — the state, and the pure step over it    │
+│                — the state, and the replayable step      │
 ├─────────────────────────────────────────────────────────┤
 │  Connection    IConnectionProvider → LAN | Relay,        │
 │                approval, lobby                            │
 ├─────────────────────────────────────────────────────────┤
-│  Core          Bootstrap, scene flow, service locators   │
+│  Core          Bootstrap, scene exclusion, frame policy  │
 └─────────────────────────────────────────────────────────┘
         (Netcode for GameObjects + Unity Transport underneath)
 ```
+
+Two words in that diagram are worth being precise about, because the loose reading of either one is
+false.
+
+**"Replayable", not "pure".** `PlayerMotor.Simulate` never reads `Time`, a `Transform` or a
+`Rigidbody2D` — everything it needs arrives as an argument, which is what lets a replay re-run tick 40
+and get tick 40's answer. But it *does* query the live physics scene for terrain
+(`Physics2D.BoxCast` against `GroundMask`). So the property is: **pure with respect to time and object
+state; static geometry is read through casts.** That holds today because arenas have no moving
+geometry. The first moving platform breaks replay silently, and the extension point for it is
+`SimulationContext`, which already exists for exactly this reason.
+
+**`Core` holds bootstrap, not services.** It is two files: `AppBootstrap`, which keeps the menu scene
+out of NGO's synchronization, and `FrameRatePolicy`. There is no service locator in it and no app
+state machine — see [Ambient lookups](#ambient-lookups) for the pattern the project actually uses and
+why. `Core` is expected to grow into the app-level scene flow; the diagram describes what it holds
+now.
 
 **Simulation** sits under netcode because both sides of the wire need it and neither owns it. The
 server simulates with it, the owning client predicts with it, and the buffer stores what it produced
@@ -35,25 +52,35 @@ under [Assemblies](#assemblies-one-per-system).
 Assets/
 ├── _Project/                 ← everything we write lives here
 │   ├── Scripts/
-│   │   ├── Core/             FrameRatePolicy (Phase 2: app state machine, scene flow)
-│   │   ├── Connection/       IConnectionProvider, DirectProvider, RelayProvider, approval
+│   │   ├── Core/             AppBootstrap, FrameRatePolicy
+│   │   ├── Connection/       IConnectionProvider, DirectConnectionProvider,
+│   │   │                     RelayConnectionProvider, ConnectionApproval, ConnectionPayload,
+│   │   │                     ConnectionRequest, ConnectionResult, SessionRoster, PlayerSlot
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
-│   │   │                     MovementConfig — the state, the input, the pure step
+│   │   │                     MovementConfig, SimulationContext — the state, the input,
+│   │   │                     the replayable step
 │   │   ├── Netcode/          NetworkSimulationLoop, IPredictedPeer, PredictionBuffer,
-│   │   │                     SnapshotFrame, SnapshotInterpolator, VisualSmoother,
-│   │   │                     ReconciliationStats, RunRecorder
+│   │   │                     SnapshotFrame, SnapshotInterpolator, WorldSnapshotBuffer,
+│   │   │                     VisualSmoother, ReconciliationStats, RunRecorder
 │   │   ├── Gameplay/
-│   │   │   ├── Match/        MatchDirector, MatchPhase, ArenaCatalog
-│   │   │   ├── Player/       PredictedPlayer, PlayerSpawnPoints, CharacterAppearance
-│   │   │   ├── Fruits/       Spawner, fruit pickup
-│   │   │   └── Combat/       Head-bounce, stun
-│   │   ├── UI/               NetDebugOverlay, MainMenuController
-│   │   └── Input/            InputReader
-│   ├── UI/                   MainMenu.uxml, Snackdown.uss, MenuPanelSettings
+│   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchOutcome,
+│   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera
+│   │   │   ├── Player/       PredictedPlayer, PlayerLife, PlayerSpawnPoints,
+│   │   │   │                 CharacterAppearance, CharacterCatalog
+│   │   │   ├── Fruits/       Fruit, FruitSpawner, FruitTable
+│   │   │   └── Combat/       HeadBounce
+│   │   ├── UI/               MainMenuController, LoadingScreenController,
+│   │   │                     EndScreenController, NetDebugOverlay
+│   │   └── Input/            InputReader, SpectatorInput
+│   ├── UI/                   MainMenu.uxml, LoadingScreen.uxml, EndScreen.uxml,
+│   │                         Snackdown.uss, MenuPanelSettings
 │   ├── Scenes/               Bootstrap, Lobby, Arena01
-│   ├── Prefabs/              Player
-│   ├── Art/                  placeholder primitives for the test arena
-│   └── Settings/             ScriptableObject configs (movement, match, spawn tables)
+│   ├── Prefabs/              Player, Fruit
+│   ├── Art/                  placeholder primitives
+│   └── Settings/             ScriptableObject configs (movement, match, arenas,
+│                             characters, fruit table)
+├── Tests/EditMode/           simulation, prediction ring, interpolator, peer collision,
+│                             stun, fruit table, arena bounds, nickname sanitation
 ├── Pixel Adventure 1/        third-party art
 ├── DEVNIK 2D/                third-party UI
 ├── Settings/                 URP pipeline assets
@@ -98,7 +125,11 @@ These are the invariants every system must respect. If a change would break one 
 3. **The owning client may *predict*** its own character to hide latency, but the server's word
    overrides it (reconciliation).
 4. **Remote clients only *interpolate*** authoritative snapshots — they never predict other players.
-5. **RPCs are validated.** A `ServerRpc` assumes the caller is hostile until checked.
+5. **RPCs are validated.** A `ServerRpc` assumes the caller is hostile until checked — and "checked"
+   means two separate things, both required. **Who** sent it: declared with `InvokePermission` on the
+   attribute, because NGO's default is `Everyone` and it enforces the permission receive-side, so the
+   declaration *is* the check. **What** they sent: range-checked where the value enters, not where it
+   is used, so the queue and everything built from it inherit the invariant.
 
 ## Settled parameters
 
@@ -107,7 +138,7 @@ These are the invariants every system must respect. If a change would break one 
 | Players per match | **4** | Enough that a client interpolates 3 remotes at once and bandwidth scales for real; matches the 4 Pixel Adventure characters; fits Relay's free tier and Multiplayer Play Mode on one machine. |
 | Topology | **Host** (listen server), written so a headless server stays possible | See [02 — Netcode](02-netcode.md#topology). |
 | Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
-| Player-vs-player contact | Solid, and **predicted** — resolved in the motor against past positions | Waiting for the server to decide it would cost a round trip on every bump. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
+| Player-vs-player contact | Solid, and **predicted** — resolved in the motor against buffered peer positions, which on a client are the *interpolated* ones | Waiting for the server to decide it would cost a round trip on every bump. The cost of not waiting is that a client predicts contact against peers as they were rendered, so close contact reliably produces a correction. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
 | Ending a round | **Last one standing**, or the most life left when the 3-minute clock runs out | Both were already implied by `MatchConfig`; a shared top value at the clock is reported as a draw rather than broken by client id, because `MaxLife` makes an exact tie reachable. |
 | A player who is out | **Hidden, not despawned** — and free to pan the camera around the arena | Despawning would take the roster entry and the life readout with it, and both are still needed by the end screen and the next round. |
 | Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
@@ -152,12 +183,36 @@ netcode code stays free of magic numbers.
 An earlier version of this document called the netcode layer "the reusable core". That claim is
 **dropped**, deliberately — lifting this layer into another game would mean a different state type, a
 different input type and a different wire format, which is most of what is in it. The cost was real
-and the payoff hypothetical. [ADR 0002](adr/0002-decoupling-the-netcode-layer.md) records the full
+and the payoff hypothetical. [ADR 0001](adr/0001-decoupling-the-netcode-layer.md) records the full
 analysis, including the NGO constraint that an `[Rpc]` cannot take a parameter closed over its
 class's generic parameter — the code generator crashes rather than reporting an error.
 
 What survives, and is enforced rather than promised, is the **layering**: gameplay depends on
-netcode, never the reverse.
+netcode, never the reverse. Enforced means the compiler rejects the other direction, not that the
+layer is portable — the ADR is explicit that it is not.
+
+## Ambient lookups
+
+Several systems are reached through a static rather than an injected reference: `MatchDirector.Current`,
+`RoundReferee.Current`, `ConnectionApproval.Current`, `ArenaBounds.Current`,
+`NetworkSimulationLoop.Instance`, plus the `PlayerLife.All` and `NetworkSimulationLoop.ActivePlayers`
+registries and two debug toggles.
+
+This is deliberate and it is the pattern the project uses instead of a container. Two reasons, and
+both are specific rather than stylistic:
+
+- **Spawn order is not something a scene can promise.** These objects come up as networked spawns, so
+  a serialized reference would be null exactly as often as it would be useful.
+- **Each peer is its own process, including under Multiplayer Play Mode.** A static is per-process,
+  which is the correct scope for "the match director in *this* session" — it is not shared state
+  between peers.
+
+The costs are real and worth naming rather than hiding. Every consumer null-checks, so forgetting one
+is a `NullReferenceException` during a scene transition; and anything reading one of these cannot be
+exercised in an EditMode test, which is visibly why the test suite covers `Simulation` and `Netcode`
+and almost nothing in `Gameplay/Match`. **A DI container would not fix either problem** — it would
+move the first and keep the second. What fixes the second is extracting the logic worth testing out
+of the `MonoBehaviour` that owns the static, which is a per-case decision.
 
 ## Assemblies — one per system
 

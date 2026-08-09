@@ -7,7 +7,7 @@ game teams converge on — kept as small as it can be while still being the real
 
 | Branch | Role | Rules |
 |---|---|---|
-| `main` | **Release.** Every commit is a version someone could download and play. | Never committed to directly. Only receives merges from `dev` at release time, and each one gets a tag. |
+| `main` | **Release.** Every commit is a version someone could download and play. | Never committed to directly. Only receives merges from `dev` at release time, and each one gets a tag. Currently still at the Phase 0 scaffold — see [Releases](#releases) for why that is deliberate. |
 | `dev` | **Integration.** The current state of development; always compiles, always runs. | Only receives merges from PRs. |
 | `feature/*` | New work. Branches off `dev`, merges back into `dev` via PR. | Short-lived — days, not weeks. |
 | `bugfix/*` | A fix for something broken in `dev`. Same lifecycle as a feature. | |
@@ -61,13 +61,27 @@ reviewable later, and it's the habit that transfers to a team.
 
 ## Releases
 
-`dev` → `main` when a phase lands and the result is demonstrable.
+**Releases start at Phase 5, not at each phase.** `main` holds the Phase 0 scaffold and stays there
+until there is something worth downloading; `dev` is where the project lives in the meantime.
+
+This is a correction, and the reason is worth recording rather than quietly rewriting. The original
+plan was `dev` → `main` with a tag at the end of every phase, and `1.0.0` at Phase 3. Three phases
+landed and none of the four steps happened once — no merge, no tag, no release, `bundleVersion` still
+at its initial value. A process with a 0% execution rate is not a process, and the honest fix was
+either to start executing it or to describe what is actually being done. Cutting a `1.0.0` off a build
+that has never been produced would have been the worse of the two.
+
+So: no tags yet, deliberately. When Phase 5 closes and a build exists:
 
 - **Versioning:** [SemVer](https://semver.org). While pre-1.0, `0.MINOR.PATCH` — each completed
-  phase bumps MINOR, fixes bump PATCH. `1.0.0` is Phase 3 complete and playable over Relay.
-- Tag on `main`: `git tag -a v0.1.0 -m "Phase 1: netcode core"` then `git push --tags`.
-- Cut a GitHub Release from the tag, with notes and (from Phase 3 on) a playable build attached.
+  phase bumps MINOR, fixes bump PATCH. `1.0.0` is the first release with a build someone can run
+  without installing Unity.
+- Tag on `main`: `git tag -a v1.0.0 -m "..."` then `git push --tags`.
+- Cut a GitHub Release from the tag, with notes and a playable build attached.
 - Keep `bundleVersion` in `ProjectSettings` in sync with the tag.
+
+Note what this does *not* change: the branch and PR half of this document is followed exactly — every
+commit on `dev` arrived through a PR, and `hotfix/*` keeps its meaning for the day a release exists.
 
 ## One-time local setup
 

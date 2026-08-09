@@ -1,10 +1,12 @@
-# ADR 0002 — Decoupling the netcode layer from gameplay
+# ADR 0001 — Decoupling the netcode layer from gameplay
 
 **Status:** **Rejected** — 2026-08-06. The decoupling is not being done; the claim it was meant to
 support was removed instead. See [Decision](#decision) at the end.
 **Date:** 2026-08-06
 **Supersedes:** nothing. **Consequence:** [01 — Architecture](../01-architecture.md) no longer
 describes the netcode layer as a reusable core.
+**Amended:** 2026-08-09 — one premise in *Context* was overtaken by the code two commits later. See
+[Superseded in practice](#superseded-in-practice) at the end. The decision itself still stands.
 
 ## Context
 
@@ -23,6 +25,11 @@ layers never know about higher ones.* The netcode layer breaks it, systematicall
 Until this is fixed, **the "reusable core" description in docs/01 is false**, and the assembly split
 that would let the compiler prove otherwise cannot be done — an assembly definition for `Netcode`
 would need a reference to `Gameplay`, which is the exact thing it is meant to forbid.
+
+> **Amendment, 2026-08-09.** The second half of that sentence turned out to be wrong: the split *was*
+> done, two commits later, by a route this document does not list. See
+> [Superseded in practice](#superseded-in-practice). The first half — that the reusable-core claim
+> was false — stands, and is what the decision below acts on.
 
 The surface is smaller than it looks. `NetworkSimulationLoop` touches only five members of
 `PredictedPlayer`: `IsOwner`, `IsServer`, `OwnerPredictTick`, `ServerSimulateTick`, `BuildSnapshot`
@@ -212,3 +219,37 @@ aspiring to be.
 
 Assembly definitions stay in Phase 5, justified by compile times and test isolation rather than by
 proving a decoupling that is no longer a goal.
+
+## Superseded in practice
+
+*Added 2026-08-09, recording what actually happened rather than rewriting what was decided.*
+
+The decision above stands: the netcode layer is not reusable, the claim was deleted instead of
+earned, and `Netcode/` still imports `PlayerState` and `InputCommand` as an accepted dependency.
+
+What did not stand is the premise in *Context* that the assembly split "cannot be done". It was done
+two commits later, in **`e99a6fb`** — pulled forward from Phase 5 for exactly the justification named
+in the last line above — by a **fourth option this document never considered**:
+
+> Extract the shared *data* into its own leaf assembly (`Snackdown.Simulation`: `PlayerState`,
+> `InputCommand`, `PlayerMotor`) that both `Netcode` and `Gameplay` reference, and put a narrow
+> **non-generic** interface (`IPredictedPeer`, 6 members) at the one seam where the tick loop has to
+> call into a character. `Snackdown.Netcode.asmdef` then compiles with no reference to `Gameplay`.
+
+The three options weighed above all tried to make the *wire format* generic, which is what ran into
+the IL post-processor. The fourth avoids the problem instead of solving it: nothing generic ever
+reaches an `[Rpc]` parameter, so the constraint below never applies. It cost 40 lines and three
+`is`-pattern downcasts at the consumers, and it made the `Netcode → Gameplay` edge a compile error
+rather than a rule.
+
+Two things worth keeping straight, because they are easy to conflate:
+
+- **The layering rule is now enforced, not promised.** That is a stronger claim than this ADR
+  expected to be able to make, and it is the one surviving structural benefit.
+- **The layer is still not reusable, and that is still fine.** The split proves direction, not
+  portability. Anyone reading `Snackdown.Netcode.asmdef` and inferring "this could be lifted into
+  another game" is reading more into it than the compiler is checking.
+
+**The NGO codegen finding recorded above outlives all of it** — the fourth option sidesteps that
+constraint rather than disproving it, so the probe and its stack trace stay just as true. That
+finding is why this document was marked *Rejected* instead of deleted.

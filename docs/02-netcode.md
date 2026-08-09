@@ -15,6 +15,15 @@ The server runs the **real** simulation. Clients never write their own position 
 A hacked client can send bogus input, but the server simulates it under the same rules as everyone
 else — so the worst a cheater can do is move *legally*.
 
+That last sentence is only true if two things are enforced, and both are easy to leave out because
+neither is code in a method body. **Whose input is this?** `InvokePermission` on the input RPC — NGO
+defaults to `Everyone` and enforces the permission on the receiving side, so without the declaration a
+client can submit input for someone else's character and the server will faithfully simulate it.
+**Is the input in range?** `MoveX` is documented as -1/0/1 and travels as a signed byte; `MoveSpeed`
+stops being a ceiling the moment that assumption is not checked, and 127 on the wire is 127× the
+intended speed. Both are declared at the boundary in `PredictedPlayer`, and the second is on the struct
+itself as `InputCommand.Sanitized`.
+
 ### 2. Client-side prediction
 Waiting for a round-trip before you move feels awful (100 ms+ of input lag). So the owning client
 **simulates its own character immediately** using the same movement code the server runs, without
@@ -93,6 +102,27 @@ That is what `WorldSnapshotBuffer` holds: everyone's position, tick by tick, so 
 re-run contact against the world as it was. It is the same ring-buffer idea as `PredictionBuffer`,
 applied to the rest of the world instead of to oneself.
 
+**What the buffer is filled from, and why it matters.** On the server, the recorded positions are the
+authoritative ones for that tick. On a client they are not: a remote character's state is whatever the
+interpolator last produced, which is deliberately ~100 ms behind server time — and the client stores
+it under its *own* prediction tick, which NGO runs ahead of the server by roughly the round trip. So
+the two machines label the same tick number with positions from different moments, by about
+`interpolation delay + client lead`.
+
+The consequence is precise and worth stating rather than discovering: **the replay is self-consistent
+but the prediction is offset from the authority whenever a peer is moving.** Prediction and replay read
+the same buffer, so a correction never comes from a replay disagreeing with itself — nothing looks
+broken. What happens instead is that close contact between two moving players reliably produces a
+correction, because the client predicted contact against where the rival was rendered and the server
+resolved it against where the rival actually was.
+
+This is a design position, not an oversight, and the alternative is not free: filling the buffer from
+authoritative snapshots means the newest tick a client can build a world frame for is *behind* its own
+prediction tick, so the gap has to be extrapolated or held — trading a known offset for an
+extrapolation error. Which trade is better is an open question rather than a settled one; it is
+[tracked in the roadmap](03-roadmap.md) for Phase 4, where the game will be playable enough to feel
+the difference.
+
 Two rules fall out of this, and they decide where any future mechanic belongs:
 
 | The mechanic depends on… | Where it lives | Examples |
@@ -162,8 +192,8 @@ would compound tick over tick instead of closing.
 
 | Direction | Mechanism | Why |
 |---|---|---|
-| Input (owner → server) | `[Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable)]` carrying the **last 3 `InputCommand`s** | Redundancy beats retransmission: a dropped packet is covered by the next one, with no head-of-line blocking. The server ignores ticks it already consumed. |
-| Snapshot (server → all) | one **unreliable** `Rpc` per tick with every player's state | One packet per tick, not one per player. Stale snapshots are worthless, so reliability would only add latency. |
+| Input (owner → server) | `[Rpc(SendTo.Server, Unreliable, InvokePermission = Owner)]` carrying the **last 3 `InputCommand`s** | Redundancy beats retransmission: a dropped packet is covered by the next one, with no head-of-line blocking. The server ignores ticks it already consumed. `Owner` is what stops a client submitting input for someone else's character. |
+| Snapshot (server → all) | one **unreliable** `Rpc` per tick with every player's state, `InvokePermission = Server` | One packet per tick, not one per player. Stale snapshots are worthless, so reliability would only add latency. `SendTo.NotServer` says where a message goes, not who may send it — without `Server`, NGO proxies a client's forged frame to everyone. |
 
 `NetworkVariable` is deliberately **not** used for input: it replicates *latest value*, collapsing
 intermediate ones — and a gap in the input sequence makes replay impossible. It stays where it fits:
@@ -190,7 +220,7 @@ motion that's smooth regardless of packet jitter or tick rate.
 | Remote transforms | snapshot + interpolation | every tick (server → clients) |
 | Life timer | `NetworkVariable` | ~1 Hz (only when it changes meaningfully) |
 | Match / round state | `NetworkVariable` + events | on change |
-| Fruit spawn / pickup | server spawn/despawn + RPC | on event |
+| Fruit spawn / pickup | server spawn/despawn + `NetworkVariable<int>` for the kind, set before `Spawn()` so it rides the spawn message | on event |
 
 ## How we'll prove it works
 
