@@ -137,11 +137,12 @@ into the predicted `Move()`), but not worth the scope against the four above.
       is what made the `Netcode ↔ Gameplay` cycle visible at all. See
       [ADR 0001](adr/0001-decoupling-the-netcode-layer.md), whose *Context* predicted this could not
       be done and was overtaken two commits later
-- [ ] **One integration test** — host plus client through the real `NetworkManager` handshake,
-      asserting the owner and the server converge after a scripted input sequence and that a dropped
-      snapshot leaves no permanent offset. Everything the suite covers today is single-peer and
-      single-process, so **no test in the repository can currently fail because of a networking bug**
-      — which is an awkward gap in a project whose deliverable is netcode correctness
+- [~] **Integration tests** — the harness landed early and elsewhere, with the player-session epic
+      rather than here, because that refactor is not safe to attempt without it: `NetworkedFixture`
+      stands up a host and *n* clients over a real transport inside one Play mode session, and the
+      handshake is covered. What is still owed to this bullet is the rest of it — that the owner and
+      the server converge after a scripted input sequence, and that a dropped snapshot leaves no
+      permanent offset
 - [ ] **Fruit distribution test** — a seeded 100k-roll check, so the claim in Phase 3 is true of the
       repository and not only of a session that happened once
 - [ ] Final architecture diagrams; a runnable build. No player build has ever been produced, so

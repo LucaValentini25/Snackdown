@@ -85,6 +85,7 @@ Assets/
 │                             characters, fruit table)
 ├── Tests/EditMode/           simulation, prediction ring, interpolator, peer collision,
 │                             stun, fruit table, arena bounds, nickname sanitation
+├── Tests/PlayMode/           the two-peer harness and the handshake it verifies
 ├── Pixel Adventure 1/        third-party art
 ├── DEVNIK 2D/                third-party UI
 ├── Settings/                 URP pipeline assets
@@ -259,6 +260,7 @@ Snackdown.Gameplay     →  Simulation, Netcode, Input, Connection
 Snackdown.Core         →  Connection
 Snackdown.UI           →  Netcode, Gameplay, Connection
 Snackdown.Tests.EditMode  →  Simulation, Netcode, Gameplay, Connection   (Editor only)
+Snackdown.Tests.PlayMode  →  nothing of ours yet — only NGO and the test runner
 ```
 
 **This is what caught the cycle.** `Netcode/` imported `PlayerState` and `InputCommand` while

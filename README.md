@@ -90,9 +90,13 @@ collision, the stun, the fruit rarity table, arena clamping and nickname sanitat
 scene, no `NetworkManager` and no Play mode, which is a property of the design rather than of the
 tests — see [docs/01](docs/01-architecture.md).
 
-Stated plainly because it matters: **what they do not yet cover is anything involving two peers.**
-There is no PlayMode or integration test, so no test in this repository can fail because of a
-networking bug. That gap is [tracked in the roadmap](docs/03-roadmap.md), not hidden.
+Alongside them, PlayMode tests that need two peers: a host and one or more clients, each with its
+own `NetworkManager`, handshaking over a real transport inside a single Play mode session. They are
+the first thing in this repository that can fail because of a networking bug.
+
+Stated plainly because it matters: **what they cover so far is the handshake.** Everything past it —
+approval, spawning, replication, reconciliation — is still verified by nothing. That gap is
+[tracked in the roadmap](docs/03-roadmap.md), not hidden.
 
 ## 📈 Status
 
