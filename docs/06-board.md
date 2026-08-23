@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-23
 
-**Overall:** 52% — 24 done, 0 in progress, 0 blocked, 22 to do, 2 dropped, across 8 epics.
+**Overall:** 54% — 25 done, 0 in progress, 0 blocked, 21 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -17,7 +17,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Connection layer — LAN and Relay behind one flow](#connection-layer-lan-and-relay-behind-one-flow) | 2 | Done | 6/6 |
 | [Gameplay core — the rules, server-authoritative](#gameplay-core-the-rules-server-authoritative) | 3 | Done | 5/5 |
 | [In-match HUD — life bars and round clock](#in-match-hud-life-bars-and-round-clock) | 4 | Done | 3/3 |
-| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 1/8 |
+| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 2/8 |
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | To do | 0/5 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | To do | 0/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 0/6 |
@@ -82,7 +82,7 @@ One networked object per connection that owns identity, life and stats, and spaw
 | | Task | Verified by | Notes |
 |:---:|---|---|---|
 | `[x]` | Stand up the networked test harness | PlayMode — HandshakeTests: the client is synchronized, the host sees it, it sees the host, and two clients see each other | The testables entry this task was written around turned out to be the wrong route and was not added — see D-011. NetworkedFixture is ours: 4 tests, no manifest change |
-| `[ ]` | PlayerSession exists alongside the avatar, unread | on connect, both peers see a session carrying the sanitized nickname | — |
+| `[x]` | PlayerSession exists alongside the avatar, unread | PlayMode — PlayerSessionTests: a joining client gets a session of its own, both peers read the sanitized name, the host's own session carries the name it chose, and a leaving client takes its session with it | Cost two things the task did not anticipate: NetworkSimulation had to become a prefab to be spawnable in a test (D-013), and the session reads its own name out of approval rather than being handed it, because the object that spawns it lives in the assembly this one depends on |
 | `[ ]` | Roster becomes an index over live sessions | a third client sees the two already present, with names and ready state | NetworkList and PlayerSlot are deleted here |
 | `[ ]` | Life, fruit count and stats move onto the session | a fruit taken by the client adds life on the server and reaches both HUDs | — |
 | `[ ]` | Flip the spawn — PlayerPrefab becomes the session | death despawns the avatar, the session survives with its final life, next round respawns it | The big one. Removes hide-instead-of-despawn and the spawn-point teleport |
@@ -130,6 +130,26 @@ Make the finished work visible to someone who was not here while it was built.
 
 Every choice that closed off an alternative, with the reasoning that closed it. This is
 the part of the board worth reading a year from now.
+
+### D-013 — A networked scene object becomes a prefab when it needs to be tested
+
+*2026-08-23* · epic **player-session**
+
+**Chosen:** NetworkSimulation — the one object carrying the tick loop, the roster, the director and the referee — was saved as a prefab and the scene now holds an instance of it.
+
+**Why:** A scene object cannot be spawned by a test: the harness runs both peers in one editor process, so they share the scene and therefore the object, where a real session gives each peer its own copy through scene synchronization. Without this the only way to test a join was to bypass the roster and spawn sessions by hand, which tests the class and not the thing the task asks for. Saving it as a prefab also means the scene and the test exercise the same object rather than two configurations that drift.
+
+**Rejected:** Splitting SessionRoster onto a GameObject of its own; leaving ps-1 without a test of the real join path.
+
+### D-012 — Networked tests load the real prefabs, not ones built in code
+
+*2026-08-23* · epic **player-session**
+
+**Chosen:** PlayerSessionTests loads Player, PlayerSession and NetworkSimulation from the asset database. The test class is wrapped in UNITY_EDITOR; the assembly stays a Play mode one.
+
+**Why:** Fabricating a prefab at runtime needs NetworkObject.GlobalObjectIdHash, which is internal — NGO can only do it in its own tests because its assembly is granted access. A runtime-built object keeps hash 0, and this task needs two of them, so registering the second is refused with a duplicate-hash error. Loading the real assets sidesteps that and buys the half a hand-built prefab could never cover: that the object which actually ships is wired up. An editor-only assembly was tried and reverted — the Test Runner reclassifies it as Edit mode, where NGO never initialises its message table and every test fails on the first message sent.
+
+**Rejected:** Writing the internal hash by reflection; moving the prefabs into a Resources folder that every build would then carry.
 
 ### D-011 — The networked harness is ours, not the one NGO ships
 
@@ -249,6 +269,7 @@ rather than an oversight.
 | | Problem | Impact | Status |
 |:---:|---|---|---|
 | `[ ]` | Almost no test in the repository can fail because of a networking bug | The handshake is now covered by PlayMode tests over a real transport, which is the layer the regression that survived six merged PRs broke. Everything past the handshake — approval, spawning, replication, reconciliation — is still verified by nothing. | open |
+| `[ ]` | Ambient statics are shared by peers under the test harness | Eight one-value statics — the Current pointers, PlayerLife.All, PlayerSession.All, ActivePlayers — are per-process, which is right for a shipped game and wrong for a harness that runs several peers in one editor. Tests must read NetworkManager.SpawnManager instead, and anything whose behaviour depends on one of these cannot be told apart between peers. | open |
 | `[ ]` | Reconcile has zero test coverage | 90 lines and 9 branches of the project's headline mechanism, unreachable from EditMode because it lives in a MonoBehaviour. | open |
 | `[ ]` | No byte of bandwidth has ever been measured | Every figure in the docs is derived from reading the serializers, while the profiler package is installed and its metrics already enabled. | open |
 | `[ ]` | main is 55 commits behind and no build has ever been produced | A reviewer following the repository link lands on the Phase 0 scaffold. Managed stripping and scene-by-name resolution are unexercised. | open |
@@ -259,6 +280,7 @@ rather than an oversight.
 
 ## Session log
 
+- **2026-08-23** — Closed ps-1. Three things were learned by trying: a prefab cannot be built at runtime without an internal NGO field (D-012), a networked scene object cannot be spawned by a test at all (D-013), and the ambient statics documented in docs/01 as safe because a peer is a process stop being safe the moment a harness runs two peers in one. The last one is recorded as a risk and the architecture doc now says so rather than claiming the opposite. Each new test was checked by breaking the code it covers: removing the session spawn fails exactly the four session tests and none of the handshake ones.
 - **2026-08-23** — Closed ps-0 with a harness of our own after opening the testables route and finding it worse than the note in the task assumed (D-011). Four handshake tests now run over a real transport. Two things learned while writing it and worth having recorded: a NetworkManager added at runtime has no NetworkConfig at all, and Shutdown() only raises a flag — the socket closes on the next network update, so a fixture that destroys the peer in the same frame leaves the port bound and breaks the next test rather than its own.
 - **2026-08-23** — Stood up this board: one JSON source, two generated views, and a rule in CLAUDE.md that closing a task, an epic or a session updates it.
 - **2026-08-23** — Designed the player-session refactor and took ten decisions on it. Confirmed by inspection that the auto-spawn does not need disabling, that every host-configurable parameter is server-read only, and that the EditMode suite is untouched by the change.

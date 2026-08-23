@@ -206,6 +206,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Snackdown.Connection::Snackdown.Connection.SessionRoster
   ShowTopMostFoldoutHeaderGroup: 1
+  _sessionPrefab: {fileID: 3851376826457987075, guid: 1787b033f74c06e4494e8738a4da1279, type: 3}
 --- !u!114 &283214386
 MonoBehaviour:
   m_ObjectHideFlags: 0

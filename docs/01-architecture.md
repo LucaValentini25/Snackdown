@@ -66,8 +66,8 @@ Assets/
 │   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchOutcome,
 │   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera,
 │   │   │                 SandboxRunner
-│   │   │   ├── Player/       PredictedPlayer, PlayerLife, PlayerSpawnPoints,
-│   │   │   │                 CharacterAppearance, CharacterCatalog
+│   │   │   ├── Player/       PredictedPlayer, PlayerSession, PlayerLife,
+│   │   │   │                 PlayerSpawnPoints, CharacterAppearance, CharacterCatalog
 │   │   │   ├── Fruits/       Fruit, FruitSpawner, FruitTable
 │   │   │   └── Combat/       HeadBounce
 │   │   ├── UI/               MainMenuController, LoadingScreenController,
@@ -79,7 +79,7 @@ Assets/
 │   │                         RoundClock.uxml, LifeBars.uxml, Nameplate.uxml,
 │   │                         Snackdown.uss, MenuPanelSettings, WorldSpacePanelSettings
 │   ├── Scenes/               Bootstrap, Lobby, Arena01, Sandbox
-│   ├── Prefabs/              Player, Fruit
+│   ├── Prefabs/              Player, PlayerSession, Fruit, NetworkSimulation
 │   ├── Art/                  placeholder primitives
 │   └── Settings/             ScriptableObject configs (movement, match, arenas,
 │                             characters, fruit table)
@@ -100,7 +100,7 @@ Three scenes, and the split is what makes several arenas possible:
 
 | Scene | Holds | Lifetime |
 |---|---|---|
-| **Bootstrap** | `NetworkManager`, `MatchDirector`, `RoundReferee`, `SessionRoster`, the tick loop, the loading screen, the round clock, the life bars and the end screen | The whole session |
+| **Bootstrap** | `NetworkManager`, the `NetworkSimulation` prefab instance — `MatchDirector`, `RoundReferee`, `SessionRoster` and the tick loop on one networked object — plus the loading screen, the round clock, the life bars and the end screen | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
 | **Arena01** | Geometry, spawn points, camera | During a match |
 | **Sandbox** | A copy of Bootstrap that hosts and starts a match on Play | Never in a build; opened by hand |
@@ -225,9 +225,9 @@ layer is portable — the ADR is explicit that it is not.
 ## Ambient lookups
 
 Several systems are reached through a static rather than an injected reference: `MatchDirector.Current`,
-`RoundReferee.Current`, `ConnectionApproval.Current`, `ArenaBounds.Current`,
-`NetworkSimulationLoop.Instance`, plus the `PlayerLife.All` and `NetworkSimulationLoop.ActivePlayers`
-registries and two debug toggles.
+`RoundReferee.Current`, `ConnectionApproval.Current`, `SessionRoster.Current`, `ArenaBounds.Current`,
+`NetworkSimulationLoop.Instance`, plus the `PlayerLife.All`, `PlayerSession.All` and
+`NetworkSimulationLoop.ActivePlayers` registries and two debug toggles.
 
 This is deliberate and it is the pattern the project uses instead of a container. Two reasons, and
 both are specific rather than stylistic:
@@ -238,10 +238,18 @@ both are specific rather than stylistic:
   which is the correct scope for "the match director in *this* session" — it is not shared state
   between peers.
 
+That second reason holds for the shipped game and stops holding under the PlayMode harness, which
+runs a host and its clients as several `NetworkManager`s inside one editor process. There, every one
+of these statics is shared by peers that are supposed to disagree: the last one to spawn wins
+`Current`, and `PlayerLife.All` holds the players of both sides at once. It is not a bug in the game
+— a player's machine only ever runs one peer — but it is the reason a networked test reads
+`NetworkManager.SpawnManager`, which belongs to a peer, instead of a registry that does not.
+
 The costs are real and worth naming rather than hiding. Every consumer null-checks, so forgetting one
 is a `NullReferenceException` during a scene transition; and anything reading one of these cannot be
-exercised in an EditMode test, which is visibly why the test suite covers `Simulation` and `Netcode`
-and almost nothing in `Gameplay/Match`. **A DI container would not fix either problem** — it would
+exercised in an EditMode test — nor, per the paragraph above, told apart between two peers in a
+PlayMode one — which is visibly why the test suite covers `Simulation` and `Netcode` and almost
+nothing in `Gameplay/Match`. **A DI container would not fix either problem** — it would
 move the first and keep the second. What fixes the second is extracting the logic worth testing out
 of the `MonoBehaviour` that owns the static, which is a per-case decision.
 
@@ -260,7 +268,7 @@ Snackdown.Gameplay     →  Simulation, Netcode, Input, Connection
 Snackdown.Core         →  Connection
 Snackdown.UI           →  Netcode, Gameplay, Connection
 Snackdown.Tests.EditMode  →  Simulation, Netcode, Gameplay, Connection   (Editor only)
-Snackdown.Tests.PlayMode  →  nothing of ours yet — only NGO and the test runner
+Snackdown.Tests.PlayMode  →  Gameplay, Connection                          (Play mode)
 ```
 
 **This is what caught the cycle.** `Netcode/` imported `PlayerState` and `InputCommand` while
