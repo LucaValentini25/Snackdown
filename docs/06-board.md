@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-23
 
-**Overall:** 50% — 23 done, 0 in progress, 0 blocked, 23 to do, 2 dropped, across 8 epics.
+**Overall:** 52% — 24 done, 0 in progress, 0 blocked, 22 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -17,7 +17,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Connection layer — LAN and Relay behind one flow](#connection-layer-lan-and-relay-behind-one-flow) | 2 | Done | 6/6 |
 | [Gameplay core — the rules, server-authoritative](#gameplay-core-the-rules-server-authoritative) | 3 | Done | 5/5 |
 | [In-match HUD — life bars and round clock](#in-match-hud-life-bars-and-round-clock) | 4 | Done | 3/3 |
-| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 0/8 |
+| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 1/8 |
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | To do | 0/5 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | To do | 0/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 0/6 |
@@ -81,7 +81,7 @@ One networked object per connection that owns identity, life and stats, and spaw
 
 | | Task | Verified by | Notes |
 |:---:|---|---|---|
-| `[ ]` | Stand up the networked test harness | host and client complete the handshake and each sees the other | Needs a testables entry in manifest.json — NGO's integration harness is currently unreachable |
+| `[x]` | Stand up the networked test harness | PlayMode — HandshakeTests: the client is synchronized, the host sees it, it sees the host, and two clients see each other | The testables entry this task was written around turned out to be the wrong route and was not added — see D-011. NetworkedFixture is ours: 4 tests, no manifest change |
 | `[ ]` | PlayerSession exists alongside the avatar, unread | on connect, both peers see a session carrying the sanitized nickname | — |
 | `[ ]` | Roster becomes an index over live sessions | a third client sees the two already present, with names and ready state | NetworkList and PlayerSlot are deleted here |
 | `[ ]` | Life, fruit count and stats move onto the session | a fruit taken by the client adds life on the server and reaches both HUDs | — |
@@ -130,6 +130,16 @@ Make the finished work visible to someone who was not here while it was built.
 
 Every choice that closed off an alternative, with the reasoning that closed it. This is
 the part of the board worth reading a year from now.
+
+### D-011 — The networked harness is ours, not the one NGO ships
+
+*2026-08-23* · epic **player-session**
+
+**Chosen:** A NetworkedFixture in a PlayMode assembly that creates a NetworkManager and a UnityTransport per peer on loopback. manifest.json is untouched.
+
+**Why:** NGO's NetcodeIntegrationTest is only compiled by listing the package under testables, and in 2.11 it lives in Unity.Netcode.Runtime.Tests together with the package's own 672 tests — all of which would then appear in this project's Test Runner, so the suite the project is judged on stops being legible in its own window. What that harness does for the ordinary case is one NetworkManager and one transport per peer, which is roughly a hundred lines written in this project's terms, against an API that is public and stable rather than one that was already renamed once in 2.0.
+
+**Rejected:** Adding the testables entry the ps-0 task was originally written around, and inheriting from NetcodeIntegrationTest.
 
 ### D-010 — The board is generated, never hand-kept
 
@@ -238,7 +248,7 @@ rather than an oversight.
 
 | | Problem | Impact | Status |
 |:---:|---|---|---|
-| `[ ]` | No test in the repository can fail because of a networking bug | The deliverable is netcode correctness and nothing verifies it. A join-breaking regression once survived six merged PRs. | open |
+| `[ ]` | Almost no test in the repository can fail because of a networking bug | The handshake is now covered by PlayMode tests over a real transport, which is the layer the regression that survived six merged PRs broke. Everything past the handshake — approval, spawning, replication, reconciliation — is still verified by nothing. | open |
 | `[ ]` | Reconcile has zero test coverage | 90 lines and 9 branches of the project's headline mechanism, unreachable from EditMode because it lives in a MonoBehaviour. | open |
 | `[ ]` | No byte of bandwidth has ever been measured | Every figure in the docs is derived from reading the serializers, while the profiler package is installed and its metrics already enabled. | open |
 | `[ ]` | main is 55 commits behind and no build has ever been produced | A reviewer following the repository link lands on the Phase 0 scaffold. Managed stripping and scene-by-name resolution are unexercised. | open |
@@ -249,6 +259,7 @@ rather than an oversight.
 
 ## Session log
 
+- **2026-08-23** — Closed ps-0 with a harness of our own after opening the testables route and finding it worse than the note in the task assumed (D-011). Four handshake tests now run over a real transport. Two things learned while writing it and worth having recorded: a NetworkManager added at runtime has no NetworkConfig at all, and Shutdown() only raises a flag — the socket closes on the next network update, so a fixture that destroys the peer in the same frame leaves the port bound and breaks the next test rather than its own.
 - **2026-08-23** — Stood up this board: one JSON source, two generated views, and a rule in CLAUDE.md that closing a task, an epic or a session updates it.
 - **2026-08-23** — Designed the player-session refactor and took ten decisions on it. Confirmed by inspection that the auto-spawn does not need disabling, that every host-configurable parameter is server-read only, and that the EditMode suite is untouched by the change.
 - **2026-08-23** — Read the repository end to end after time away: 64 scripts, six design documents and a ten-domain audit. Conclusion recorded — the netcode is solid and measured; everything unfinished sits in the lobby, identity and configuration layer.
