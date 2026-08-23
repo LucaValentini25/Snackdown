@@ -1,0 +1,285 @@
+{
+  "project": "Snackdown",
+  "updated": "2026-08-23",
+  "currentEpic": "player-session",
+
+  "epics": [
+    {
+      "id": "netcode-core",
+      "title": "Netcode core — predicted character",
+      "phase": "1",
+      "status": "done",
+      "goal": "A character that responds instantly on the owning client, is decided by the server, and self-corrects when the two disagree. Everything else in the project is scaffolding around this.",
+      "tasks": [
+        { "id": "nc-1", "title": "Fixed 30 Hz tick wired to NetworkTickSystem", "status": "done", "test": "EditMode — tick ordering" },
+        { "id": "nc-2", "title": "InputCommand sampled on the owner and sent to the server", "status": "done", "test": "EditMode — input sanitation" },
+        { "id": "nc-3", "title": "Shared replayable Simulate() used by both sides", "status": "done", "test": "EditMode — 40 ticks replayed twice are bit-identical", "notes": "Covers the arithmetic; the terrain-cast path runs with GroundMask = 0 in fixtures" },
+        { "id": "nc-4", "title": "Client prediction with a (tick, input, state) ring", "status": "done", "test": "EditMode — PredictionBufferTests" },
+        { "id": "nc-5", "title": "Server snapshots carrying lastProcessedInputTick", "status": "done", "test": "—" },
+        { "id": "nc-6", "title": "Reconciliation — rewind to snapshot, replay pending inputs", "status": "done", "test": "none — lives inside a MonoBehaviour and is unreachable from EditMode", "notes": "90 lines, 9 branches, 0% coverage. The project's headline mechanism" },
+        { "id": "nc-7", "title": "Snapshot interpolation for remote players", "status": "done", "test": "EditMode — SnapshotInterpolatorTests" },
+        { "id": "nc-8", "title": "Debug overlay: predicted vs authoritative, RTT, corrections", "status": "done", "test": "—", "notes": "Ships in the build and costs ~97% of host managed allocation" },
+        { "id": "nc-9", "title": "Validated under simulated latency and packet loss", "status": "done", "test": "manual — 150 ms / 20% loss, median error 0.302 units", "notes": "Written up in docs/05" }
+      ]
+    },
+    {
+      "id": "connection-layer",
+      "title": "Connection layer — LAN and Relay behind one flow",
+      "phase": "2",
+      "status": "done",
+      "goal": "The same join flow whether the peer is on the LAN or across the internet, with the door closed to anything unchecked.",
+      "tasks": [
+        { "id": "cl-1", "title": "IConnectionProvider — async throughout, failures as return values", "status": "done", "test": "—" },
+        { "id": "cl-2", "title": "DirectConnectionProvider — host and join by IP", "status": "done", "test": "manual — two peers on a LAN" },
+        { "id": "cl-3", "title": "RelayConnectionProvider — join by six-character code", "status": "done", "test": "manual — a real hosted session", "notes": "Sessions API; project linked with Relay and Lobby enabled" },
+        { "id": "cl-4", "title": "Connection approval with payload and version check", "status": "done", "test": "EditMode — nickname sanitation, ConnectionApprovalTests" },
+        { "id": "cl-5", "title": "SessionRoster — replicated names, skins, ready state", "status": "done", "test": "—", "notes": "About to be rewritten as an index by the player-session epic" },
+        { "id": "cl-6", "title": "Menu and lobby in UI Toolkit, wired to the abstraction", "status": "done", "test": "—" },
+        { "id": "cl-7", "title": "Character picker", "status": "dropped", "test": "—", "notes": "Transport half shipped, picker never did. Moved to the wardrobe epic where it belongs" }
+      ]
+    },
+    {
+      "id": "gameplay-core",
+      "title": "Gameplay core — the rules, server-authoritative",
+      "phase": "3",
+      "status": "done",
+      "goal": "The whole pitched loop running end to end, with every rule decided by the server against server-owned positions.",
+      "tasks": [
+        { "id": "gc-1", "title": "Life timer draining server-side, replicated ~1 Hz", "status": "done", "test": "—", "notes": "1 write/s by configuration, plus an immediate publish on pickup and on death" },
+        { "id": "gc-2", "title": "Fruit spawner with a rarity table, networked pickup", "status": "done", "test": "EditMode — FruitTableTests", "notes": "8 fruit, 35% to 1%, worth 3s to 20s" },
+        { "id": "gc-3", "title": "Head-bounce detection and stun", "status": "done", "test": "EditMode — StunTests", "notes": "Stun lives in PlayerState so reconciliation replays through it" },
+        { "id": "gc-4", "title": "Players solid to each other, predicted client-side", "status": "done", "test": "EditMode — PeerCollisionTests", "notes": "Resolves against interpolated peer positions — see known problems" },
+        { "id": "gc-5", "title": "Death to spectator, win conditions, end screen", "status": "done", "test": "EditMode — ArenaBoundsTests", "pr": 19, "notes": "Player hidden rather than despawned — the workaround the player-session epic removes" }
+      ]
+    },
+    {
+      "id": "hud",
+      "title": "In-match HUD — life bars and round clock",
+      "phase": "4",
+      "status": "done",
+      "goal": "Make the core mechanic visible. A draining life timer nobody can see makes the phase complete on paper and undemoable in practice.",
+      "tasks": [
+        { "id": "hud-1", "title": "Round clock", "status": "done", "test": "—", "pr": 23 },
+        { "id": "hud-2", "title": "Life bars, built both ways — floating and along the bottom", "status": "done", "test": "—", "pr": 23, "notes": "F3 swaps them at runtime so the better one can be picked by looking" },
+        { "id": "hud-3", "title": "Nameplates sized in metres, not by transform scale", "status": "done", "test": "—", "pr": 23, "notes": "Three consecutive sizing bugs; the rule they came from is written down in docs/01" },
+        { "id": "hud-4", "title": "Pick one layout and delete the other", "status": "dropped", "test": "—", "notes": "Superseded by D-006 — it becomes a player preference instead of a choice to make" }
+      ]
+    },
+    {
+      "id": "player-session",
+      "title": "Separate player identity from avatar",
+      "phase": "4",
+      "status": "in-progress",
+      "goal": "One networked object per connection that owns identity, life and stats, and spawns a disposable avatar per round. Unblocks late join, real despawn on death, the wardrobe and host-configured matches — none of which can be built cleanly on top of NGO's default one-prefab-per-connection model.",
+      "tasks": [
+        { "id": "ps-0", "title": "Stand up the networked test harness", "status": "todo", "test": "host and client complete the handshake and each sees the other", "notes": "Needs a testables entry in manifest.json — NGO's integration harness is currently unreachable" },
+        { "id": "ps-1", "title": "PlayerSession exists alongside the avatar, unread", "status": "todo", "test": "on connect, both peers see a session carrying the sanitized nickname" },
+        { "id": "ps-2", "title": "Roster becomes an index over live sessions", "status": "todo", "test": "a third client sees the two already present, with names and ready state", "notes": "NetworkList and PlayerSlot are deleted here" },
+        { "id": "ps-3", "title": "Life, fruit count and stats move onto the session", "status": "todo", "test": "a fruit taken by the client adds life on the server and reaches both HUDs" },
+        { "id": "ps-4", "title": "Flip the spawn — PlayerPrefab becomes the session", "status": "todo", "test": "death despawns the avatar, the session survives with its final life, next round respawns it", "notes": "The big one. Removes hide-instead-of-despawn and the spawn-point teleport" },
+        { "id": "ps-5", "title": "Late join arrives as a spectator", "status": "todo", "test": "a client joining during Playing has no avatar, is not counted alive, and cannot win on the clock" },
+        { "id": "ps-6", "title": "Host can kick, with a reason the kicked client sees", "status": "todo", "test": "a non-host asking for a kick is ignored by the server" },
+        { "id": "ps-7", "title": "Replicated match settings and difficulty profiles", "status": "todo", "test": "host lowers starting life to 30 and the client's round starts at 30", "notes": "Nothing Simulate() reads is exposed — see D-005" }
+      ]
+    },
+    {
+      "id": "wardrobe",
+      "title": "Wardrobe — unique, changeable skins",
+      "phase": "4",
+      "status": "todo",
+      "goal": "First free skin on arrival, changeable in the lobby, never two players wearing the same one. Nearly free once the skin lives on the session.",
+      "tasks": [
+        { "id": "wr-1", "title": "Approval assigns the first free skin instead of always 0", "status": "todo", "test": "four clients connect and get four different skins" },
+        { "id": "wr-2", "title": "Wire CharacterCount from CharacterCatalog.Count", "status": "todo", "test": "a fifth catalog entry is selectable", "notes": "Hardcoded 4 today, so a fifth skin would be silently clamped away" },
+        { "id": "wr-3", "title": "Wardrobe UI in the lobby, taken skins shown as taken", "status": "todo", "test": "a client asking for a taken skin is refused by the server" },
+        { "id": "wr-4", "title": "Nickname remembered in PlayerPrefs", "status": "todo", "test": "—", "notes": "Zero PlayerPrefs calls in the project today" },
+        { "id": "wr-5", "title": "HUD layout preference, host default plus local override", "status": "todo", "test": "—", "notes": "D-006" }
+      ]
+    },
+    {
+      "id": "verification",
+      "title": "Verification — make the netcode claims checkable",
+      "phase": "5",
+      "status": "todo",
+      "goal": "Close the gap where no test in the repository can fail because of a networking bug, and no byte has ever been counted.",
+      "tasks": [
+        { "id": "vf-1", "title": "Integration test — a dropped snapshot leaves no permanent offset", "status": "todo", "test": "self" },
+        { "id": "vf-2", "title": "Extract Reconcile so it can be tested without a MonoBehaviour", "status": "todo", "test": "EditMode — replay converges after a forced desync" },
+        { "id": "vf-3", "title": "Seeded 100k-roll fruit distribution test", "status": "todo", "test": "self", "notes": "The claim exists in docs; the test that backs it does not" },
+        { "id": "vf-4", "title": "Measure bandwidth with the profiler already installed", "status": "todo", "test": "self", "notes": "Every byte figure in the docs is derived from reading serializers" }
+      ]
+    },
+    {
+      "id": "polish",
+      "title": "Polish and release",
+      "phase": "5",
+      "status": "todo",
+      "goal": "Make the finished work visible to someone who was not here while it was built.",
+      "tasks": [
+        { "id": "pl-1", "title": "Decide how peer contact is predicted", "status": "todo", "test": "—", "notes": "Touching it invalidates the Phase 1 measurements, which would need re-running" },
+        { "id": "pl-2", "title": "Spectator camera follows a player and switches targets", "status": "todo", "test": "—" },
+        { "id": "pl-3", "title": "A second arena", "status": "todo", "test": "—", "notes": "Authoring only — ArenaCatalog and the networked load are already in place" },
+        { "id": "pl-4", "title": "Public lobby browser", "status": "todo", "test": "—", "notes": "D-009 — deferred to the end deliberately" },
+        { "id": "pl-5", "title": "Keep debug tooling out of the player build", "status": "todo", "test": "—" },
+        { "id": "pl-6", "title": "A runnable build, main brought up to date, a tag", "status": "todo", "test": "—", "notes": "No player build has ever been produced" }
+      ]
+    }
+  ],
+
+  "decisions": [
+    {
+      "id": "D-001",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "Separate player identity from avatar, and do it first",
+      "choice": "One PlayerSession NetworkObject per connection, owning identity and life; a disposable avatar spawned per round.",
+      "why": "Four wanted features — late join, real despawn on death, the wardrobe and returning to the lobby — are each awkward on their own under NGO's default model, and each stops being a special case once identity and avatar have separate lifetimes. Building them first means building them twice.",
+      "rejected": "Doing the wardrobe and match config first for faster visible progress; keeping NGO's model and patching late join and death as special cases."
+    },
+    {
+      "id": "D-002",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "The roster becomes an index, not a store",
+      "choice": "PlayerRoster keeps no data of its own — it is an ordered view over the live sessions, the same pattern as PlayerLife.All.",
+      "why": "Nickname and skin already exist in three places, which works only because the flow is one-directional and once-only. The wardrobe, per-round avatars and late join all break that condition, and a value with three owners fails by showing each peer something different — no crash, no exception, and rare enough to be blamed on the network.",
+      "rejected": "Letting the roster and the sessions both hold identity; keeping the NetworkList as the source and having sessions read it."
+    },
+    {
+      "id": "D-003",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "Life, fruit count and match stats live on the session",
+      "choice": "The session tracks life, fruit eaten and per-round stats, all server-validated. The avatar is physical only; the HUD reads the session.",
+      "why": "If the avatar has to survive death to keep the life value, it stays the owner of identity and the refactor achieves nothing. Moving life up also removes a branch from PredictedPlayer.IsSolid: a dead player has no avatar, so peer-collision prediction never considers it, rather than checking a flag.",
+      "rejected": "Leaving PlayerLife on the avatar and continuing to hide the character instead of despawning it."
+    },
+    {
+      "id": "D-004",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "Keep NGO's auto-spawn and repoint it",
+      "choice": "NetworkManager.PlayerPrefab becomes the PlayerSession prefab. The avatar becomes an ordinary network prefab the session spawns with SpawnWithOwnership.",
+      "why": "Disabling AutoSpawnPlayerPrefabClientSide and hand-rolling the spawn would mean rewriting ConnectionApproval's admission path and losing GetPlayerNetworkObject. Repointing keeps both, and makes NGO's own clientId-to-object lookup return exactly the object worth reaching.",
+      "rejected": "Turning auto-spawn off and spawning both objects manually from the approval callback."
+    },
+    {
+      "id": "D-005",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "Match settings replicate as a struct; nothing Simulate() reads is configurable",
+      "choice": "A MatchSettings struct in a server-written NetworkVariable, seeded from difficulty presets and overridable field by field. MovementConfig stays out of it entirely.",
+      "why": "Everything the host wants to tune — life, drain, round length, stun, fruit — is read by the server alone and reaches clients as an already-applied result, so a mismatch costs nothing. Everything Simulate() reads is executed identically on both sides of the wire, and a divergence there produces a trembling character whose symptom points at reconciliation, which is not where the bug is.",
+      "rejected": "One flat replicated config covering movement too; closed difficulty profiles with no per-field override."
+    },
+    {
+      "id": "D-006",
+      "date": "2026-08-23",
+      "epic": "wardrobe",
+      "title": "HUD layout is a player preference with a host-set default",
+      "choice": "The host picks the room default; each player can override it locally, remembered in PlayerPrefs.",
+      "why": "It is the only setting that changes nothing about the match, only how one screen looks. Replicating it means a player whose taste differs from the host's plays all night with the layout they did not want, for no rule-level reason.",
+      "rejected": "Host-controlled and replicated for everyone; picking one layout and deleting the other."
+    },
+    {
+      "id": "D-007",
+      "date": "2026-08-23",
+      "title": "Tests ship with the feature, not as a phase",
+      "choice": "Every task carries the test that verifies it, written in the same PR. The networked harness is stood up first so this is possible at all.",
+      "why": "A verification phase at the end is a phase that gets cut. The cost of not having this is already measured: a join-breaking regression survived six merged PRs over 47 hours, and the commit that fixed it says so in its own body.",
+      "rejected": "Writing the integration tests after the refactor, against the new architecture; leaving them in Phase 5 as originally planned."
+    },
+    {
+      "id": "D-008",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "Naming — PlayerSession and PlayerRoster",
+      "choice": "PlayerSession for the per-connection object, PlayerRoster for the index over them.",
+      "why": "Controller already means a character controller in Unity, and the object being named is a connection with an identity attached, which is what a session is. Roster keeps the name the UI layer already uses.",
+      "rejected": "PlayerController, PlayerHub, NetworkPlayer."
+    },
+    {
+      "id": "D-009",
+      "date": "2026-08-23",
+      "epic": "polish",
+      "title": "Public lobby browser is deferred to the end",
+      "choice": "Join by code only until the player lifecycle and the wardrobe are finished.",
+      "why": "It demonstrates no netcode that the connection layer does not already demonstrate, and it adds a screen and a lifecycle of its own. It is worth having for how it looks in a demo video, which is a reason to do it late rather than never.",
+      "rejected": "Building it now as the product-facing front of the project."
+    },
+    {
+      "id": "D-010",
+      "date": "2026-08-23",
+      "title": "The board is generated, never hand-kept",
+      "choice": "docs/board.json is the only file edited. A script renders docs/06-board.md for readers and docs/local/board.html for working.",
+      "why": "A board is touched on every task, and two hand-maintained copies of a thing edited that often disagree within a week — the same failure the audit found across the docs, where the reasoning stayed excellent and the facts drifted. One source removes the possibility rather than requiring discipline.",
+      "rejected": "Hand-writing the HTML alongside the markdown; keeping the board only as an HTML page, which the repository's own rules forbid as a deliverable."
+    }
+  ],
+
+  "risks": [
+    {
+      "title": "No test in the repository can fail because of a networking bug",
+      "impact": "The deliverable is netcode correctness and nothing verifies it. A join-breaking regression once survived six merged PRs.",
+      "severity": "high",
+      "status": "open"
+    },
+    {
+      "title": "Reconcile has zero test coverage",
+      "impact": "90 lines and 9 branches of the project's headline mechanism, unreachable from EditMode because it lives in a MonoBehaviour.",
+      "severity": "high",
+      "status": "open"
+    },
+    {
+      "title": "No byte of bandwidth has ever been measured",
+      "impact": "Every figure in the docs is derived from reading the serializers, while the profiler package is installed and its metrics already enabled.",
+      "severity": "medium",
+      "status": "open"
+    },
+    {
+      "title": "main is 55 commits behind and no build has ever been produced",
+      "impact": "A reviewer following the repository link lands on the Phase 0 scaffold. Managed stripping and scene-by-name resolution are unexercised.",
+      "severity": "medium",
+      "status": "open"
+    },
+    {
+      "title": "The debug overlay ships enabled and dominates host allocation",
+      "impact": "Its IMGUI pass is ~97% of all managed allocation on the host — 320-600 KB/s against ~12 KB/s from the entire simulation path.",
+      "severity": "medium",
+      "status": "open"
+    },
+    {
+      "title": "Peer contact is predicted against interpolated positions",
+      "impact": "Roughly 0.47 s stale at the measured RTT, so close contact between two moving players reliably corrects. Fixing it invalidates the Phase 1 measurements.",
+      "severity": "medium",
+      "status": "open"
+    },
+    {
+      "title": "Snapshots broadcast at 30 Hz while the session sits in the lobby",
+      "impact": "Bandwidth spent on a match that is not running.",
+      "severity": "low",
+      "status": "open"
+    },
+    {
+      "title": "FruitSpawner.ServerDespawnAll has no call sites",
+      "impact": "Fruit survives into the lobby and into the next match.",
+      "severity": "low",
+      "status": "open"
+    }
+  ],
+
+  "log": [
+    {
+      "date": "2026-08-23",
+      "entry": "Read the repository end to end after time away: 64 scripts, six design documents and a ten-domain audit. Conclusion recorded — the netcode is solid and measured; everything unfinished sits in the lobby, identity and configuration layer."
+    },
+    {
+      "date": "2026-08-23",
+      "entry": "Designed the player-session refactor and took ten decisions on it. Confirmed by inspection that the auto-spawn does not need disabling, that every host-configurable parameter is server-read only, and that the EditMode suite is untouched by the change."
+    },
+    {
+      "date": "2026-08-23",
+      "entry": "Stood up this board: one JSON source, two generated views, and a rule in CLAUDE.md that closing a task, an epic or a session updates it."
+    }
+  ]
+}
