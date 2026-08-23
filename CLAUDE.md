@@ -94,6 +94,35 @@ If a comment is needed to explain *what* the code does, the code needs renaming,
 - When a decision changes, `README.md` and the affected `docs/` file are updated **in the same commit**
   as the code. A doc that disagrees with the code is worse than no doc.
 
+### The board is updated when work closes
+
+`docs/board.json` is the live state of the work: every task with the test that verifies it, every
+decision with the reasoning that closed off the alternatives, and every known problem that is not
+being fixed yet. **It is the only file edited by hand.** Two views are generated from it and neither
+is ever written directly:
+
+```bash
+python tools/board/build_board.py           # renders both views
+python tools/board/build_board.py --check   # exits 1 if they are stale
+```
+
+| File | | |
+|---|---|---|
+| `docs/board.json` | source | tracked, hand-edited |
+| `docs/06-board.md` | generated | tracked — what a reader sees on GitHub |
+| `docs/local/board.html` | generated | gitignored — the working view |
+
+**Update it when a task, an epic or a working session closes**, and commit the regenerated markdown
+alongside the JSON. Closing a task means setting its status *and* recording what actually happened:
+if it took a different shape than planned, if something was found along the way, if a decision was
+taken to get it done. A board that only ever flips checkboxes is a worse artefact than no board —
+the reasoning is the part worth having later.
+
+`docs/03-roadmap.md` and the board are not the same document and do not compete: the roadmap holds
+the phases and what "done" means for each, and changes rarely. The board holds the live task list and
+the decision log, and changes constantly. Where they disagree about status, the board is right and
+the roadmap is stale.
+
 ## Git
 
 - **Never add Claude as a co-author or as a commit trailer.** The history is Luca's.
@@ -150,6 +179,8 @@ Run through this and report the result — no silent skips:
    comments and XML docs, not just prose in `docs/` — a `<remarks>` block claiming a packet is 120
    bytes when it is 176 is the same failure as a stale README.
 6. The change stays **inside the current phase** of `docs/03-roadmap.md`. No drive-by refactors.
+7. **The board reflects the work.** `docs/board.json` updated, both views regenerated, and
+   `python tools/board/build_board.py --check` exits 0.
 
 ## Off-limits
 
