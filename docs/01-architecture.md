@@ -105,6 +105,12 @@ Three scenes, and the split is what makes several arenas possible:
 | **Arena01** | Geometry, spawn points, camera | During a match |
 | **Sandbox** | A copy of Bootstrap that hosts and starts a match on Play | Never in a build; opened by hand |
 
+All four are listed in Build Settings, and **Sandbox is listed with its checkbox off** — present so
+Unity stops adding it back every time somebody opens it, disabled so it stays out of a player build.
+The other three are enabled because Netcode can only load a scene over the network if it is in that
+list, which is what an arena is. Removing Sandbox from the list is not a tidy-up: it comes straight
+back the next time the scene is opened, and the churn shows up in every diff.
+
 Bootstrap is loaded first and **never unloaded**; the lobby and arenas come and go on top of it
 with `LoadSceneMode.Additive`. Loading them as `Single` would unload bootstrap along with
 everything else — taking the connection, the roster and the director with it, which are precisely
