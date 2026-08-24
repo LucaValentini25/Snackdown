@@ -378,6 +378,10 @@
     {
       "date": "2026-08-24",
       "entry": "Closed ps-4, and with it both workarounds the epic was written to remove: a player who is out is despawned rather than hidden, and a round spawns a character at its spawn point rather than moving one that was already standing somewhere else. The second went further than the task note expected — with nothing left to reposition, PlayerSnapshot could drop its teleport flag, which is the first time this project has taken something off the wire (D-018). Also closed a hole nobody had hit yet: the life reset lived on the way back to the lobby, a path a rematch started from the end screen never travels, so it moved onto the call that hands out a body. The death-to-despawn wiring was checked by cutting it — two of the four new tests then fail on a timeout rather than an assertion, which is what a despawn that never arrives looks like."
+    },
+    {
+      "date": "2026-08-24",
+      "entry": "Fixed the thing ps-4 only observed. MatchDirector discarded the SceneEventProgressStatus that NGO's LoadScene and UnloadScene return, so a load refused because another scene event was still in flight did nothing at all — no log, no exception, and a phase left in Loading waiting on reports for a scene nobody had asked for. The load is now checked and puts the phase back to Lobby with the reason in the console; the unload is reported but not acted on, since nothing downstream waits for it. Reproduced in the sandbox before and after: same two calls in one frame, phase Loading forever versus phase Lobby and \"Netcode refused to load Arena01: SceneEventInProgress\"."
     }
   ]
 }

@@ -167,23 +167,46 @@ namespace Snackdown.Gameplay.Match
             // else -- including this director and the roster, which are exactly the things that have
             // to survive a match starting. So bootstrap stays loaded for the whole session and the
             // lobby and arenas come and go on top of it.
-            UnloadCurrentSceneThen(_arenas.Get(_arenaIndex.Value).SceneName);
+            if (UnloadCurrentSceneThen(_arenas.Get(_arenaIndex.Value).SceneName)) return;
+
+            // The load was refused, so nothing will ever report having finished it. Going back to
+            // the lobby is the only honest state: the phase said Loading a line ago, and leaving it
+            // there is a loading screen that never ends with nothing in the console to explain it.
+            _expectedCount.Value = 0;
+            _phase.Value = MatchPhase.Lobby;
         }
 
         /// <summary>
-        /// Swaps the loaded gameplay scene for another, additively.
+        /// Swaps the loaded gameplay scene for another, additively. Returns whether the load was
+        /// accepted.
         /// </summary>
         /// <remarks>
-        /// The unload is fire-and-forget on purpose: NGO reports the new scene through
+        /// <para>The unload is fire-and-forget on purpose: NGO reports the new scene through
         /// <see cref="OnLoadComplete"/> regardless, and gating the load on the unload finishing
-        /// would add a round trip to a transition players already perceive as slow.
+        /// would add a round trip to a transition players already perceive as slow.</para>
+        /// <para>The load is not. <c>LoadScene</c> answers with a
+        /// <see cref="SceneEventProgressStatus"/> and refuses outright when another scene event is
+        /// still in flight — silently, with no log and no exception. Discarding that answer is what
+        /// left the phase sitting in <c>Loading</c> forever, waiting on load reports for a scene
+        /// nobody had been asked to load.</para>
         /// </remarks>
-        void UnloadCurrentSceneThen(string sceneName)
+        bool UnloadCurrentSceneThen(string sceneName)
         {
             UnloadCurrentScene();
 
+            SceneEventProgressStatus status =
+                NetworkManager.SceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
+
+            if (status != SceneEventProgressStatus.Started)
+            {
+                Debug.LogError($"[Snackdown] Netcode refused to load {sceneName}: {status}.", this);
+                return false;
+            }
+
+            // Only recorded once the load is under way. Remembering a scene that was refused would
+            // have the next unload go looking for something that never arrived.
             _loadedSceneName = sceneName;
-            NetworkManager.SceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
+            return true;
         }
 
         void UnloadCurrentScene()
@@ -191,8 +214,17 @@ namespace Snackdown.Gameplay.Match
             if (string.IsNullOrEmpty(_loadedSceneName)) return;
 
             Scene previous = SceneManager.GetSceneByName(_loadedSceneName);
+
             if (previous.IsValid() && previous.isLoaded)
-                NetworkManager.SceneManager.UnloadScene(previous);
+            {
+                SceneEventProgressStatus status = NetworkManager.SceneManager.UnloadScene(previous);
+
+                // Reported and not acted on. Nothing downstream waits for an unload, so a refusal
+                // costs an arena left standing under the next one rather than a stuck phase — worth
+                // knowing about, not worth stopping for.
+                if (status != SceneEventProgressStatus.Started)
+                    Debug.LogError($"[Snackdown] Netcode refused to unload {previous.name}: {status}.", this);
+            }
 
             _loadedSceneName = null;
         }
