@@ -5,9 +5,9 @@
 Live state of the work: what is done, what is being done now, every decision taken and why,
 and what is known to be wrong. Updated when a task, an epic or a working session closes.
 
-**Last updated:** 2026-08-23
+**Last updated:** 2026-08-24
 
-**Overall:** 57% — 26 done, 0 in progress, 0 blocked, 20 to do, 2 dropped, across 8 epics.
+**Overall:** 59% — 27 done, 0 in progress, 0 blocked, 19 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -17,7 +17,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Connection layer — LAN and Relay behind one flow](#connection-layer-lan-and-relay-behind-one-flow) | 2 | Done | 6/6 |
 | [Gameplay core — the rules, server-authoritative](#gameplay-core-the-rules-server-authoritative) | 3 | Done | 5/5 |
 | [In-match HUD — life bars and round clock](#in-match-hud-life-bars-and-round-clock) | 4 | Done | 3/3 |
-| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 3/8 |
+| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 4/8 |
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | To do | 0/5 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | To do | 0/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 0/6 |
@@ -84,7 +84,7 @@ One networked object per connection that owns identity, life and stats, and spaw
 | `[x]` | Stand up the networked test harness | PlayMode — HandshakeTests: the client is synchronized, the host sees it, it sees the host, and two clients see each other | The testables entry this task was written around turned out to be the wrong route and was not added — see D-011. NetworkedFixture is ours: 4 tests, no manifest change |
 | `[x]` | PlayerSession exists alongside the avatar, unread | PlayMode — PlayerSessionTests: a joining client gets a session of its own, both peers read the sanitized name, the host's own session carries the name it chose, and a leaving client takes its session with it | Cost two things the task did not anticipate: NetworkSimulation had to become a prefab to be spawnable in a test (D-013), and the session reads its own name out of approval rather than being handed it, because the object that spawns it lives in the assembly this one depends on |
 | `[x]` | Roster becomes an index over live sessions | PlayMode — SessionRosterTests: a client joining a running session sees all four players with their names, skins and ready flags; every peer orders the list the same way; a client cannot ready up a player it does not own | NetworkList and PlayerSlot are deleted as planned, and the roster went with them — it cannot name PlayerSession from Snackdown.Connection, so it moved to Gameplay/Player (D-014). Two things the task did not anticipate: the pre-spawn write ps-1 promised turns out to log a warning on every join and was not done (D-015), and the harness had a real flake — every session bound the same UDP port, so a session now takes one of its own |
-| `[ ]` | Life, fruit count and stats move onto the session | a fruit taken by the client adds life on the server and reaches both HUDs | — |
+| `[x]` | Life, fruit count and stats move onto the session | PlayMode — FruitPickupTests: a fruit the client walks into adds life and a count on the server and both reach the client, the host is not credited for it, and a fruit nobody is standing on collects nothing and spawns silently | PlayerLife moved as a component onto the PlayerSession prefab rather than being folded into the class (D-016), so the referee, the HUD and the spectator camera did not change at all. Stats stayed at one number — fruit, cumulative for the connection — narrowing D-003, which had said per-round. The four places that reached life through the avatar now resolve owner to session, which is what forced PlayerSession.Of to take the peer it should look in (D-017). Two things found on the way: D-015 was reasoning from a wrong premise and is corrected, and FruitSpawner had been logging a warning per fruit for the same reason |
 | `[ ]` | Flip the spawn — PlayerPrefab becomes the session | death despawns the avatar, the session survives with its final life, next round respawns it | The big one. Removes hide-instead-of-despawn and the spawn-point teleport |
 | `[ ]` | Late join arrives as a spectator | a client joining during Playing has no avatar, is not counted alive, and cannot win on the clock | — |
 | `[ ]` | Host can kick, with a reason the kicked client sees | a non-host asking for a kick is ignored by the server | — |
@@ -131,15 +131,35 @@ Make the finished work visible to someone who was not here while it was built.
 Every choice that closed off an alternative, with the reasoning that closed it. This is
 the part of the board worth reading a year from now.
 
+### D-017 — Looking a player up takes the peer to look in
+
+*2026-08-24* · epic **player-session**
+
+**Chosen:** PlayerSession.Of(NetworkManager peer, ulong clientId) rather than Of(clientId). The single-argument version was removed rather than kept beside it.
+
+**Why:** Game code now crosses from one networked object to another to find a player: a fruit sees a character, resolves its owner, and writes to that owner's session. PlayerSession.All is a static, and the PlayMode harness runs a host and its clients in one process, so it holds several peers' copies of the same player and the first match is not reliably the caller's. Reading the wrong one is a wrong answer; writing to it is a permission error NGO logs and nothing acts on, which means a fruit that is silently never banked. Keeping a one-argument overload beside it would leave the footgun in the API and a remark explaining not to use it. In a shipped build every copy belongs to the only peer there is and the argument costs nothing.
+
+**Rejected:** Documenting the hazard and keeping the short overload. Having each caller filter PlayerSession.All itself, which is the same three lines copied into four files.
+
+### D-016 — PlayerLife moved to the session as a component, not as fields on it
+
+*2026-08-24* · epic **player-session**
+
+**Chosen:** The PlayerLife component was taken off the Player prefab and put on the PlayerSession prefab unchanged. PlayerSession exposes it as Life and adds one number of its own, the fruit count. The class was not merged into PlayerSession.
+
+**Why:** Moving the component keeps one file to one type: the session is identity, PlayerLife is the rules of the life clock, and they are now two components on one object instead of one class doing both. It also cost almost nothing to the rest of the project — the referee, the bottom-strip HUD, the spectator camera and the director all read PlayerLife.All, which is unchanged, so none of them were touched. Folding the fields into PlayerSession would have meant rewriting all four to read PlayerSession.All and leaving a large class that mixes a player's name with the drain rate. What did have to change is the four places that reached life through the avatar — the fruit, the head bounce, the predicted character and the nameplate — and those had to change under either option.
+
+**Rejected:** Merging life into PlayerSession and deleting PlayerLife. Leaving PlayerLife on the avatar and having the session hold a reference to it, which is the arrangement this epic exists to undo.
+
 ### D-015 — The session still adopts its identity after spawn, not before
 
 *2026-08-23* · epic **player-session**
 
-**Chosen:** PlayerSession keeps reading its name and skin out of ConnectionApproval in OnNetworkSpawn. Both arrive as deltas immediately after the spawn message rather than inside it.
+**Chosen:** PlayerSession keeps reading its name and skin out of ConnectionApproval in OnNetworkSpawn. Both are inside the spawn message every client receives. CORRECTED in ps-3 — the original entry claimed they arrived as deltas after it, and that was wrong.
 
-**Why:** ps-1 recorded that writing them before Spawn would fold them into the spawn message, and that the task moving the roster into this assembly could finally do it. It compiles now, and it is still wrong: NGO logs "NetworkVariable is written to, but doesn't know its NetworkBehaviour yet" from MarkNetworkBehaviourDirty for any variable set before its object is spawned, and the flag that suppresses it is internal to the package. A warning on every single join costs more than two small deltas — a console that cries wolf is how a real warning goes unread.
+**Why:** The decision is right and the original reasoning behind it was not, so both are recorded. What is true: writing a NetworkVariable before Spawn logs "NetworkVariable is written to, but doesn't know its NetworkBehaviour yet" — NGO does not attach a variable to its behaviour until the object spawns, and the flag that silences it is internal to the package. Verified in ps-3 by making a fruit do it and watching the test catch it. What was wrong: this was written up as a trade against two extra deltas. There are no deltas. NetworkObject.SpawnInternal runs the server's own spawn — and therefore OnNetworkSpawn — before calling SendSpawnCallForObject, which serializes each variable's current value, so anything written there is already in the initial state clients receive. Writing before Spawn buys nothing at all and costs a warning per join. The ps-1 note that promised this as a follow-up was wrong on the same point.
 
-**Rejected:** Reaching NetworkVariableBase.IgnoreInitializeWarning by reflection. Spawning the session and having the roster write the values straight after, which is the same two deltas with an extra hop.
+**Rejected:** Reaching NetworkVariableBase.IgnoreInitializeWarning by reflection. Spawning the session and having the roster write the values straight after, which is a real delta with an extra hop.
 
 ### D-014 — SessionRoster moved to Gameplay and stopped replicating anything
 
@@ -289,7 +309,7 @@ rather than an oversight.
 | | Problem | Impact | Status |
 |:---:|---|---|---|
 | `[ ]` | Almost no test in the repository can fail because of a networking bug | The handshake is now covered by PlayMode tests over a real transport, which is the layer the regression that survived six merged PRs broke. Everything past the handshake — approval, spawning, replication, reconciliation — is still verified by nothing. | open |
-| `[ ]` | Ambient statics are shared by peers under the test harness | Eight one-value statics — the Current pointers, PlayerLife.All, PlayerSession.All, ActivePlayers — are per-process, which is right for a shipped game and wrong for a harness that runs several peers in one editor. Tests must read NetworkManager.SpawnManager instead, and anything whose behaviour depends on one of these cannot be told apart between peers. | open |
+| `[ ]` | Ambient statics are shared by peers under the test harness | Eight one-value statics — the Current pointers, PlayerLife.All, PlayerSession.All, ActivePlayers — are per-process, which is right for a shipped game and wrong for a harness that runs several peers in one editor. Tests must read NetworkManager.SpawnManager instead, and anything whose behaviour depends on one of these cannot be told apart between peers. Narrowed by ps-3: the two lookups that game code uses to cross between objects, PlayerSession.Of and SessionRoster.Of, now filter by peer (D-017). The registries themselves and the Current pointers are unchanged. | open |
 | `[ ]` | Reconcile has zero test coverage | 90 lines and 9 branches of the project's headline mechanism, unreachable from EditMode because it lives in a MonoBehaviour. | open |
 | `[ ]` | No byte of bandwidth has ever been measured | Every figure in the docs is derived from reading the serializers, while the profiler package is installed and its metrics already enabled. | open |
 | `[ ]` | main is 55 commits behind and no build has ever been produced | A reviewer following the repository link lands on the Phase 0 scaffold. Managed stripping and scene-by-name resolution are unexercised. | open |
@@ -300,6 +320,7 @@ rather than an oversight.
 
 ## Session log
 
+- **2026-08-24** — Closed ps-3. PlayerLife moved onto the session prefab and the fruit now credits a player rather than a body. Both new tests were checked by breaking what they cover: matching the pickup on any NetworkObject instead of on a character makes a fruit collect itself, and writing the fruit's kind before Spawn trips the log assertion. That second one settled a claim I had got wrong in ps-2 — a NetworkVariable written in the server's OnNetworkSpawn is already inside the spawn message, so D-015's talk of deltas was reasoning from a wrong premise and is corrected in place. The port fix from ps-2 also turned out to be half a fix: the leftover socket is not always from this run, so the harness now probes a port before binding it. Related and not fixed: the editor process is holding UDP 7777 from a Play session that ended, which is why the sandbox cannot host without an editor restart — Enter Play Mode Options has domain reload disabled, so a leaked socket outlives the session that opened it.
 - **2026-08-23** — Closed ps-2. The roster stopped replicating a player list and became an index over the sessions, which deleted PlayerSlot and moved the roster out of Snackdown.Connection (D-014). The pre-spawn write ps-1 left as a follow-up turned out to be a console warning per join and was rejected rather than inherited (D-015). Adding the tests surfaced a real flake in the harness: every session bound the same UDP port, and roughly one run in three failed to bind it in whichever test ran next, so a session now takes a port of its own.
 - **2026-08-23** — Closed ps-1. Three things were learned by trying: a prefab cannot be built at runtime without an internal NGO field (D-012), a networked scene object cannot be spawned by a test at all (D-013), and the ambient statics documented in docs/01 as safe because a peer is a process stop being safe the moment a harness runs two peers in one. The last one is recorded as a risk and the architecture doc now says so rather than claiming the opposite. Each new test was checked by breaking the code it covers: removing the session spawn fails exactly the four session tests and none of the handshake ones.
 - **2026-08-23** — Closed ps-0 with a harness of our own after opening the testables route and finding it worse than the note in the task assumed (D-011). Four handshake tests now run over a real transport. Two things learned while writing it and worth having recorded: a NetworkManager added at runtime has no NetworkConfig at all, and Shutdown() only raises a flag — the socket closes on the next network update, so a fixture that destroys the peer in the same frame leaves the port bound and breaks the next test rather than its own.

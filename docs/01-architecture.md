@@ -146,7 +146,7 @@ These are the invariants every system must respect. If a change would break one 
 | Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
 | Player-vs-player contact | Solid, and **predicted** — resolved in the motor against buffered peer positions, which on a client are the *interpolated* ones | Waiting for the server to decide it would cost a round trip on every bump. The cost of not waiting is that a client predicts contact against peers as they were rendered, so close contact reliably produces a correction. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
 | Ending a round | **Last one standing**, or the most life left when the 3-minute clock runs out | Both were already implied by `MatchConfig`; a shared top value at the clock is reported as a draw rather than broken by client id, because `MaxLife` makes an exact tie reachable. |
-| A player who is out | **Hidden, not despawned** — and free to pan the camera around the arena | Despawning would take the life readout with it, and the end screen and the next round still need it. Half of this reason has already gone: the roster entry now lives on `PlayerSession`, which outlives the avatar. The other half goes with `ps-3`, and then the hiding does too. |
+| A player who is out | **Hidden, not despawned** — for now | Both of the reasons this existed are gone. The roster entry moved to `PlayerSession` in `ps-2` and the life moved there in `ps-3`, so neither dies with the avatar any more. What is left is that the avatar is still the object NGO ties to the connection; `ps-4` moves that too and the hiding goes with it. |
 | Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
 
 ## Who decides a round is over
@@ -244,6 +244,12 @@ of these statics is shared by peers that are supposed to disagree: the last one 
 `Current`, and `PlayerLife.All` holds the players of both sides at once. It is not a bug in the game
 — a player's machine only ever runs one peer — but it is the reason a networked test reads
 `NetworkManager.SpawnManager`, which belongs to a peer, instead of a registry that does not.
+
+One of these has since been narrowed rather than accepted. `PlayerSession.Of` takes the peer to look
+in, because game code — not just tests — now reaches across objects to find a player: fruit resolves
+a character to its owner's session and writes to it. Reading the wrong peer's copy is a wrong answer;
+*writing* to it is a permission error NGO logs and nobody reads. `SessionRoster` filters the same way
+for the same reason. Where a static is only ever read by the peer that owns it, it stays a static.
 
 The costs are real and worth naming rather than hiding. Every consumer null-checks, so forgetting one
 is a `NullReferenceException` during a scene transition; and anything reading one of these cannot be

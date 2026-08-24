@@ -113,7 +113,14 @@ namespace Snackdown.Gameplay.Player
         // --- remote -----------------------------------------------------------------------
         readonly SnapshotInterpolator _interpolator = new SnapshotInterpolator();
 
-        /// <summary>This character's life, if the match system is present. Null in a bare test scene.</summary>
+        /// <summary>This player's life, once their session has arrived on this peer.</summary>
+        /// <remarks>
+        /// Not a component of this object any more — it moved onto <see cref="PlayerSession"/> in
+        /// ps-3 — so it cannot be fetched in <c>Awake</c> and be relied on. The session and the
+        /// avatar are two spawns, and a client receives them in whichever order synchronization
+        /// hands them over: on a late join the session usually lands first, on a fresh connection
+        /// the avatar can. Null here is a normal state that ends, not a missing reference.
+        /// </remarks>
         PlayerLife _life;
 
         /// <summary>
@@ -248,9 +255,11 @@ namespace Snackdown.Gameplay.Player
             _tickDelta = 1f / NetworkManager.NetworkConfig.TickRate;
             _state = PlayerState.AtPosition(transform.position);
             _inputReader = GetComponent<InputReader>();
-            _life = GetComponent<PlayerLife>();
 
-            if (_life != null) _life.AliveChanged += OnAliveChanged;
+            // Waits for the session if it has not arrived. Binding once and giving up would leave
+            // the character permanently visible, including after its owner had run out.
+            PlayerSession.MembershipChanged += OnAnySessionChanged;
+            BindLife();
 
             // Only the owner's device drives this character. On every other peer the reader would
             // enable its InputActions and latch the local keyboard's jumps into a character that
@@ -272,19 +281,42 @@ namespace Snackdown.Gameplay.Player
 
         public override void OnNetworkDespawn()
         {
+            PlayerSession.MembershipChanged -= OnAnySessionChanged;
+
             if (_life != null) _life.AliveChanged -= OnAliveChanged;
+            _life = null;
 
             NetworkSimulationLoop.Unregister(this);
+        }
+
+        void OnAnySessionChanged(PlayerSession _) => BindLife();
+
+        /// <summary>Attaches to this player's life the first time their session is present.</summary>
+        void BindLife()
+        {
+            if (_life != null) return;
+
+            PlayerSession player = PlayerSession.Of(NetworkManager, OwnerClientId);
+            if (player == null || player.Life == null) return;
+
+            _life = player.Life;
+            _life.AliveChanged += OnAliveChanged;
+
+            // Applied on binding as well as on change: the flag may already say this player is out
+            // by the time their session reaches this peer, and a character that only reacts to
+            // changes would be drawn alive until the next one.
+            OnAliveChanged(_life);
         }
 
         /// <summary>
         /// Shows or hides the character as it enters and leaves the round.
         /// </summary>
         /// <remarks>
-        /// The visual is hidden rather than the object despawned. Despawning would take the roster
-        /// entry, the life readout and the owner's connection to this object with it, and all three
-        /// are still needed — by the scoreboard, by the end screen, and by the next round, which
-        /// reuses the same character rather than negotiating a new one.
+        /// The visual is hidden rather than the object despawned. Despawning would take the owner's
+        /// connection to this object with it, and the next round reuses the same character rather
+        /// than negotiating a new one. The other two reasons this used to have — the roster entry
+        /// and the life readout — are gone: both now live on the session and outlive the avatar
+        /// already. What is left goes with ps-4.
         /// </remarks>
         void OnAliveChanged(PlayerLife life)
         {
