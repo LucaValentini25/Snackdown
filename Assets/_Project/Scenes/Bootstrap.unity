@@ -423,6 +423,7 @@ GameObject:
   - component: {fileID: 1664336101}
   - component: {fileID: 1664336104}
   - component: {fileID: 1664336105}
+  - component: {fileID: 1664336106}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -565,6 +566,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Snackdown.Core::Snackdown.Core.AppBootstrap
   _firstScene: Lobby
+--- !u!114 &1664336106
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1664336100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6fa10337fafe79488c67b4b8047e5b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Connection::Snackdown.Connection.SessionConnection
+  _port: 7777
+  _maxPlayers: 4
+  _useRelay: 1
 --- !u!1001 &690686050046683470
 PrefabInstance:
   m_ObjectHideFlags: 0

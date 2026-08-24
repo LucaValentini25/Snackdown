@@ -24,22 +24,11 @@ namespace Snackdown.UI
     [RequireComponent(typeof(UIDocument))]
     public class MainMenuController : MonoBehaviour
     {
-        [Tooltip("Port used for direct connections.")]
-        [SerializeField] ushort _port = 7777;
-
-        [Tooltip("Players allowed in one session. Enforced by connection approval.")]
-        [SerializeField] int _maxPlayers = 4;
-
-        [Tooltip("Start on Relay (join by code) instead of direct LAN (join by address).")]
-        [SerializeField] bool _useRelay = true;
-
         [Tooltip("Players needed before a match can start. Set to 1 to test the arena alone.")]
         [Min(1)]
         [SerializeField] int _minPlayersToStart = 2;
 
         UIDocument _document;
-        IConnectionProvider _provider;
-        ConnectionApproval _approval;
         SessionRoster _roster;
         CancellationTokenSource _attempt;
 
@@ -84,8 +73,6 @@ namespace Snackdown.UI
         string _rawJoinTarget = string.Empty;
 
         bool _watchingDisconnects;
-
-        static string GameVersion => Application.version;
 
         void Awake() => _document = GetComponent<UIDocument>();
 
@@ -142,6 +129,26 @@ namespace Snackdown.UI
 
             AttachDisconnectWatch();
 
+            ShowWhicheverScreenTheSessionCallsFor();
+        }
+
+        /// <summary>
+        /// Opens on the lobby when there is a session to be in, and on the menu when there is not.
+        /// </summary>
+        /// <remarks>
+        /// This runs every time the scene is loaded, and the scene is loaded every time a match
+        /// ends — so assuming the menu, which is what this used to do, meant <i>Return to lobby</i>
+        /// put a player back on the host-or-join screen with their session still running. Nobody was
+        /// ever disconnected by it; the screen simply forgot.
+        /// </remarks>
+        void ShowWhicheverScreenTheSessionCallsFor()
+        {
+            if (Session != null && Session.InSession)
+            {
+                ShowLobby(Session.IsHosting, Session.JoinTarget);
+                return;
+            }
+
             ShowMenu();
         }
 
@@ -174,24 +181,18 @@ namespace Snackdown.UI
         /// Built on first use, not in <c>Awake</c>: <see cref="NetworkManager.Singleton"/> is
         /// assigned during the NetworkManager's own <c>Awake</c> and nothing orders the two.
         /// </remarks>
-        IConnectionProvider Provider
-        {
-            get
-            {
-                if (_provider == null && NetworkManager.Singleton != null)
-                {
-                    _approval = new ConnectionApproval(NetworkManager.Singleton, GameVersion, _maxPlayers);
+        /// <summary>
+        /// The connection this screen is a view of, or null when the bootstrap scene is absent.
+        /// </summary>
+        /// <remarks>
+        /// Owned by <see cref="SessionConnection"/> in the bootstrap scene rather than built here.
+        /// This scene is unloaded whenever a match runs, and everything it held privately went with
+        /// it — which is why returning from a match used to land on the host-or-join screen with the
+        /// session still running underneath.
+        /// </remarks>
+        static SessionConnection Session => SessionConnection.Current;
 
-                    // The one line that knows there is more than one way to connect. Everything
-                    // below this point talks to the interface and cannot tell them apart.
-                    _provider = _useRelay
-                        ? new RelayConnectionProvider(NetworkManager.Singleton, _approval, GameVersion, _maxPlayers)
-                        : new DirectConnectionProvider(NetworkManager.Singleton, _port, _approval, GameVersion);
-                }
-
-                return _provider;
-            }
-        }
+        IConnectionProvider Provider => Session != null ? Session.Provider : null;
 
         /// <summary>
         /// Relabels the address field for whichever provider is in use.
@@ -208,9 +209,9 @@ namespace Snackdown.UI
             // OnEnable, by which point NetworkManager has woken.
             if (Provider == null || _target == null) return;
 
-            _target.label = _provider.JoinsByCode ? "Code" : "Address";
+            _target.label = Provider.JoinsByCode ? "Code" : "Address";
 
-            if (_provider.JoinsByCode)
+            if (Provider.JoinsByCode)
             {
                 _target.value = string.Empty;
                 _target.textEdition.placeholder = "ABC123";
@@ -273,6 +274,9 @@ namespace Snackdown.UI
             }
 
             SetStatus(_menuStatus, string.Empty, isError: false);
+
+            if (Session != null) Session.Remember(result);
+
             ShowLobby(hosting, result.JoinTarget);
         }
 
@@ -557,9 +561,11 @@ namespace Snackdown.UI
                 _rosterList.Add(row);
             }
 
+            int maxPlayers = Session != null ? Session.MaxPlayers : _roster.Count;
+
             _lobbySubtitle.text = _roster.Count == 1
                 ? "Waiting for players…"
-                : $"{_roster.Count} of {_maxPlayers} players";
+                : $"{_roster.Count} of {maxPlayers} players";
 
             _ready.text = IsLocalReady() ? "Not ready" : "Ready";
 
@@ -622,6 +628,8 @@ namespace Snackdown.UI
             _attempt?.Cancel();
 
             if (Provider != null) await Provider.LeaveAsync();
+
+            if (Session != null) Session.Forget();
 
             ShowMenu();
             SetStatus(_lobbyStatus, string.Empty, isError: false);

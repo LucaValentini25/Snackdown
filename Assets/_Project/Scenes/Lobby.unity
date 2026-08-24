@@ -232,9 +232,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2fbf1ebfdcd6b6a4589165ea502b17c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Snackdown.UI::Snackdown.UI.MainMenuController
-  _port: 7777
-  _maxPlayers: 4
-  _useRelay: 1
   _minPlayersToStart: 1
 --- !u!114 &559191157
 MonoBehaviour:
