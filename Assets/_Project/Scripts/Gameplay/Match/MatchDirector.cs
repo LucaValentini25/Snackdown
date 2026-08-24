@@ -29,17 +29,35 @@ namespace Snackdown.Gameplay.Match
         [Tooltip("Seconds between the arena being ready and play starting.")]
         [SerializeField] float _countdownSeconds = 3f;
 
-        [Tooltip("The rules this match runs under. Everything that reads them should read them here.")]
+        [Tooltip("Numbers a session starts on, before a host picks a preset or changes a field.")]
         [SerializeField] MatchConfig _rules;
 
-        /// <summary>The numbers this match is being played with.</summary>
+        [Tooltip("Difficulty presets a host can start from. Optional; without one there is one setting set.")]
+        [SerializeField] DifficultyCatalog _difficulties;
+
+        /// <summary>The numbers this match is being played with, on every peer.</summary>
         /// <remarks>
-        /// Held once, by the match, instead of separately by every player and by the referee. Three
-        /// copies of the same reference is three chances for one of them to point at a different
-        /// asset, and no way to tell from the Inspector that they had. It is also what lets the
-        /// sandbox scene run under its own rules without a second player prefab.
+        /// <para>Held once, by the match, instead of separately by every player and by the referee.
+        /// Three copies of the same reference is three chances for one of them to point at a
+        /// different asset, and no way to tell from the Inspector that they had. It is also what
+        /// lets the sandbox scene run under its own rules without a second player prefab.</para>
+        /// <para>Replicated since <c>ps-7</c>, and it had to be: two of these numbers are read by
+        /// clients, not only applied by the server — see <see cref="MatchSettings"/>. The serialized
+        /// asset above is now only the value a session <i>starts</i> on.</para>
         /// </remarks>
-        public MatchConfig Rules => _rules;
+        public MatchSettings Rules => _settings.Value;
+
+        /// <summary>How many presets a host can choose between. Zero when none are authored.</summary>
+        public int PresetCount => _difficulties != null ? _difficulties.Count : 0;
+
+        /// <summary>The name of a preset, for a menu that lists them.</summary>
+        public string PresetName(int index)
+            => _difficulties != null ? _difficulties.Get(index).DisplayName : string.Empty;
+
+        readonly NetworkVariable<MatchSettings> _settings = new NetworkVariable<MatchSettings>();
+
+        /// <summary>Raised on every peer when the numbers change.</summary>
+        public event Action<MatchSettings> SettingsChanged;
 
         readonly NetworkVariable<MatchPhase> _phase = new NetworkVariable<MatchPhase>(MatchPhase.Lobby);
         readonly NetworkVariable<int> _arenaIndex = new NetworkVariable<int>(0);
@@ -110,9 +128,15 @@ namespace Snackdown.Gameplay.Match
         {
             Current = this;
             _phase.OnValueChanged += OnPhaseChanged;
+            _settings.OnValueChanged += OnSettingsChanged;
 
             if (IsServer)
             {
+                // Seeded here rather than from a field initialiser: the server's own spawn runs
+                // before the spawn message is serialized, so what is written now is what every
+                // client receives on join rather than a delta chasing it.
+                _settings.Value = MatchSettings.From(_rules).Clamped();
+
                 NetworkManager.SceneManager.OnLoadComplete += OnLoadComplete;
                 NetworkManager.OnClientConnectedCallback += OnClientJoined;
                 NetworkManager.OnClientDisconnectCallback += OnClientLeft;
@@ -124,6 +148,7 @@ namespace Snackdown.Gameplay.Match
         public override void OnNetworkDespawn()
         {
             _phase.OnValueChanged -= OnPhaseChanged;
+            _settings.OnValueChanged -= OnSettingsChanged;
 
             if (IsServer && NetworkManager != null)
             {
@@ -138,6 +163,60 @@ namespace Snackdown.Gameplay.Match
         }
 
         void OnPhaseChanged(MatchPhase previous, MatchPhase current) => PhaseChanged?.Invoke(current);
+
+        void OnSettingsChanged(MatchSettings previous, MatchSettings current)
+            => SettingsChanged?.Invoke(current);
+
+        // ==================================================================================
+        //  The numbers
+        // ==================================================================================
+
+        /// <summary>Asks the server to load a preset's numbers. Only the host is obeyed.</summary>
+        public void RequestPreset(int index) => PresetRpc(index);
+
+        /// <summary>Asks the server to run on these numbers. Only the host is obeyed.</summary>
+        public void RequestSettings(MatchSettings settings) => SettingsRpc(settings);
+
+        /// <remarks>
+        /// The sender is checked against the server's own id, the same as readying up and kicking:
+        /// the lobby only shows these controls to the host, and a button is not a rule. Without it
+        /// any client could halve everyone's starting life on the way into a match.
+        /// </remarks>
+        [Rpc(SendTo.Server)]
+        void PresetRpc(int index, RpcParams rpcParams = default)
+        {
+            if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId) return;
+            if (_difficulties == null || _difficulties.Count == 0) return;
+
+            ServerSetSettings(_difficulties.SettingsFor(index));
+        }
+
+        [Rpc(SendTo.Server)]
+        void SettingsRpc(MatchSettings settings, RpcParams rpcParams = default)
+        {
+            if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId) return;
+
+            ServerSetSettings(settings);
+        }
+
+        /// <summary>
+        /// Puts new numbers in force. Server-only, and only between matches.
+        /// </summary>
+        /// <remarks>
+        /// <para>Refused once a match is under way, and that is the whole reason this is a method
+        /// rather than a setter. Lowering the ceiling mid-round would shrink every life bar on every
+        /// screen at once; raising the drain would have players losing at a rate they did not agree
+        /// to. The lobby is where the rules are agreed, so the lobby is where they can move.</para>
+        /// <para>Clamped rather than trusted. These arrive from a host typing into a field, and a
+        /// starting life of zero is a match everyone loses on the first frame.</para>
+        /// </remarks>
+        public void ServerSetSettings(MatchSettings settings)
+        {
+            if (!IsServer) return;
+            if (_phase.Value != MatchPhase.Lobby && _phase.Value != MatchPhase.Ended) return;
+
+            _settings.Value = settings.Clamped();
+        }
 
         // ==================================================================================
         //  Server

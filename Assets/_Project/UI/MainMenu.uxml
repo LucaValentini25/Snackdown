@@ -41,6 +41,38 @@
                  so laying out four fixed slots here would mean hiding and showing them instead. -->
             <ui:VisualElement name="roster-list" class="roster" />
 
+            <!-- The rules panel. Every peer sees the numbers; only the host is given the controls
+                 that move them, and only between matches. The rows are laid out here rather than
+                 built in code because unlike the roster there is a fixed, known set of them. -->
+            <ui:VisualElement name="settings-panel" class="settings">
+                <ui:Label text="Rules" class="settings__title" />
+
+                <ui:VisualElement name="preset-row" class="settings__row">
+                    <ui:Label text="Preset" class="settings__label" />
+                    <ui:DropdownField name="preset-field" class="settings__control" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="settings__row">
+                    <ui:Label text="Starting life" class="settings__label" />
+                    <ui:FloatField name="starting-life-field" class="settings__control" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="settings__row">
+                    <ui:Label text="Life ceiling" class="settings__label" />
+                    <ui:FloatField name="max-life-field" class="settings__control" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="settings__row">
+                    <ui:Label text="Drain per second" class="settings__label" />
+                    <ui:FloatField name="drain-field" class="settings__control" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="settings__row">
+                    <ui:Label text="Round seconds" class="settings__label" />
+                    <ui:FloatField name="round-seconds-field" class="settings__control" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
             <ui:Button name="ready-button" text="Ready" class="button button--primary" />
             <ui:Button name="start-button" text="Start match" class="button hidden" />
             <ui:Button name="leave-button" text="Leave" class="button" />

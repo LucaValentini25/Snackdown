@@ -73,10 +73,10 @@ namespace Snackdown.Gameplay.Match
             }
         }
 
-        /// <summary>The rules in force, preferring the match's copy over this component's own.</summary>
-        MatchConfig Rules => MatchDirector.Current != null && MatchDirector.Current.Rules != null
+        /// <summary>The numbers in force, preferring the match's replicated copy over this component's own.</summary>
+        MatchSettings Rules => MatchDirector.Current != null
             ? MatchDirector.Current.Rules
-            : _config;
+            : MatchSettings.From(_config);
 
         public static RoundReferee Current { get; private set; }
 
@@ -85,16 +85,17 @@ namespace Snackdown.Gameplay.Match
             Current = this;
 
             if (IsServer && _config == null)
-                Debug.LogWarning($"[Snackdown] {name} has no MatchConfig; falling back to a {FallbackRoundSeconds}s round.", this);
+            {
+                Debug.LogWarning(
+                    $"[Snackdown] {name} has no MatchConfig; without a director it falls back to a "
+                    + $"{MatchSettings.Fallback.RoundSeconds}s round.", this);
+            }
         }
 
         public override void OnNetworkDespawn()
         {
             if (ReferenceEquals(Current, this)) Current = null;
         }
-
-        /// <summary>Round length used when no config is assigned, so a match still ends.</summary>
-        const float FallbackRoundSeconds = 180f;
 
         void Update()
         {
@@ -138,8 +139,7 @@ namespace Snackdown.Gameplay.Match
             _outcome.Value = MatchOutcome.Undecided;
             _startingPlayers = PlayerLife.All.Count;
 
-            MatchConfig rules = Rules;
-            float seconds = rules != null ? rules.RoundSeconds : FallbackRoundSeconds;
+            float seconds = Rules.RoundSeconds;
 
             // A round of zero seconds means no clock at all, which is what the sandbox runs under.
             // Expressing "untimed" as data keeps it out of the rules themselves.
@@ -182,7 +182,7 @@ namespace Snackdown.Gameplay.Match
         /// </summary>
         /// <remarks>
         /// A shared top value is reported as no winner rather than broken by client id or spawn
-        /// order. Life is capped by <see cref="MatchConfig.MaxLife"/>, so two players sitting at the
+        /// order. Life is capped by <see cref="MatchSettings.MaxLife"/>, so two players sitting at the
         /// ceiling is a reachable state and not a floating-point curiosity — resolving it by an
         /// arbitrary rule would hand someone a win for having connected first.
         /// </remarks>

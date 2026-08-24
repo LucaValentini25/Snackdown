@@ -70,7 +70,7 @@ The predicted local player stays responsive at both.
 
 - [x] Life timer (server-authoritative, ~1 Hz replication) — drains continuously server-side,
       publishes once a second, clients drain locally between updates. 1 write/s by configuration
-      (`MatchConfig.LifeReplicationHz`), plus an immediate publish on fruit pickup and on death,
+      (`MatchSettings.LifeReplicationHz`), plus an immediate publish on fruit pickup and on death,
       where the original wrote every frame
 - [x] Fruit spawner (rarity table as ScriptableObject) + networked pickup — 8 fruit from 35% common
       to 1% legendary, worth 3s to 20s. Weights are 35%→1% by construction; the 100k-roll

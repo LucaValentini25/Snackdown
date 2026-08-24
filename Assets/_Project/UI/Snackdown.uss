@@ -171,6 +171,39 @@
     border-color: var(--bad);
 }
 
+.settings {
+    margin-bottom: var(--gap);
+    padding: 8px 10px;
+    background-color: var(--bg);
+    border-radius: 4px;
+}
+
+.settings__title {
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+    -unity-font-style: bold;
+}
+
+.settings__row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3px;
+}
+
+.settings__label {
+    font-size: 13px;
+    color: var(--ink);
+}
+
+/* Fixed rather than growing: four rows whose fields all start at the same x read as a table,
+   and a column that jogs left and right with the length of each label does not. */
+.settings__control {
+    width: 130px;
+    margin: 0;
+}
+
 .join-code-row {
     flex-direction: row;
     align-items: center;
