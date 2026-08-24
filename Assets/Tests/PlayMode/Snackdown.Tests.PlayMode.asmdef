@@ -2,7 +2,10 @@
     "name": "Snackdown.Tests.PlayMode",
     "rootNamespace": "Snackdown.Tests",
     "references": [
+        "Snackdown.Connection",
+        "Snackdown.Gameplay",
         "Unity.Netcode.Runtime",
+        "Unity.Collections",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

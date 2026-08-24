@@ -21,6 +21,15 @@ namespace Snackdown.Connection
     /// </remarks>
     public class SessionRoster : NetworkBehaviour
     {
+        /// <summary>The per-connection session object spawned for every player who joins.</summary>
+        /// <remarks>
+        /// Held as a plain <see cref="GameObject"/> rather than as the component it carries, and not
+        /// by accident: the session lives in <c>Snackdown.Gameplay</c>, which depends on this
+        /// assembly. Naming its type here would close the loop and neither would compile. The
+        /// roster spawns the object and the object works out who it belongs to.
+        /// </remarks>
+        [SerializeField] private GameObject _sessionPrefab;
+
         readonly NetworkList<PlayerSlot> _slots = new NetworkList<PlayerSlot>();
 
         /// <summary>Raised on every peer whenever the roster changes, after the change is applied.</summary>
@@ -94,6 +103,8 @@ namespace Snackdown.Connection
             if (!IsServer) return;
             if (IndexOf(clientId) >= 0) return;
 
+            SpawnSession(clientId);
+
             ConnectionApproval approval = ConnectionApproval.Current;
 
             _slots.Add(new PlayerSlot
@@ -105,6 +116,29 @@ namespace Snackdown.Connection
                 CharacterIndex = approval?.CharacterOf(clientId) ?? 0,
                 IsReady = false
             });
+        }
+
+        /// <summary>
+        /// Gives a newly admitted client its own session object, owned by that client.
+        /// </summary>
+        /// <remarks>
+        /// <para>Spawned with ownership rather than left on the server so that the client can
+        /// eventually ask things of its own session — changing skin, readying up — through Rpcs the
+        /// server still validates. Ownership is who may ask, not who decides.</para>
+        /// <para>Nothing here despawns it. NGO destroys an owned object when its owner disconnects,
+        /// which is exactly the lifetime wanted: a session lasts as long as the connection. The
+        /// avatar's lifetime is what will become shorter, later.</para>
+        /// </remarks>
+        void SpawnSession(ulong clientId)
+        {
+            if (_sessionPrefab == null)
+            {
+                Debug.LogError($"[Snackdown] {name} has no session prefab; players will have no identity.", this);
+                return;
+            }
+
+            GameObject session = Instantiate(_sessionPrefab);
+            session.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
         }
 
         void RemovePlayer(ulong clientId)

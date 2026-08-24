@@ -79,6 +79,8 @@ namespace Snackdown.Tests
             Host = CreatePeer("Host", isHost: true);
             Assert.IsTrue(Host.StartHost(), $"The host refused to start. Port {HarnessPort} may already be bound.");
 
+            OnHostStarted();
+
             for (int i = 0; i < clientCount; i++)
             {
                 NetworkManager client = CreatePeer($"Client {i + 1}", isHost: false);
@@ -133,6 +135,20 @@ namespace Snackdown.Tests
         /// <param name="peer">The peer being configured, not yet started.</param>
         /// <param name="isHost">True for the host, false for a joining client.</param>
         protected virtual void Configure(NetworkManager peer, bool isHost)
+        {
+        }
+
+        /// <summary>
+        /// Runs on the server once it is listening and before any client joins. Override to spawn
+        /// the objects a session is expected to already contain.
+        /// </summary>
+        /// <remarks>
+        /// In a real session the systems that react to a player arriving are scene objects: they
+        /// exist before anyone connects, because the scene was loaded first. A test that spawned
+        /// them afterwards would be exercising a join order that never happens, and would quietly
+        /// pass over the case where the first client arrives before its handler does.
+        /// </remarks>
+        protected virtual void OnHostStarted()
         {
         }
 

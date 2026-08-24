@@ -73,7 +73,7 @@
       "goal": "One networked object per connection that owns identity, life and stats, and spawns a disposable avatar per round. Unblocks late join, real despawn on death, the wardrobe and host-configured matches — none of which can be built cleanly on top of NGO's default one-prefab-per-connection model.",
       "tasks": [
         { "id": "ps-0", "title": "Stand up the networked test harness", "status": "done", "test": "PlayMode — HandshakeTests: the client is synchronized, the host sees it, it sees the host, and two clients see each other", "notes": "The testables entry this task was written around turned out to be the wrong route and was not added — see D-011. NetworkedFixture is ours: 4 tests, no manifest change" },
-        { "id": "ps-1", "title": "PlayerSession exists alongside the avatar, unread", "status": "todo", "test": "on connect, both peers see a session carrying the sanitized nickname" },
+        { "id": "ps-1", "title": "PlayerSession exists alongside the avatar, unread", "status": "done", "test": "PlayMode — PlayerSessionTests: a joining client gets a session of its own, both peers read the sanitized name, the host's own session carries the name it chose, and a leaving client takes its session with it", "notes": "Cost two things the task did not anticipate: NetworkSimulation had to become a prefab to be spawnable in a test (D-013), and the session reads its own name out of approval rather than being handed it, because the object that spawns it lives in the assembly this one depends on" },
         { "id": "ps-2", "title": "Roster becomes an index over live sessions", "status": "todo", "test": "a third client sees the two already present, with names and ready state", "notes": "NetworkList and PlayerSlot are deleted here" },
         { "id": "ps-3", "title": "Life, fruit count and stats move onto the session", "status": "todo", "test": "a fruit taken by the client adds life on the server and reaches both HUDs" },
         { "id": "ps-4", "title": "Flip the spawn — PlayerPrefab becomes the session", "status": "todo", "test": "death despawns the avatar, the session survives with its final life, next round respawns it", "notes": "The big one. Removes hide-instead-of-despawn and the spawn-point teleport" },
@@ -223,6 +223,24 @@
       "choice": "A NetworkedFixture in a PlayMode assembly that creates a NetworkManager and a UnityTransport per peer on loopback. manifest.json is untouched.",
       "why": "NGO's NetcodeIntegrationTest is only compiled by listing the package under testables, and in 2.11 it lives in Unity.Netcode.Runtime.Tests together with the package's own 672 tests — all of which would then appear in this project's Test Runner, so the suite the project is judged on stops being legible in its own window. What that harness does for the ordinary case is one NetworkManager and one transport per peer, which is roughly a hundred lines written in this project's terms, against an API that is public and stable rather than one that was already renamed once in 2.0.",
       "rejected": "Adding the testables entry the ps-0 task was originally written around, and inheriting from NetcodeIntegrationTest."
+    },
+    {
+      "id": "D-012",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "Networked tests load the real prefabs, not ones built in code",
+      "choice": "PlayerSessionTests loads Player, PlayerSession and NetworkSimulation from the asset database. The test class is wrapped in UNITY_EDITOR; the assembly stays a Play mode one.",
+      "why": "Fabricating a prefab at runtime needs NetworkObject.GlobalObjectIdHash, which is internal — NGO can only do it in its own tests because its assembly is granted access. A runtime-built object keeps hash 0, and this task needs two of them, so registering the second is refused with a duplicate-hash error. Loading the real assets sidesteps that and buys the half a hand-built prefab could never cover: that the object which actually ships is wired up. An editor-only assembly was tried and reverted — the Test Runner reclassifies it as Edit mode, where NGO never initialises its message table and every test fails on the first message sent.",
+      "rejected": "Writing the internal hash by reflection; moving the prefabs into a Resources folder that every build would then carry."
+    },
+    {
+      "id": "D-013",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "A networked scene object becomes a prefab when it needs to be tested",
+      "choice": "NetworkSimulation — the one object carrying the tick loop, the roster, the director and the referee — was saved as a prefab and the scene now holds an instance of it.",
+      "why": "A scene object cannot be spawned by a test: the harness runs both peers in one editor process, so they share the scene and therefore the object, where a real session gives each peer its own copy through scene synchronization. Without this the only way to test a join was to bypass the roster and spawn sessions by hand, which tests the class and not the thing the task asks for. Saving it as a prefab also means the scene and the test exercise the same object rather than two configurations that drift.",
+      "rejected": "Splitting SessionRoster onto a GameObject of its own; leaving ps-1 without a test of the real join path."
     }
   ],
 
@@ -231,6 +249,12 @@
       "title": "Almost no test in the repository can fail because of a networking bug",
       "impact": "The handshake is now covered by PlayMode tests over a real transport, which is the layer the regression that survived six merged PRs broke. Everything past the handshake — approval, spawning, replication, reconciliation — is still verified by nothing.",
       "severity": "high",
+      "status": "open"
+    },
+    {
+      "title": "Ambient statics are shared by peers under the test harness",
+      "impact": "Eight one-value statics — the Current pointers, PlayerLife.All, PlayerSession.All, ActivePlayers — are per-process, which is right for a shipped game and wrong for a harness that runs several peers in one editor. Tests must read NetworkManager.SpawnManager instead, and anything whose behaviour depends on one of these cannot be told apart between peers.",
+      "severity": "medium",
       "status": "open"
     },
     {
@@ -293,6 +317,10 @@
     {
       "date": "2026-08-23",
       "entry": "Closed ps-0 with a harness of our own after opening the testables route and finding it worse than the note in the task assumed (D-011). Four handshake tests now run over a real transport. Two things learned while writing it and worth having recorded: a NetworkManager added at runtime has no NetworkConfig at all, and Shutdown() only raises a flag — the socket closes on the next network update, so a fixture that destroys the peer in the same frame leaves the port bound and breaks the next test rather than its own."
+    },
+    {
+      "date": "2026-08-23",
+      "entry": "Closed ps-1. Three things were learned by trying: a prefab cannot be built at runtime without an internal NGO field (D-012), a networked scene object cannot be spawned by a test at all (D-013), and the ambient statics documented in docs/01 as safe because a peer is a process stop being safe the moment a harness runs two peers in one. The last one is recorded as a risk and the architecture doc now says so rather than claiming the opposite. Each new test was checked by breaking the code it covers: removing the session spawn fails exactly the four session tests and none of the handshake ones."
     }
   ]
 }

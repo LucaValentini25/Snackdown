@@ -6,7 +6,8 @@
         "Snackdown.Simulation",
         "Snackdown.Netcode",
         "Snackdown.Input",
-        "Unity.Netcode.Runtime"
+        "Unity.Netcode.Runtime",
+        "Unity.Collections"
     ],
     "autoReferenced": true,
     "noEngineReferences": false
