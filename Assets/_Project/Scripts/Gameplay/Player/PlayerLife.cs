@@ -53,24 +53,33 @@ namespace Snackdown.Gameplay.Player
         public bool IsAlive => _alive.Value;
 
         /// <summary>
-        /// The rules in force, preferring the match's copy over this prefab's own.
+        /// The numbers in force, preferring the match's replicated copy over this prefab's own.
         /// </summary>
         /// <remarks>
-        /// The prefab reference stays as the fallback for a bare test scene with no director. When
-        /// there is one, its asset wins — which is what lets the sandbox run with the drain off
-        /// without needing a second player prefab to carry that difference.
+        /// <para>The prefab reference stays as the fallback for a bare test scene with no director.
+        /// When there is one, what it replicates wins — which is what lets the sandbox run with the
+        /// drain off without needing a second player prefab, and since <c>ps-7</c> what lets a host
+        /// change the numbers for everyone.</para>
+        /// <para>Read fresh rather than cached on spawn. Two of these are read on the client every
+        /// frame and the host can move them between matches, so a copy taken at spawn would have a
+        /// player draining at last match's rate.</para>
         /// </remarks>
-        MatchConfig Rules => MatchDirector.Current != null && MatchDirector.Current.Rules != null
+        MatchSettings Rules => MatchDirector.Current != null
             ? MatchDirector.Current.Rules
-            : _config;
+            : MatchSettings.From(_config);
 
         /// <summary>Seconds left, smoothed on clients so the readout does not tick in steps.</summary>
         public float Remaining => IsServer ? _exactLife : _displayed;
 
-        /// <summary>Fraction of <see cref="MatchConfig.MaxLife"/> remaining, for a bar.</summary>
-        public float Fraction => Rules != null && Rules.MaxLife > 0f
-            ? Mathf.Clamp01(Remaining / Rules.MaxLife)
-            : 0f;
+        /// <summary>Fraction of <see cref="MatchSettings.MaxLife"/> remaining, for a bar.</summary>
+        public float Fraction
+        {
+            get
+            {
+                float max = Rules.MaxLife;
+                return max > 0f ? Mathf.Clamp01(Remaining / max) : 0f;
+            }
+        }
 
         /// <summary>Raised on the server the moment this player is out of the round.</summary>
         /// <remarks>

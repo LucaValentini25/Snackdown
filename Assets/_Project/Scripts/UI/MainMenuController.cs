@@ -60,6 +60,26 @@ namespace Snackdown.UI
         Button _copyCode;
         VisualElement _rosterList;
 
+        VisualElement _settingsPanel;
+        VisualElement _presetRow;
+        DropdownField _preset;
+        FloatField _startingLife;
+        FloatField _maxLife;
+        FloatField _drain;
+        FloatField _roundSeconds;
+
+        MatchDirector _director;
+
+        /// <summary>
+        /// True while the fields are being filled from the replicated numbers.
+        /// </summary>
+        /// <remarks>
+        /// Setting <c>value</c> on a UI Toolkit field raises its change event, so writing what the
+        /// server just sent would send it straight back — and with two peers editing, bounce between
+        /// them. This is the flag that tells a change apart from an echo of one.
+        /// </remarks>
+        bool _fillingFields;
+
         /// <summary>The bare code, without the sentence wrapped around it for display.</summary>
         string _rawJoinTarget = string.Empty;
 
@@ -90,6 +110,14 @@ namespace Snackdown.UI
             _copyCode = root.Q<Button>("copy-code-button");
             _rosterList = root.Q<VisualElement>("roster-list");
 
+            _settingsPanel = root.Q<VisualElement>("settings-panel");
+            _presetRow = root.Q<VisualElement>("preset-row");
+            _preset = root.Q<DropdownField>("preset-field");
+            _startingLife = root.Q<FloatField>("starting-life-field");
+            _maxLife = root.Q<FloatField>("max-life-field");
+            _drain = root.Q<FloatField>("drain-field");
+            _roundSeconds = root.Q<FloatField>("round-seconds-field");
+
             _nickname.value = DefaultNickname();
 
             // Deferred a frame rather than read here: the provider needs NetworkManager.Singleton,
@@ -105,6 +133,12 @@ namespace Snackdown.UI
             _start.clicked += OnStartClicked;
             _leave.clicked += OnLeaveClicked;
             _copyCode.clicked += OnCopyCodeClicked;
+
+            _preset.RegisterValueChangedCallback(OnPresetPicked);
+            _startingLife.RegisterValueChangedCallback(OnSettingEdited);
+            _maxLife.RegisterValueChangedCallback(OnSettingEdited);
+            _drain.RegisterValueChangedCallback(OnSettingEdited);
+            _roundSeconds.RegisterValueChangedCallback(OnSettingEdited);
 
             AttachDisconnectWatch();
 
@@ -123,6 +157,13 @@ namespace Snackdown.UI
             _leave.clicked -= OnLeaveClicked;
             _copyCode.clicked -= OnCopyCodeClicked;
 
+            _preset.UnregisterValueChangedCallback(OnPresetPicked);
+            _startingLife.UnregisterValueChangedCallback(OnSettingEdited);
+            _maxLife.UnregisterValueChangedCallback(OnSettingEdited);
+            _drain.UnregisterValueChangedCallback(OnSettingEdited);
+            _roundSeconds.UnregisterValueChangedCallback(OnSettingEdited);
+
+            DetachDirector();
             DetachRoster();
 
             _attempt?.Cancel();
@@ -250,6 +291,7 @@ namespace Snackdown.UI
 
         void ShowMenu()
         {
+            DetachDirector();
             DetachRoster();
 
             _menuScreen.RemoveFromClassList("hidden");
@@ -284,6 +326,7 @@ namespace Snackdown.UI
             // the lobby is the point past which there is certainly a session to lose.
             AttachDisconnectWatch();
 
+            AttachDirector();
             AttachRoster();
             RefreshRoster();
         }
@@ -333,6 +376,120 @@ namespace Snackdown.UI
             SetStatus(_menuStatus,
                 string.IsNullOrWhiteSpace(reason) ? "The session ended." : reason,
                 isError: true);
+        }
+
+        // ==================================================================================
+        //  Rules
+        // ==================================================================================
+
+        void AttachDirector()
+        {
+            if (_director != null) return;
+
+            _director = FindFirstObjectByType<MatchDirector>();
+            if (_director == null) return;
+
+            _director.SettingsChanged += OnSettingsReplicated;
+            FillPresetChoices();
+            RefreshSettings();
+        }
+
+        void DetachDirector()
+        {
+            if (_director == null) return;
+
+            _director.SettingsChanged -= OnSettingsReplicated;
+            _director = null;
+        }
+
+        void OnSettingsReplicated(MatchSettings settings) => RefreshSettings();
+
+        /// <remarks>
+        /// The presets are authored content, so the list is built once from whatever the catalog
+        /// holds rather than hardcoded here. A session with no catalog assigned hides the row
+        /// instead of showing an empty dropdown that does nothing when opened.
+        /// </remarks>
+        void FillPresetChoices()
+        {
+            _preset.choices.Clear();
+
+            for (int i = 0; i < _director.PresetCount; i++)
+                _preset.choices.Add(_director.PresetName(i));
+
+            _presetRow.EnableInClassList("hidden", _director.PresetCount == 0);
+        }
+
+        /// <summary>
+        /// Shows the numbers in force, and lets the host move them only when a move would take.
+        /// </summary>
+        /// <remarks>
+        /// <para>Everyone sees them, which is the point of replicating them at all: a player agreeing
+        /// to ready up should be able to see what they are agreeing to. Only the host gets fields
+        /// that respond, and the server refuses anything else regardless.</para>
+        /// <para>Disabled rather than hidden for a client, unlike the Start button. A control that is
+        /// absent says "this does not exist"; one that is greyed says "this is not yours", and here
+        /// the second is true and worth saying — the numbers are the rules of the match they are
+        /// about to play.</para>
+        /// </remarks>
+        void RefreshSettings()
+        {
+            if (_director == null || _settingsPanel == null) return;
+
+            MatchSettings settings = _director.Rules;
+
+            bool hosting = NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
+
+            // Between matches only. The server refuses a change once a match is under way, so a
+            // field that still accepted typing would be a control that silently does nothing.
+            bool changeable = hosting
+                              && (_director.Phase == MatchPhase.Lobby || _director.Phase == MatchPhase.Ended);
+
+            _preset.SetEnabled(changeable);
+            _startingLife.SetEnabled(changeable);
+            _maxLife.SetEnabled(changeable);
+            _drain.SetEnabled(changeable);
+            _roundSeconds.SetEnabled(changeable);
+
+            _fillingFields = true;
+
+            _startingLife.value = settings.StartingLife;
+            _maxLife.value = settings.MaxLife;
+            _drain.value = settings.DrainPerSecond;
+            _roundSeconds.value = settings.RoundSeconds;
+
+            _fillingFields = false;
+        }
+
+        void OnPresetPicked(ChangeEvent<string> change)
+        {
+            if (_fillingFields || _director == null) return;
+
+            int index = _preset.choices.IndexOf(change.newValue);
+            if (index < 0) return;
+
+            _director.RequestPreset(index);
+        }
+
+        /// <remarks>
+        /// Sends all four rather than the one that moved. The struct is the unit the server clamps
+        /// and replicates, and a per-field message would have to be reassembled against a copy that
+        /// may already have moved underneath it.
+        /// </remarks>
+        void OnSettingEdited(ChangeEvent<float> change)
+        {
+            if (_fillingFields || _director == null) return;
+
+            _director.RequestSettings(new MatchSettings
+            {
+                StartingLife = _startingLife.value,
+                MaxLife = _maxLife.value,
+                DrainPerSecond = _drain.value,
+                RoundSeconds = _roundSeconds.value,
+
+                // Not offered in the lobby: it is a bandwidth trade, not a rule, and nothing a
+                // player would recognise. Carried through so editing a field cannot reset it.
+                LifeReplicationHz = _director.Rules.LifeReplicationHz
+            });
         }
 
         void AttachRoster()
@@ -411,6 +568,10 @@ namespace Snackdown.UI
             // players there are, so lowering it cannot put the session into a state the server
             // disagrees with.
             _start.SetEnabled(_roster.EveryoneReady && _roster.Count >= _minPlayersToStart);
+
+            // The rules panel rides the same redraw. Whether the host may still change a number
+            // depends on the phase, and nothing else here is watching for that.
+            RefreshSettings();
         }
 
         bool IsLocalReady()

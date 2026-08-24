@@ -103,6 +103,7 @@ MonoBehaviour:
   _arenas: {fileID: 11400000, guid: 14189454d9a1f354cbda24f3665c14f4, type: 2}
   _countdownSeconds: 3
   _rules: {fileID: 11400000, guid: f0c5d336e0e603a48a6e4b1112a396f1, type: 2}
+  _difficulties: {fileID: 11400000, guid: d1caf8287605c9c49a36143818b23761, type: 2}
 --- !u!114 &5902530594892654771
 MonoBehaviour:
   m_ObjectHideFlags: 0

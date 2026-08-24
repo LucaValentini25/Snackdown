@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2e582df874495843bdee449d91f0d99, type: 3}
+  m_Name: DifficultyCatalog
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Match.DifficultyCatalog
+  _presets:
+  - DisplayName: Relaxed
+    Rules: {fileID: 11400000, guid: b2dfc5d4f0c95af43b4daed8a1d6f67a, type: 2}
+  - DisplayName: Standard
+    Rules: {fileID: 11400000, guid: f0c5d336e0e603a48a6e4b1112a396f1, type: 2}
+  - DisplayName: Brutal
+    Rules: {fileID: 11400000, guid: dea450854bf36ed41a4f4deb872dc250, type: 2}

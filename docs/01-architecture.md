@@ -63,7 +63,8 @@ Assets/
 │   │   │                     SnapshotFrame, SnapshotInterpolator, WorldSnapshotBuffer,
 │   │   │                     VisualSmoother, ReconciliationStats, RunRecorder
 │   │   ├── Gameplay/
-│   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchOutcome,
+│   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchSettings,
+│   │   │   │                 DifficultyCatalog, MatchOutcome,
 │   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera,
 │   │   │                 SandboxRunner
 │   │   │   ├── Player/       PredictedPlayer, PlayerSession, SessionRoster, PlayerLife,
@@ -151,7 +152,7 @@ These are the invariants every system must respect. If a change would break one 
 | Topology | **Host** (listen server), written so a headless server stays possible | See [02 — Netcode](02-netcode.md#topology). |
 | Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
 | Player-vs-player contact | Solid, and **predicted** — resolved in the motor against buffered peer positions, which on a client are the *interpolated* ones | Waiting for the server to decide it would cost a round trip on every bump. The cost of not waiting is that a client predicts contact against peers as they were rendered, so close contact reliably produces a correction. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
-| Ending a round | **Last one standing**, or the most life left when the 3-minute clock runs out | Both were already implied by `MatchConfig`; a shared top value at the clock is reported as a draw rather than broken by client id, because `MaxLife` makes an exact tie reachable. |
+| Ending a round | **Last one standing**, or the most life left when the clock runs out | Both were already implied by the rules asset; a shared top value at the clock is reported as a draw rather than broken by client id, because `MaxLife` makes an exact tie reachable. The clock is three minutes by default and the host can move it — see below. |
 | A player who is out | **Despawned** — and free to pan the camera around the arena | The character was hidden rather than despawned for three phases, because despawning it took the roster entry, the life and the connection's own player object with it. `ps-2` moved the first onto `PlayerSession`, `ps-3` the second, and `ps-4` pointed `NetworkConfig.PlayerPrefab` at the session so the third stopped being true. There is nothing left to preserve, so the body goes. |
 | Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
 
@@ -198,6 +199,22 @@ to point somewhere else and no way to see from the Inspector that it had. Each k
 as a fallback for a scene with no director. That is also what lets the sandbox run under its own
 rules — drain at zero, round at zero, which the referee reads as *no clock* rather than as a round
 that ends immediately — without a second player prefab to carry the difference.
+
+**The rules a session is playing by are replicated, and the asset is only where they start.** A
+`MatchSettings` struct rides a server-written `NetworkVariable` on the director; the host picks a
+preset from `DifficultyCatalog` or edits any number in the lobby, and the server clamps whatever
+arrives before publishing it. See ADR D-005.
+
+It has to replicate rather than merely be applied server-side, and the reason is worth stating
+because the ADR originally got it wrong. Two of the five numbers are read *by clients*:
+`DrainPerSecond` is what a client counts its own life down with between the server's once-a-second
+updates, and `MaxLife` is the denominator of every life bar drawn. A host lowering either against
+clients still holding the old asset would have every other screen emptying at a different rate,
+disagreeing about numbers that decide the match.
+
+Nothing `Simulate()` reads is in there. Movement is executed identically on both sides of the wire,
+and a divergence there produces a trembling character whose symptom points at reconciliation, which
+is not where the bug would be. Tuning is for the rules, not for the physics.
 
 ## Art has a size; it is not scaled to one
 
