@@ -92,8 +92,10 @@ namespace Snackdown.Gameplay.Combat
             // Already stunned: no chaining a second stun onto someone who cannot move anyway.
             if (lower.State.IsStunned) return;
 
-            PlayerLife lowerLife = lower.GetComponent<PlayerLife>();
-            if (lowerLife != null && !lowerLife.IsAlive) return;
+            // The life left the avatar in ps-3, so being alive is a question about the player and
+            // not about the object being stood on.
+            PlayerSession lowerPlayer = PlayerSession.Of(NetworkManager, lower.OwnerClientId);
+            if (lowerPlayer != null && lowerPlayer.Life != null && !lowerPlayer.Life.IsAlive) return;
 
             lower.ServerApplyStun(_stunSeconds);
             upper.ServerBounce(_bounceVelocity);

@@ -90,9 +90,9 @@ namespace Snackdown.Gameplay.Fruits
 
             NetworkObject instance = Instantiate(_fruitPrefab, point.position, Quaternion.identity);
 
-            // Kind is set before Spawn so it is part of the initial state every client receives.
-            // Setting it afterwards would replicate a second message and let clients briefly draw
-            // the wrong fruit.
+            // Told before Spawn and published by the fruit on spawn, so it is part of the initial
+            // state every client receives. Setting it after the spawn call would replicate a second
+            // message and let clients briefly draw the wrong fruit.
             Fruit fruit = instance.GetComponent<Fruit>();
             if (fruit != null) fruit.ServerSetKind(kind);
 

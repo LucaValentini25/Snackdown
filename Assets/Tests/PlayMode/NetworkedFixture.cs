@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -48,18 +50,10 @@ namespace Snackdown.Tests
         /// <summary>How many ports the harness cycles through before returning to the first.</summary>
         private const int HarnessPortRange = 64;
 
-        /// <summary>
-        /// The port the next session will bind. Advanced once per session, never reused within a run.
-        /// </summary>
+        /// <summary>Where to start looking for a free port next time a session stands up.</summary>
         /// <remarks>
-        /// Every session used to bind the same port, and roughly one run in three failed with
-        /// <i>"Failed to bind UDP socket because the address is already in use"</i> in whichever
-        /// test happened to run next. <see cref="ShutDownSession"/> waits for every peer to stop
-        /// listening, but that flag is NGO's and the socket underneath it is the operating system's:
-        /// a UDP port is not necessarily free the instant the process that held it says it is done.
-        /// Handing each session a port of its own makes the race impossible rather than unlikely,
-        /// which matters more here than anywhere else in the suite — a test that fails one time in
-        /// three is a test everybody learns to re-run instead of read.
+        /// Advanced rather than reset so that consecutive sessions do not all start their search on
+        /// the same port that the previous one has only just let go of.
         /// </remarks>
         private static int _nextPortOffset;
 
@@ -97,8 +91,7 @@ namespace Snackdown.Tests
         /// <param name="clientCount">How many clients join the host.</param>
         protected IEnumerator StartSession(int clientCount)
         {
-            _port = (ushort)(FirstHarnessPort + _nextPortOffset);
-            _nextPortOffset = (_nextPortOffset + 1) % HarnessPortRange;
+            _port = ClaimFreePort();
 
             Host = CreatePeer("Host", isHost: true);
             Assert.IsTrue(Host.StartHost(), $"The host refused to start. Port {_port} may already be bound.");
@@ -226,6 +219,11 @@ namespace Snackdown.Tests
                 yield return null;
             }
 
+            // Two more frames after the flag drops, because the flag is NGO's and the socket is the
+            // transport's: the close is queued on the network update that follows the shutdown.
+            yield return null;
+            yield return null;
+
             // Destroyed even if a shutdown hung: leaking a live peer into the next test is worse
             // than the assertion failure that hanging one would have produced.
             foreach (NetworkManager peer in _peers)
@@ -236,6 +234,55 @@ namespace Snackdown.Tests
             _peers.Clear();
             _clients.Clear();
             Host = null;
+        }
+
+        /// <summary>
+        /// Finds a loopback port nothing is holding, and reserves it for this session.
+        /// </summary>
+        /// <remarks>
+        /// <para>Checked rather than assumed. Every session used to bind the same port and roughly
+        /// one run in three failed with <i>"Failed to bind UDP socket because the address is already
+        /// in use"</i> in whichever test ran next; handing each session a different port made that
+        /// rarer and not impossible, because the leftover is not always from this run. NGO's
+        /// <c>IsListening</c> goes false when it stops listening, but the socket underneath belongs
+        /// to the operating system and can outlive the editor's Play mode session that opened it —
+        /// so the next run, starting its own search at the top again, walks into a port its
+        /// predecessor still holds.</para>
+        /// <para>Binding a throwaway socket is the only answer that does not guess. On Windows a UDP
+        /// bind is exclusive, so a port some leftover still holds refuses this probe and the search
+        /// moves on. There is a gap between closing the probe and the transport binding, but it is
+        /// microseconds inside one process, against a leftover that lingers for seconds.</para>
+        /// </remarks>
+        private static ushort ClaimFreePort()
+        {
+            for (int attempt = 0; attempt < HarnessPortRange; attempt++)
+            {
+                var candidate = (ushort)(FirstHarnessPort + _nextPortOffset);
+                _nextPortOffset = (_nextPortOffset + 1) % HarnessPortRange;
+
+                if (IsFree(candidate)) return candidate;
+            }
+
+            Assert.Fail(
+                $"No free port in {FirstHarnessPort}–{FirstHarnessPort + HarnessPortRange - 1}. "
+                + "Something is holding the whole harness range; a previous editor session is the usual cause.");
+
+            return FirstHarnessPort;
+        }
+
+        private static bool IsFree(ushort port)
+        {
+            try
+            {
+                using (new UdpClient(new IPEndPoint(IPAddress.Loopback, port)))
+                {
+                    return true;
+                }
+            }
+            catch (SocketException)
+            {
+                return false;
+            }
         }
 
         private NetworkManager CreatePeer(string name, bool isHost)

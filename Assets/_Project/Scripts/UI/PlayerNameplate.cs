@@ -19,6 +19,10 @@ namespace Snackdown.UI
     /// when they go out, which is the behaviour wanted anyway.</para>
     /// <para>Reads life; replicates nothing. The number already crossed the wire because the server
     /// owns it.</para>
+    /// <para>It labels a character but reads a <see cref="PlayerSession"/>, which is a different
+    /// object from the one it hangs off since ps-3 moved life there. So the character supplies only
+    /// the owner id, and the plate resolves the player from it — and keeps resolving until it can,
+    /// because the session and the avatar are two separate spawns arriving in no fixed order.</para>
     /// </remarks>
     [RequireComponent(typeof(UIDocument))]
     public class PlayerNameplate : MonoBehaviour
@@ -40,12 +44,15 @@ namespace Snackdown.UI
         Label _name;
         VisualElement _fill;
 
+        /// <summary>The character this plate labels, which is what says whose plate it is.</summary>
+        PredictedPlayer _character;
+
         PlayerLife _life;
 
         void Awake()
         {
             _document = GetComponent<UIDocument>();
-            _life = GetComponentInParent<PlayerLife>();
+            _character = GetComponentInParent<PredictedPlayer>();
 
             ApplyWorldSize();
         }
@@ -129,11 +136,23 @@ namespace Snackdown.UI
 
         void LateUpdate()
         {
-            if (_root == null || _life == null) return;
+            if (_root == null || _character == null) return;
+
+            // Resolved here rather than in Awake, and re-resolved while it comes back null: the
+            // session carrying this life is its own networked object and may not have reached this
+            // peer yet. Nothing else in this method is expensive enough for one lookup to matter.
+            if (_life == null)
+            {
+                PlayerSession player = PlayerSession.Of(
+                    _character.NetworkManager, _character.OwnerClientId);
+
+                _life = player != null ? player.Life : null;
+            }
 
             MatchDirector director = MatchDirector.Current;
 
             bool visible = LifeBarStyle.Placement == LifeBarPlacement.OverTheCharacter
+                           && _life != null
                            && _life.IsAlive
                            && director != null
                            && (director.Phase == MatchPhase.Countdown
@@ -142,7 +161,7 @@ namespace Snackdown.UI
             _root.EnableInClassList("hidden", !visible);
             if (!visible) return;
 
-            _name.text = LifeText.NameOf(_life.OwnerClientId);
+            _name.text = LifeText.NameOf(_character.OwnerClientId);
             _fill.style.width = Length.Percent(Mathf.Clamp01(_life.Fraction) * 100f);
             _fill.EnableInClassList("nameplate__fill--low", _life.Remaining <= _lowLifeSeconds);
         }

@@ -11,6 +11,10 @@ namespace Snackdown.Gameplay.Player
     /// running out is how you lose.
     /// </summary>
     /// <remarks>
+    /// <para>Lives on <see cref="PlayerSession"/>, not on the avatar. It started on the avatar,
+    /// which is why a player who ran out had to be hidden rather than despawned: despawning would
+    /// have taken this number with it, and the end screen and the next round both still need it.
+    /// A life that outlives the body removes that whole workaround. See ADR D-003.</para>
     /// <para>The server owns the number and everyone else reads it. That is not ceremony — life
     /// decides who wins, and a client that could write its own would simply never lose.</para>
     /// <para>Drained continuously but <b>replicated on an interval</b>. The original subtracted
