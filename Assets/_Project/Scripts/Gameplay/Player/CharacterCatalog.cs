@@ -6,9 +6,9 @@ namespace Snackdown.Gameplay.Player
     /// The character skins a player can pick, in the order their indices refer to.
     /// </summary>
     /// <remarks>
-    /// <para>Order is the contract. A <see cref="Snackdown.Connection.PlayerSlot"/> carries an
-    /// integer, and that integer means "the entry at this position" — so reordering this asset
-    /// silently changes what everyone already picked. Add at the end.</para>
+    /// <para>Order is the contract. A <see cref="PlayerSession"/> carries an integer, and that
+    /// integer means "the entry at this position" — so reordering this asset silently changes what
+    /// everyone already picked. Add at the end.</para>
     /// <para>Skins are cosmetic by design: <c>docs/01</c> settles that the four characters are
     /// mechanically identical. Nothing here reaches the simulation, which is why a wrong or hostile
     /// index is a visual mistake and never an advantage.</para>

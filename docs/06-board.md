@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-23
 
-**Overall:** 54% — 25 done, 0 in progress, 0 blocked, 21 to do, 2 dropped, across 8 epics.
+**Overall:** 57% — 26 done, 0 in progress, 0 blocked, 20 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -17,7 +17,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Connection layer — LAN and Relay behind one flow](#connection-layer-lan-and-relay-behind-one-flow) | 2 | Done | 6/6 |
 | [Gameplay core — the rules, server-authoritative](#gameplay-core-the-rules-server-authoritative) | 3 | Done | 5/5 |
 | [In-match HUD — life bars and round clock](#in-match-hud-life-bars-and-round-clock) | 4 | Done | 3/3 |
-| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 2/8 |
+| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 3/8 |
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | To do | 0/5 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | To do | 0/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 0/6 |
@@ -48,7 +48,7 @@ The same join flow whether the peer is on the LAN or across the internet, with t
 | `[x]` | DirectConnectionProvider — host and join by IP | manual — two peers on a LAN | — |
 | `[x]` | RelayConnectionProvider — join by six-character code | manual — a real hosted session | Sessions API; project linked with Relay and Lobby enabled |
 | `[x]` | Connection approval with payload and version check | EditMode — nickname sanitation, ConnectionApprovalTests | — |
-| `[x]` | SessionRoster — replicated names, skins, ready state | — | About to be rewritten as an index by the player-session epic |
+| `[x]` | SessionRoster — replicated names, skins, ready state | — | Rewritten by ps-2: the NetworkList and PlayerSlot are gone, the three fields live on PlayerSession, and the roster is an index over them in Gameplay/Player |
 | `[x]` | Menu and lobby in UI Toolkit, wired to the abstraction | — | — |
 | `[-]` | Character picker | — | Transport half shipped, picker never did. Moved to the wardrobe epic where it belongs |
 
@@ -83,7 +83,7 @@ One networked object per connection that owns identity, life and stats, and spaw
 |:---:|---|---|---|
 | `[x]` | Stand up the networked test harness | PlayMode — HandshakeTests: the client is synchronized, the host sees it, it sees the host, and two clients see each other | The testables entry this task was written around turned out to be the wrong route and was not added — see D-011. NetworkedFixture is ours: 4 tests, no manifest change |
 | `[x]` | PlayerSession exists alongside the avatar, unread | PlayMode — PlayerSessionTests: a joining client gets a session of its own, both peers read the sanitized name, the host's own session carries the name it chose, and a leaving client takes its session with it | Cost two things the task did not anticipate: NetworkSimulation had to become a prefab to be spawnable in a test (D-013), and the session reads its own name out of approval rather than being handed it, because the object that spawns it lives in the assembly this one depends on |
-| `[ ]` | Roster becomes an index over live sessions | a third client sees the two already present, with names and ready state | NetworkList and PlayerSlot are deleted here |
+| `[x]` | Roster becomes an index over live sessions | PlayMode — SessionRosterTests: a client joining a running session sees all four players with their names, skins and ready flags; every peer orders the list the same way; a client cannot ready up a player it does not own | NetworkList and PlayerSlot are deleted as planned, and the roster went with them — it cannot name PlayerSession from Snackdown.Connection, so it moved to Gameplay/Player (D-014). Two things the task did not anticipate: the pre-spawn write ps-1 promised turns out to log a warning on every join and was not done (D-015), and the harness had a real flake — every session bound the same UDP port, so a session now takes one of its own |
 | `[ ]` | Life, fruit count and stats move onto the session | a fruit taken by the client adds life on the server and reaches both HUDs | — |
 | `[ ]` | Flip the spawn — PlayerPrefab becomes the session | death despawns the avatar, the session survives with its final life, next round respawns it | The big one. Removes hide-instead-of-despawn and the spawn-point teleport |
 | `[ ]` | Late join arrives as a spectator | a client joining during Playing has no avatar, is not counted alive, and cannot win on the clock | — |
@@ -130,6 +130,26 @@ Make the finished work visible to someone who was not here while it was built.
 
 Every choice that closed off an alternative, with the reasoning that closed it. This is
 the part of the board worth reading a year from now.
+
+### D-015 — The session still adopts its identity after spawn, not before
+
+*2026-08-23* · epic **player-session**
+
+**Chosen:** PlayerSession keeps reading its name and skin out of ConnectionApproval in OnNetworkSpawn. Both arrive as deltas immediately after the spawn message rather than inside it.
+
+**Why:** ps-1 recorded that writing them before Spawn would fold them into the spawn message, and that the task moving the roster into this assembly could finally do it. It compiles now, and it is still wrong: NGO logs "NetworkVariable is written to, but doesn't know its NetworkBehaviour yet" from MarkNetworkBehaviourDirty for any variable set before its object is spawned, and the flag that suppresses it is internal to the package. A warning on every single join costs more than two small deltas — a console that cries wolf is how a real warning goes unread.
+
+**Rejected:** Reaching NetworkVariableBase.IgnoreInitializeWarning by reflection. Spawning the session and having the roster write the values straight after, which is the same two deltas with an extra hop.
+
+### D-014 — SessionRoster moved to Gameplay and stopped replicating anything
+
+*2026-08-23* · epic **player-session**
+
+**Chosen:** The roster is an index over the live PlayerSession objects, ordered by owner id, living in Snackdown.Gameplay.Player. NetworkList<PlayerSlot> and the PlayerSlot struct are deleted; name, skin and ready state are NetworkVariables on the session, and the ready Rpc moved there with them.
+
+**Why:** The roster held a second copy of three facts the session already owns, kept in step by hand on the server — and a second copy is a copy that can disagree, which is the failure this whole epic exists to remove. Indexing means naming PlayerSession, and Snackdown.Connection cannot: Gameplay depends on it, not the other way round. So the file moved to the assembly that was always describing it, the same answer that broke the Netcode/Gameplay cycle in Phase 1. Nothing was lost on the wire — a late joiner still arrives to a full list, because NGO synchronizes the spawned session objects for the same reason it used to send the whole NetworkList. The roster keeps three jobs: spawning one session per connection, ordering the list so every peer draws the lobby identically, and raising one Changed event.
+
+**Rejected:** Keeping the roster in Connection behind an IPlayerSession interface — an abstraction bought purely to keep a file in the wrong folder. Deleting the roster outright and letting each view read PlayerSession.All, which leaves nobody owning the order or the change event, and hands every reader a static that is shared between peers under the test harness.
 
 ### D-013 — A networked scene object becomes a prefab when it needs to be tested
 
@@ -280,6 +300,7 @@ rather than an oversight.
 
 ## Session log
 
+- **2026-08-23** — Closed ps-2. The roster stopped replicating a player list and became an index over the sessions, which deleted PlayerSlot and moved the roster out of Snackdown.Connection (D-014). The pre-spawn write ps-1 left as a follow-up turned out to be a console warning per join and was rejected rather than inherited (D-015). Adding the tests surfaced a real flake in the harness: every session bound the same UDP port, and roughly one run in three failed to bind it in whichever test ran next, so a session now takes a port of its own.
 - **2026-08-23** — Closed ps-1. Three things were learned by trying: a prefab cannot be built at runtime without an internal NGO field (D-012), a networked scene object cannot be spawned by a test at all (D-013), and the ambient statics documented in docs/01 as safe because a peer is a process stop being safe the moment a harness runs two peers in one. The last one is recorded as a risk and the architecture doc now says so rather than claiming the opposite. Each new test was checked by breaking the code it covers: removing the session spawn fails exactly the four session tests and none of the handshake ones.
 - **2026-08-23** — Closed ps-0 with a harness of our own after opening the testables route and finding it worse than the note in the task assumed (D-011). Four handshake tests now run over a real transport. Two things learned while writing it and worth having recorded: a NetworkManager added at runtime has no NetworkConfig at all, and Shutdown() only raises a flag — the socket closes on the next network update, so a fixture that destroys the peer in the same frame leaves the port bound and breaks the next test rather than its own.
 - **2026-08-23** — Stood up this board: one JSON source, two generated views, and a rule in CLAUDE.md that closing a task, an epic or a session updates it.

@@ -36,14 +36,32 @@ namespace Snackdown.Tests
     /// </remarks>
     public abstract class NetworkedFixture
     {
-        /// <summary>Loopback port the harness binds, deliberately not the game's 7777.</summary>
+        /// <summary>First loopback port the harness binds, deliberately not the game's 7777.</summary>
         /// <remarks>
         /// The editor may be hosting a real session on 7777 while the suite runs — that is the
         /// normal way this project is worked on. Sharing the port would make the tests fail for a
         /// reason that has nothing to do with the code under test, which is the worst kind of
         /// red suite: one that teaches you to ignore it.
         /// </remarks>
-        protected const ushort HarnessPort = 7787;
+        protected const ushort FirstHarnessPort = 7787;
+
+        /// <summary>How many ports the harness cycles through before returning to the first.</summary>
+        private const int HarnessPortRange = 64;
+
+        /// <summary>
+        /// The port the next session will bind. Advanced once per session, never reused within a run.
+        /// </summary>
+        /// <remarks>
+        /// Every session used to bind the same port, and roughly one run in three failed with
+        /// <i>"Failed to bind UDP socket because the address is already in use"</i> in whichever
+        /// test happened to run next. <see cref="ShutDownSession"/> waits for every peer to stop
+        /// listening, but that flag is NGO's and the socket underneath it is the operating system's:
+        /// a UDP port is not necessarily free the instant the process that held it says it is done.
+        /// Handing each session a port of its own makes the race impossible rather than unlikely,
+        /// which matters more here than anywhere else in the suite — a test that fails one time in
+        /// three is a test everybody learns to re-run instead of read.
+        /// </remarks>
+        private static int _nextPortOffset;
 
         /// <summary>How long <see cref="WaitFor"/> may wait before failing the test.</summary>
         /// <remarks>
@@ -55,6 +73,9 @@ namespace Snackdown.Tests
 
         private readonly List<NetworkManager> _peers = new List<NetworkManager>();
         private readonly List<NetworkManager> _clients = new List<NetworkManager>();
+
+        /// <summary>The port this session bound, shared by its host and every client that joins it.</summary>
+        private ushort _port;
 
         /// <summary>Server and client in one process, the way the game actually runs.</summary>
         protected NetworkManager Host { get; private set; }
@@ -76,22 +97,49 @@ namespace Snackdown.Tests
         /// <param name="clientCount">How many clients join the host.</param>
         protected IEnumerator StartSession(int clientCount)
         {
+            _port = (ushort)(FirstHarnessPort + _nextPortOffset);
+            _nextPortOffset = (_nextPortOffset + 1) % HarnessPortRange;
+
             Host = CreatePeer("Host", isHost: true);
-            Assert.IsTrue(Host.StartHost(), $"The host refused to start. Port {HarnessPort} may already be bound.");
+            Assert.IsTrue(Host.StartHost(), $"The host refused to start. Port {_port} may already be bound.");
 
             OnHostStarted();
 
-            for (int i = 0; i < clientCount; i++)
-            {
-                NetworkManager client = CreatePeer($"Client {i + 1}", isHost: false);
-                _clients.Add(client);
-
-                Assert.IsTrue(client.StartClient(), $"Client {i + 1} refused to start.");
-            }
+            for (int i = 0; i < clientCount; i++) StartOneClient();
 
             yield return WaitFor(
                 () => EveryClientIsSynchronized(clientCount),
                 $"the host and {clientCount} client(s) to complete the handshake");
+        }
+
+        /// <summary>
+        /// Starts one more client against a session that is already running, and returns once it is
+        /// approved and synchronized.
+        /// </summary>
+        /// <remarks>
+        /// Separate from <see cref="StartSession"/> because "joins a session that already has people
+        /// in it" is a different case from "joins at the same moment as everyone else", and only the
+        /// first one exercises the state a peer is handed on arrival. Clients started together are
+        /// all racing the same empty session.
+        /// </remarks>
+        protected IEnumerator JoinAnotherClient()
+        {
+            int index = _clients.Count;
+            StartOneClient();
+
+            yield return WaitFor(
+                () => EveryClientIsSynchronized(_clients.Count),
+                $"client {index + 1} to join a session that was already running");
+        }
+
+        private void StartOneClient()
+        {
+            int number = _clients.Count + 1;
+
+            NetworkManager client = CreatePeer($"Client {number}", isHost: false);
+            _clients.Add(client);
+
+            Assert.IsTrue(client.StartClient(), $"Client {number} refused to start.");
         }
 
         /// <summary>
@@ -204,7 +252,7 @@ namespace Snackdown.Tests
             // Multiplayer Play Mode starts its virtual players with command line arguments, and
             // UnityTransport reads them by default — which would silently point a test at whatever
             // session that editor was configured for.
-            transport.SetConnectionData(true, "127.0.0.1", HarnessPort, "127.0.0.1");
+            transport.SetConnectionData(true, "127.0.0.1", _port, "127.0.0.1");
 
             // Two seconds rather than the default sixty. A minute of retrying is right for a player
             // on a bad connection and wrong for loopback, where a client that has not connected by
@@ -232,7 +280,6 @@ namespace Snackdown.Tests
 
             Configure(peer, isHost);
 
-            _peers.Add(peer);
             return peer;
         }
 

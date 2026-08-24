@@ -1,6 +1,7 @@
 using System.Threading;
 using Snackdown.Connection;
 using Snackdown.Gameplay.Match;
+using Snackdown.Gameplay.Player;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -305,19 +306,19 @@ namespace Snackdown.UI
 
             for (int i = 0; i < _roster.Count; i++)
             {
-                PlayerSlot slot = _roster[i];
-                bool isYou = slot.ClientId == localId;
+                PlayerSession player = _roster[i];
+                bool isYou = player.OwnerClientId == localId;
 
                 var row = new VisualElement();
                 row.AddToClassList("roster-row");
 
-                var name = new Label(slot.Nickname.ToString() + (isYou ? "  (you)" : string.Empty));
+                var name = new Label(player.Nickname + (isYou ? "  (you)" : string.Empty));
                 name.AddToClassList("roster-row__name");
                 if (isYou) name.AddToClassList("roster-row__you");
 
-                var state = new Label(slot.IsReady ? "READY" : "waiting");
+                var state = new Label(player.IsReady ? "READY" : "waiting");
                 state.AddToClassList("roster-row__state");
-                if (slot.IsReady) state.AddToClassList("roster-row__state--ready");
+                if (player.IsReady) state.AddToClassList("roster-row__state--ready");
 
                 row.Add(name);
                 row.Add(state);
@@ -339,16 +340,11 @@ namespace Snackdown.UI
 
         bool IsLocalReady()
         {
-            if (_roster == null || NetworkManager.Singleton == null) return false;
-
-            for (int i = 0; i < _roster.Count; i++)
-                if (_roster[i].ClientId == NetworkManager.Singleton.LocalClientId)
-                    return _roster[i].IsReady;
-
-            return false;
+            PlayerSession local = _roster == null ? null : _roster.Local;
+            return local != null && local.IsReady;
         }
 
-        void OnReadyClicked() => _roster?.ToggleReady();
+        void OnReadyClicked() => _roster?.Local?.ToggleReady();
 
         /// <summary>
         /// Puts the bare join code on the clipboard, so it can be pasted into a chat.

@@ -1,4 +1,4 @@
-using Snackdown.Connection;
+using Snackdown.Gameplay.Player;
 using UnityEngine;
 
 namespace Snackdown.UI
@@ -21,30 +21,24 @@ namespace Snackdown.UI
             return $"{whole / 60}:{whole % 60:00}";
         }
 
-        /// <summary>The display name for a client, falling back to their id if the roster has not arrived.</summary>
+        /// <summary>The display name for a client, falling back to their id if the session has not arrived.</summary>
         public static string NameOf(ulong clientId)
-        {
-            SessionRoster roster = SessionRoster.Current;
-            if (roster == null) return $"P{clientId}";
-
-            for (int i = 0; i < roster.Count; i++)
-                if (roster[i].ClientId == clientId)
-                    return roster[i].Nickname.ToString();
-
-            return $"P{clientId}";
-        }
+            => SessionOf(clientId)?.Nickname ?? $"P{clientId}";
 
         /// <summary>The skin index a client picked, for showing their portrait next to their name.</summary>
         public static int CharacterIndexOf(ulong clientId)
+            => SessionOf(clientId)?.CharacterIndex ?? 0;
+
+        /// <remarks>
+        /// Asked of the roster rather than of <see cref="PlayerSession.Of"/>, which is a static
+        /// registry shared by every peer in the process. That distinction is invisible in a build
+        /// and is the difference between reading this peer's players and reading everyone's while
+        /// the Play mode harness has a host and its clients running side by side.
+        /// </remarks>
+        static PlayerSession SessionOf(ulong clientId)
         {
             SessionRoster roster = SessionRoster.Current;
-            if (roster == null) return 0;
-
-            for (int i = 0; i < roster.Count; i++)
-                if (roster[i].ClientId == clientId)
-                    return roster[i].CharacterIndex;
-
-            return 0;
+            return roster == null ? null : roster.Of(clientId);
         }
     }
 }
