@@ -101,7 +101,7 @@ namespace Snackdown.Tests
             for (int i = 0; i < clientCount; i++) StartOneClient();
 
             yield return WaitFor(
-                () => EveryClientIsSynchronized(clientCount),
+                EveryLiveClientIsSynchronized,
                 $"the host and {clientCount} client(s) to complete the handshake");
         }
 
@@ -121,7 +121,7 @@ namespace Snackdown.Tests
             StartOneClient();
 
             yield return WaitFor(
-                () => EveryClientIsSynchronized(_clients.Count),
+                EveryLiveClientIsSynchronized,
                 $"client {index + 1} to join a session that was already running");
         }
 
@@ -330,16 +330,28 @@ namespace Snackdown.Tests
             return peer;
         }
 
-        private bool EveryClientIsSynchronized(int clientCount)
+        /// <summary>
+        /// True once every client this fixture still has running has completed the handshake.
+        /// </summary>
+        /// <remarks>
+        /// Counts the clients that are <i>listening</i> rather than every one ever started, because
+        /// a test may have disconnected one on purpose — proving a skin is freed means taking a
+        /// player away and bringing another in. Counting the dead one left the next join waiting for
+        /// a peer that was never coming back, and failing on a timeout that blamed the arrival.
+        /// </remarks>
+        private bool EveryLiveClientIsSynchronized()
         {
-            if (Host.ConnectedClientsIds.Count != clientCount + 1) return false;
+            int expected = 1;
 
             foreach (NetworkManager client in _clients)
             {
+                if (client == null || !client.IsListening) continue;
+
+                expected++;
                 if (!client.IsConnectedClient) return false;
             }
 
-            return true;
+            return Host.ConnectedClientsIds.Count == expected;
         }
 
         private bool AnyPeerIsStillListening()
