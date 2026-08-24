@@ -207,6 +207,27 @@ namespace Snackdown.Tests
                 "The new round did not start this player back at a full life.");
         }
 
+        [UnityTest]
+        public IEnumerator JoiningWhileTheSessionIsInTheLobby_ArrivesInTheRound()
+        {
+            yield return StartSession(clientCount: 1);
+            yield return JoinAnotherClient();
+
+            ulong late = Clients[1].LocalClientId;
+
+            yield return WaitFor(
+                () => LifeOn(Host, late) != null,
+                "the server to hold the late client's life");
+
+            // The other half of ps-5, and the half a harness without scene management can reach.
+            // Somebody who arrives while a round is being played is sat out of it; somebody who
+            // arrives in the lobby is not, and an over-eager version of that rule — one that forgot
+            // to look at the phase, or looked at the wrong one — would put every joiner out of a
+            // round that had not started.
+            Assert.IsTrue(LifeOn(Host, late).IsAlive,
+                "A client that joined while the session was still in the lobby was sat out of the round.");
+        }
+
         /// <summary>Starts a round for one player the way the arena does, and waits for the body.</summary>
         private IEnumerator BeginRoundFor(ulong clientId, Vector2 at)
         {

@@ -95,11 +95,12 @@ The predicted local player stays responsive at both.
       `ConnectionRequest.Host/Join`, and `ConnectionApproval.CharacterCount` wired from
       `CharacterCatalog.Count` instead of a hardcoded 4 (today a fifth skin would be silently clamped
       away). Closes the Phase 2 item above
-- [ ] **Late join → spectator** — a client that connects during `Countdown`, `Playing` or `Ended`
-      joins as a spectator for the round in progress and plays the next one. Today nothing refuses it
-      and the arrival is placed at the origin with a full life bar, so a latecomer can fall out of the
-      world and still win on the clock. Modelled as "already out this round", which reuses the whole
-      spectator path rather than adding a state
+- [x] **Late join → spectator** — a client that connects during `Countdown`, `Playing` or `Ended`
+      joins as a spectator for the round in progress and plays the next one. It used to be placed at
+      the origin with a full life bar, so a latecomer could fall out of the world and still win on
+      the clock. Modelled as "already out this round", which reused the whole spectator path rather
+      than adding a state: the match calls the same `ServerEndRound` running out uses, and the
+      camera, the referee and the next round needed no changes at all
 
 ## Phase 4 — Extended features
 

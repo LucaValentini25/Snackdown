@@ -173,7 +173,7 @@ namespace Snackdown.Gameplay.Player
             if (IsServer)
             {
                 AdoptApprovedIdentity();
-                if (_life != null) _life.Died += OnDied;
+                if (_life != null) _life.LeftRound += OnLeftRound;
             }
 
             MembershipChanged?.Invoke(this);
@@ -183,7 +183,7 @@ namespace Snackdown.Gameplay.Player
         {
             _all.Remove(this);
 
-            if (IsServer && _life != null) _life.Died -= OnDied;
+            if (IsServer && _life != null) _life.LeftRound -= OnLeftRound;
 
             _nickname.OnValueChanged -= OnNicknameChanged;
             _characterIndex.OnValueChanged -= OnCharacterIndexChanged;
@@ -292,10 +292,11 @@ namespace Snackdown.Gameplay.Player
         }
 
         /// <remarks>
-        /// Running out ends the round for this player and nothing else: the session stays, holding
-        /// the life it ended on for the end screen and the fruit it collected for the scoreboard.
+        /// Leaving the round costs this player their body and nothing else: the session stays,
+        /// holding the life it ended on for the end screen and the fruit it collected for the
+        /// scoreboard. A player who arrives mid-round comes through here too, with no body to lose.
         /// </remarks>
-        private void OnDied(PlayerLife life) => ServerDespawnAvatar();
+        private void OnLeftRound(PlayerLife life) => ServerDespawnAvatar();
 
         // ==================================================================================
         //  Fruit
