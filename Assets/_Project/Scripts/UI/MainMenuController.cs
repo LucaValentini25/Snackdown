@@ -63,6 +63,8 @@ namespace Snackdown.UI
         /// <summary>The bare code, without the sentence wrapped around it for display.</summary>
         string _rawJoinTarget = string.Empty;
 
+        bool _watchingDisconnects;
+
         static string GameVersion => Application.version;
 
         void Awake() => _document = GetComponent<UIDocument>();
@@ -104,11 +106,15 @@ namespace Snackdown.UI
             _leave.clicked += OnLeaveClicked;
             _copyCode.clicked += OnCopyCodeClicked;
 
+            AttachDisconnectWatch();
+
             ShowMenu();
         }
 
         void OnDisable()
         {
+            DetachDisconnectWatch();
+
             _host.clicked -= OnHostClicked;
             _join.clicked -= OnJoinClicked;
             _cancel.clicked -= OnCancelClicked;
@@ -272,8 +278,61 @@ namespace Snackdown.UI
             // beats disabling it: a permanently greyed button invites clicking to find out why.
             _start.EnableInClassList("hidden", !hosting);
 
+            // Tried again here as well as on enable. The manager lives in the bootstrap scene and
+            // this document in the lobby one, and the ordering between them is not something either
+            // can promise — the same reason the provider labels are applied a frame late. Reaching
+            // the lobby is the point past which there is certainly a session to lose.
+            AttachDisconnectWatch();
+
             AttachRoster();
             RefreshRoster();
+        }
+
+        /// <summary>
+        /// Watches for this machine losing the session, so the lobby does not outlive it.
+        /// </summary>
+        /// <remarks>
+        /// Written for being kicked and it fixes more than that: until now a client whose host quit
+        /// sat in a lobby screen listing players who were gone, with a Ready button that reached
+        /// nobody. Any end to the connection lands here.
+        /// </remarks>
+        void AttachDisconnectWatch()
+        {
+            if (_watchingDisconnects || NetworkManager.Singleton == null) return;
+
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnSomebodyDisconnected;
+            _watchingDisconnects = true;
+        }
+
+        void DetachDisconnectWatch()
+        {
+            if (!_watchingDisconnects || NetworkManager.Singleton == null) return;
+
+            NetworkManager.Singleton.OnClientDisconnectCallback -= OnSomebodyDisconnected;
+            _watchingDisconnects = false;
+        }
+
+        /// <remarks>
+        /// <para>The host is told about everyone who leaves and this is not about them — their
+        /// roster row disappears on its own. Only this machine losing its own connection sends the
+        /// screen back.</para>
+        /// <para><c>DisconnectReason</c> is whatever the server passed to <c>DisconnectClient</c>,
+        /// which for a kick is <see cref="SessionRoster.KickReason"/> and for a host that quit is
+        /// nothing at all. Empty is the ordinary case, not an error, so it gets a sentence of its
+        /// own rather than a blank status line.</para>
+        /// </remarks>
+        void OnSomebodyDisconnected(ulong clientId)
+        {
+            NetworkManager manager = NetworkManager.Singleton;
+            if (manager == null || manager.IsServer) return;
+            if (clientId != manager.LocalClientId) return;
+
+            string reason = manager.DisconnectReason;
+
+            ShowMenu();
+            SetStatus(_menuStatus,
+                string.IsNullOrWhiteSpace(reason) ? "The session ended." : reason,
+                isError: true);
         }
 
         void AttachRoster()
@@ -304,6 +363,10 @@ namespace Snackdown.UI
 
             ulong localId = NetworkManager.Singleton != null ? NetworkManager.Singleton.LocalClientId : 0;
 
+            // Asked of the connection rather than remembered from the button that was clicked: the
+            // host is the server, and one of those two facts cannot drift.
+            bool hosting = NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
+
             for (int i = 0; i < _roster.Count; i++)
             {
                 PlayerSession player = _roster[i];
@@ -322,6 +385,18 @@ namespace Snackdown.UI
 
                 row.Add(name);
                 row.Add(state);
+
+                // Offered only where it can be used, and never against yourself — a host kicking
+                // itself would end the session for everyone, which is quitting with extra steps.
+                if (hosting && !isYou)
+                {
+                    ulong target = player.OwnerClientId;
+
+                    var kick = new Button(() => _roster?.RequestKick(target)) { text = "Kick" };
+                    kick.AddToClassList("roster-row__kick");
+                    row.Add(kick);
+                }
+
                 _rosterList.Add(row);
             }
 
