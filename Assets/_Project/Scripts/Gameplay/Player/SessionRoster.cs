@@ -142,5 +142,52 @@ namespace Snackdown.Gameplay.Player
 
             foreach (PlayerSession player in _players) player.ServerSetReady(false);
         }
+
+        // ==================================================================================
+        //  Kicking
+        // ==================================================================================
+
+        /// <summary>What a removed player is told, in their own words rather than the log's.</summary>
+        /// <remarks>
+        /// Fixed rather than typed by the host. A free-text reason would be a second player-supplied
+        /// string crossing the wire, and it would need everything the nickname needs — stripping,
+        /// trimming, a length cap — to stop a host writing control characters into somebody else's
+        /// screen. A host who wants to say more has a voice; this only has to say who did it, so
+        /// being dropped does not read as the connection failing.
+        /// </remarks>
+        public const string KickReason = "The host removed you from the session.";
+
+        /// <summary>Asks the server to remove a player. Only the host is obeyed.</summary>
+        /// <remarks>
+        /// The lobby only offers this to the host, but that is a button and buttons are not
+        /// security. The request travels as an Rpc any client could send, and the server is where it
+        /// is refused — see <see cref="KickRpc"/>.
+        /// </remarks>
+        public void RequestKick(ulong clientId) => KickRpc(clientId);
+
+        /// <remarks>
+        /// <para>The sender is compared against the server's own id rather than trusted from the
+        /// body, the same way readying up is. NGO overwrites
+        /// <c>RpcParams.Receive.SenderClientId</c> with the transport's id on the server, so it is
+        /// the one identity a client cannot forge — and without this check any client could clear
+        /// the lobby.</para>
+        /// <para>Nothing here removes the player from this roster. NGO despawns everything a
+        /// departing client owned, the session among it, and the roster is rebuilt from what is
+        /// spawned — so the list is right because the objects are gone, not because two places were
+        /// kept in step.</para>
+        /// </remarks>
+        [Rpc(SendTo.Server)]
+        private void KickRpc(ulong clientId, RpcParams rpcParams = default)
+        {
+            if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId) return;
+
+            // A host kicking itself would shut the session down for everyone, which is a way to end
+            // a game and not a way to remove a player.
+            if (clientId == NetworkManager.ServerClientId) return;
+
+            if (Of(clientId) == null) return;
+
+            NetworkManager.DisconnectClient(clientId, KickReason);
+        }
     }
 }
