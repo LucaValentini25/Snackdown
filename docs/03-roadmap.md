@@ -56,11 +56,13 @@ The predicted local player stays responsive at both.
 - [x] `RelayProvider` (Sessions API, join by code) — the project is linked as **Snackdown** under
       Luca's organization, with Relay and Lobby enabled; verified by hosting a real session
 - [x] `ConnectionApproval` with payload (nickname, chosen character, version check)
-- [x] `SessionRoster` — replicated player list with names, skins and ready state
+- [x] `SessionRoster` — the player list with names, skins and ready state. Landed as a replicated
+      `NetworkList<PlayerSlot>`; Phase 4 replaced both with an index over the live `PlayerSession`
+      objects, which is where those three fields now live
 - [x] Main menu → host/join → lobby, built with **UI Toolkit**, wired to the abstraction
 - [~] Character select (4 Pixel Adventure skins, mechanically identical) — **the transport half is
       done and the picker is not.** The index travels in the connection payload, is clamped by
-      approval, lives in the roster and dresses the sprite; but nothing sets it, so it is provably 0
+      approval, lives on the session and dresses the sprite; but nothing sets it, so it is provably 0
       in every session and all four players render identically. Previously marked done, which was
       wrong: the plumbing landing is not the feature landing. The picker closes with Phase 3
 

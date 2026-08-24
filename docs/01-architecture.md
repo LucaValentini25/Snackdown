@@ -55,7 +55,7 @@ Assets/
 │   │   ├── Core/             AppBootstrap, FrameRatePolicy
 │   │   ├── Connection/       IConnectionProvider, DirectConnectionProvider,
 │   │   │                     RelayConnectionProvider, ConnectionApproval, ConnectionPayload,
-│   │   │                     ConnectionRequest, ConnectionResult, SessionRoster, PlayerSlot
+│   │   │                     ConnectionRequest, ConnectionResult, NetworkConfigReport
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
 │   │   │                     MovementConfig, SimulationContext — the state, the input,
 │   │   │                     the replayable step
@@ -66,7 +66,7 @@ Assets/
 │   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchOutcome,
 │   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera,
 │   │   │                 SandboxRunner
-│   │   │   ├── Player/       PredictedPlayer, PlayerSession, PlayerLife,
+│   │   │   ├── Player/       PredictedPlayer, PlayerSession, SessionRoster, PlayerLife,
 │   │   │   │                 PlayerSpawnPoints, CharacterAppearance, CharacterCatalog
 │   │   │   ├── Fruits/       Fruit, FruitSpawner, FruitTable
 │   │   │   └── Combat/       HeadBounce
@@ -146,7 +146,7 @@ These are the invariants every system must respect. If a change would break one 
 | Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
 | Player-vs-player contact | Solid, and **predicted** — resolved in the motor against buffered peer positions, which on a client are the *interpolated* ones | Waiting for the server to decide it would cost a round trip on every bump. The cost of not waiting is that a client predicts contact against peers as they were rendered, so close contact reliably produces a correction. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
 | Ending a round | **Last one standing**, or the most life left when the 3-minute clock runs out | Both were already implied by `MatchConfig`; a shared top value at the clock is reported as a draw rather than broken by client id, because `MaxLife` makes an exact tie reachable. |
-| A player who is out | **Hidden, not despawned** — and free to pan the camera around the arena | Despawning would take the roster entry and the life readout with it, and both are still needed by the end screen and the next round. |
+| A player who is out | **Hidden, not despawned** — and free to pan the camera around the arena | Despawning would take the life readout with it, and the end screen and the next round still need it. Half of this reason has already gone: the roster entry now lives on `PlayerSession`, which outlives the avatar. The other half goes with `ps-3`, and then the hiding does too. |
 | Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
 
 ## Who decides a round is over
@@ -285,3 +285,10 @@ the six members the loop actually calls.
 
 The payoff beyond the compiler check: `Snackdown.Simulation` is pure enough to unit test without a
 scene, a `NetworkManager` or Play mode, which is exactly what `Snackdown.Tests.EditMode` does.
+
+**It caught a second one later, and the same answer worked.** `SessionRoster` shipped in
+`Snackdown.Connection` because a lobby list feels like a connection concern. It is not: it is a list
+of players, and the moment `PlayerSession` became the thing that holds a player's name, the roster
+had to be able to name that type — which `Connection` cannot, since `Gameplay` depends on it and not
+the other way round. The roster moved to `Gameplay/Player`, where it was always describing something
+that lives. Nothing was abstracted to make it fit; the file was in the wrong folder.

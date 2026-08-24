@@ -1,5 +1,5 @@
-using Snackdown.Connection;
 using Snackdown.Gameplay.Match;
+using Snackdown.Gameplay.Player;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -92,13 +92,9 @@ namespace Snackdown.UI
         static string NameOf(ulong clientId)
         {
             SessionRoster roster = SessionRoster.Current;
-            if (roster == null) return $"Player {clientId}";
+            PlayerSession session = roster == null ? null : roster.Of(clientId);
 
-            for (int i = 0; i < roster.Count; i++)
-                if (roster[i].ClientId == clientId)
-                    return roster[i].Nickname.ToString();
-
-            return $"Player {clientId}";
+            return session == null ? $"Player {clientId}" : session.Nickname;
         }
 
         static void ReturnToLobby()

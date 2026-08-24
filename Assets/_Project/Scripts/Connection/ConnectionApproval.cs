@@ -64,9 +64,9 @@ namespace Snackdown.Connection
         /// The approval currently vetting connections on this peer, or null when none is.
         /// </summary>
         /// <remarks>
-        /// Scene objects like <see cref="SessionRoster"/> spawn long after whoever constructed this,
-        /// and have no reference to hand. A static pointer is the smallest thing that closes that
-        /// gap: it is set while vetting is active and cleared when it stops, so it cannot outlive
+        /// The objects that need it — the roster, and the session spawned for each player — come up
+        /// long after whoever constructed this, and have no reference to hand. A static pointer is
+        /// the smallest thing that closes that gap: it is set while vetting is active and cleared when it stops, so it cannot outlive
         /// the session it describes — unlike the <c>DontDestroyOnLoad</c> singletons in the original
         /// project, which survived scene loads and answered for sessions that no longer existed.
         /// </remarks>

@@ -33,7 +33,7 @@
         { "id": "cl-2", "title": "DirectConnectionProvider — host and join by IP", "status": "done", "test": "manual — two peers on a LAN" },
         { "id": "cl-3", "title": "RelayConnectionProvider — join by six-character code", "status": "done", "test": "manual — a real hosted session", "notes": "Sessions API; project linked with Relay and Lobby enabled" },
         { "id": "cl-4", "title": "Connection approval with payload and version check", "status": "done", "test": "EditMode — nickname sanitation, ConnectionApprovalTests" },
-        { "id": "cl-5", "title": "SessionRoster — replicated names, skins, ready state", "status": "done", "test": "—", "notes": "About to be rewritten as an index by the player-session epic" },
+        { "id": "cl-5", "title": "SessionRoster — replicated names, skins, ready state", "status": "done", "test": "—", "notes": "Rewritten by ps-2: the NetworkList and PlayerSlot are gone, the three fields live on PlayerSession, and the roster is an index over them in Gameplay/Player" },
         { "id": "cl-6", "title": "Menu and lobby in UI Toolkit, wired to the abstraction", "status": "done", "test": "—" },
         { "id": "cl-7", "title": "Character picker", "status": "dropped", "test": "—", "notes": "Transport half shipped, picker never did. Moved to the wardrobe epic where it belongs" }
       ]
@@ -74,7 +74,7 @@
       "tasks": [
         { "id": "ps-0", "title": "Stand up the networked test harness", "status": "done", "test": "PlayMode — HandshakeTests: the client is synchronized, the host sees it, it sees the host, and two clients see each other", "notes": "The testables entry this task was written around turned out to be the wrong route and was not added — see D-011. NetworkedFixture is ours: 4 tests, no manifest change" },
         { "id": "ps-1", "title": "PlayerSession exists alongside the avatar, unread", "status": "done", "test": "PlayMode — PlayerSessionTests: a joining client gets a session of its own, both peers read the sanitized name, the host's own session carries the name it chose, and a leaving client takes its session with it", "notes": "Cost two things the task did not anticipate: NetworkSimulation had to become a prefab to be spawnable in a test (D-013), and the session reads its own name out of approval rather than being handed it, because the object that spawns it lives in the assembly this one depends on" },
-        { "id": "ps-2", "title": "Roster becomes an index over live sessions", "status": "todo", "test": "a third client sees the two already present, with names and ready state", "notes": "NetworkList and PlayerSlot are deleted here" },
+        { "id": "ps-2", "title": "Roster becomes an index over live sessions", "status": "done", "test": "PlayMode — SessionRosterTests: a client joining a running session sees all four players with their names, skins and ready flags; every peer orders the list the same way; a client cannot ready up a player it does not own", "notes": "NetworkList and PlayerSlot are deleted as planned, and the roster went with them — it cannot name PlayerSession from Snackdown.Connection, so it moved to Gameplay/Player (D-014). Two things the task did not anticipate: the pre-spawn write ps-1 promised turns out to log a warning on every join and was not done (D-015), and the harness had a real flake — every session bound the same UDP port, so a session now takes one of its own" },
         { "id": "ps-3", "title": "Life, fruit count and stats move onto the session", "status": "todo", "test": "a fruit taken by the client adds life on the server and reaches both HUDs" },
         { "id": "ps-4", "title": "Flip the spawn — PlayerPrefab becomes the session", "status": "todo", "test": "death despawns the avatar, the session survives with its final life, next round respawns it", "notes": "The big one. Removes hide-instead-of-despawn and the spawn-point teleport" },
         { "id": "ps-5", "title": "Late join arrives as a spectator", "status": "todo", "test": "a client joining during Playing has no avatar, is not counted alive, and cannot win on the clock" },
@@ -241,6 +241,24 @@
       "choice": "NetworkSimulation — the one object carrying the tick loop, the roster, the director and the referee — was saved as a prefab and the scene now holds an instance of it.",
       "why": "A scene object cannot be spawned by a test: the harness runs both peers in one editor process, so they share the scene and therefore the object, where a real session gives each peer its own copy through scene synchronization. Without this the only way to test a join was to bypass the roster and spawn sessions by hand, which tests the class and not the thing the task asks for. Saving it as a prefab also means the scene and the test exercise the same object rather than two configurations that drift.",
       "rejected": "Splitting SessionRoster onto a GameObject of its own; leaving ps-1 without a test of the real join path."
+    },
+    {
+      "id": "D-014",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "SessionRoster moved to Gameplay and stopped replicating anything",
+      "choice": "The roster is an index over the live PlayerSession objects, ordered by owner id, living in Snackdown.Gameplay.Player. NetworkList<PlayerSlot> and the PlayerSlot struct are deleted; name, skin and ready state are NetworkVariables on the session, and the ready Rpc moved there with them.",
+      "why": "The roster held a second copy of three facts the session already owns, kept in step by hand on the server — and a second copy is a copy that can disagree, which is the failure this whole epic exists to remove. Indexing means naming PlayerSession, and Snackdown.Connection cannot: Gameplay depends on it, not the other way round. So the file moved to the assembly that was always describing it, the same answer that broke the Netcode/Gameplay cycle in Phase 1. Nothing was lost on the wire — a late joiner still arrives to a full list, because NGO synchronizes the spawned session objects for the same reason it used to send the whole NetworkList. The roster keeps three jobs: spawning one session per connection, ordering the list so every peer draws the lobby identically, and raising one Changed event.",
+      "rejected": "Keeping the roster in Connection behind an IPlayerSession interface — an abstraction bought purely to keep a file in the wrong folder. Deleting the roster outright and letting each view read PlayerSession.All, which leaves nobody owning the order or the change event, and hands every reader a static that is shared between peers under the test harness."
+    },
+    {
+      "id": "D-015",
+      "date": "2026-08-23",
+      "epic": "player-session",
+      "title": "The session still adopts its identity after spawn, not before",
+      "choice": "PlayerSession keeps reading its name and skin out of ConnectionApproval in OnNetworkSpawn. Both arrive as deltas immediately after the spawn message rather than inside it.",
+      "why": "ps-1 recorded that writing them before Spawn would fold them into the spawn message, and that the task moving the roster into this assembly could finally do it. It compiles now, and it is still wrong: NGO logs \"NetworkVariable is written to, but doesn't know its NetworkBehaviour yet\" from MarkNetworkBehaviourDirty for any variable set before its object is spawned, and the flag that suppresses it is internal to the package. A warning on every single join costs more than two small deltas — a console that cries wolf is how a real warning goes unread.",
+      "rejected": "Reaching NetworkVariableBase.IgnoreInitializeWarning by reflection. Spawning the session and having the roster write the values straight after, which is the same two deltas with an extra hop."
     }
   ],
 
@@ -321,6 +339,10 @@
     {
       "date": "2026-08-23",
       "entry": "Closed ps-1. Three things were learned by trying: a prefab cannot be built at runtime without an internal NGO field (D-012), a networked scene object cannot be spawned by a test at all (D-013), and the ambient statics documented in docs/01 as safe because a peer is a process stop being safe the moment a harness runs two peers in one. The last one is recorded as a risk and the architecture doc now says so rather than claiming the opposite. Each new test was checked by breaking the code it covers: removing the session spawn fails exactly the four session tests and none of the handshake ones."
+    },
+    {
+      "date": "2026-08-23",
+      "entry": "Closed ps-2. The roster stopped replicating a player list and became an index over the sessions, which deleted PlayerSlot and moved the roster out of Snackdown.Connection (D-014). The pre-spawn write ps-1 left as a follow-up turned out to be a console warning per join and was rejected rather than inherited (D-015). Adding the tests surfaced a real flake in the harness: every session bound the same UDP port, and roughly one run in three failed to bind it in whichever test ran next, so a session now takes a port of its own."
     }
   ]
 }

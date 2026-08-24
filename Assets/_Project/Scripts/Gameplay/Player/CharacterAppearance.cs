@@ -1,4 +1,3 @@
-using Snackdown.Connection;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -8,10 +7,10 @@ namespace Snackdown.Gameplay.Player
     /// Dresses a character in the skin its owner picked, on every peer.
     /// </summary>
     /// <remarks>
-    /// <para>Reads the choice from <see cref="SessionRoster"/> rather than replicating it again.
-    /// The index already crossed the wire once, inside the connection payload, and was clamped by
-    /// approval before it reached the roster — sending it a second time would mean a second copy
-    /// that can disagree with the first, and a second place for a client to lie.</para>
+    /// <para>Reads the choice off the owner's <see cref="PlayerSession"/> rather than replicating
+    /// it again. The index already crossed the wire once, inside the connection payload, and was
+    /// clamped by approval before it reached the session — sending it a second time would mean a
+    /// second copy that can disagree with the first, and a second place for a client to lie.</para>
     /// <para>Purely visual. Nothing here is read by <see cref="PlayerMotor"/>, which is what makes
     /// the four characters mechanically identical rather than merely intended to be.</para>
     /// </remarks>
@@ -32,8 +31,9 @@ namespace Snackdown.Gameplay.Player
 
             _roster = FindFirstObjectByType<SessionRoster>();
 
-            // The roster is replicated, so a character can spawn before the slot describing it has
-            // arrived. Re-applying on every change costs nothing and removes the race.
+            // A character can spawn before the session describing it has been synchronized, and
+            // the skin index arrives as a delta after that. Re-applying on every roster change costs
+            // nothing and removes both races.
             if (_roster != null) _roster.Changed += Apply;
 
             Apply();
@@ -53,15 +53,6 @@ namespace Snackdown.Gameplay.Player
             if (entry.Portrait != null) _renderer.sprite = entry.Portrait;
         }
 
-        int IndexForOwner()
-        {
-            if (_roster == null) return 0;
-
-            for (int i = 0; i < _roster.Count; i++)
-                if (_roster[i].ClientId == OwnerClientId)
-                    return _roster[i].CharacterIndex;
-
-            return 0;
-        }
+        int IndexForOwner() => _roster == null ? 0 : _roster.Of(OwnerClientId)?.CharacterIndex ?? 0;
     }
 }

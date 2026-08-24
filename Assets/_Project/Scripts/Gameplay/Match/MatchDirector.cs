@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Snackdown.Connection;
 using Snackdown.Gameplay.Player;
 using Unity.Netcode;
 using UnityEngine;
