@@ -59,6 +59,28 @@ reviewable later, and it's the habit that transfers to a team.
    commit** when the commits are individually meaningful and worth keeping (the Phase commits are).
 5. Delete the branch after merging.
 
+### The base is `dev`. Check it every time
+
+GitHub opens a new pull request against the repository's **default branch**, and if that is still
+`main` the form arrives pre-filled with the wrong base. Merging it would put unreleased work
+straight into the branch that is supposed to hold only things someone could download and play,
+skipping integration entirely — and the diff looks plausible, because everything in it is real work.
+
+Two things keep it from happening:
+
+- **Set the default branch to `dev`** in the repository settings, once. That is the fix; the rest is
+  a net under it.
+- **Open PRs through a link that names the base**, rather than the one GitHub prints after a push:
+
+  ```
+  https://github.com/<owner>/<repo>/compare/dev...<branch>?expand=1
+  ```
+
+  The `/pull/new/<branch>` URL that `git push` suggests does *not* name a base, so it falls back to
+  the default branch. The `compare` form does, and it is the same number of clicks.
+
+`main` moves only at release time, from `dev`, with a tag — see [Releases](#releases).
+
 ## Releases
 
 **Releases start at Phase 5, not at each phase.** `main` holds the Phase 0 scaffold and stays there
