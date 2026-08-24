@@ -55,7 +55,8 @@ Assets/
 │   │   ├── Core/             AppBootstrap, FrameRatePolicy
 │   │   ├── Connection/       IConnectionProvider, DirectConnectionProvider,
 │   │   │                     RelayConnectionProvider, ConnectionApproval, ConnectionPayload,
-│   │   │                     ConnectionRequest, ConnectionResult, NetworkConfigReport
+│   │   │                     ConnectionRequest, ConnectionResult, SessionConnection,
+│   │   │                     NetworkConfigReport
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
 │   │   │                     MovementConfig, SimulationContext — the state, the input,
 │   │   │                     the replayable step
@@ -101,7 +102,7 @@ Three scenes, and the split is what makes several arenas possible:
 
 | Scene | Holds | Lifetime |
 |---|---|---|
-| **Bootstrap** | `NetworkManager`, the `NetworkSimulation` prefab instance — `MatchDirector`, `RoundReferee`, `SessionRoster` and the tick loop on one networked object — plus the loading screen, the round clock, the life bars and the end screen | The whole session |
+| **Bootstrap** | `NetworkManager` and `SessionConnection`, the `NetworkSimulation` prefab instance — `MatchDirector`, `RoundReferee`, `SessionRoster` and the tick loop on one networked object — plus the loading screen, the round clock, the life bars and the end screen | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
 | **Arena01** | Geometry, spawn points, camera | During a match |
 | **Sandbox** | A copy of Bootstrap that hosts and starts a match on Play | Never in a build; opened by hand |
@@ -120,6 +121,12 @@ the things that have to survive a match starting.
 Arenas are content, not code: they live in an `ArenaCatalog` asset, so adding one is authoring.
 As with the character catalog, the index is what crosses the network, so entries are appended and
 never reordered.
+
+**The connection outlives the lobby that opened it.** `SessionConnection` sits in bootstrap and owns
+the provider, the approval and the join code; the menu asks it rather than holding them. That is not
+tidiness — the lobby scene is unloaded whenever a match runs, so everything the menu held privately
+died with it, and *Return to lobby* came back to the host-or-join screen with the session still
+running underneath and the join code gone.
 
 **The lobby scene has exactly one owner**, the reconciler in the UI layer, which brings it up
 whenever the phase says it should be there — including before any session exists. When a match ends
