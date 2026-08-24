@@ -98,30 +98,8 @@ namespace Snackdown.Gameplay.Player
         /// </remarks>
         const uint MaxInputTickLead = 64;
 
-        /// <summary>
-        /// How many consecutive snapshots keep announcing a teleport after one happens.
-        /// </summary>
-        /// <remarks>
-        /// Snapshots are unreliable, so a flag announced once is a flag that can be dropped — and
-        /// a dropped teleport flag turns a deliberate reposition back into a counted prediction
-        /// failure. Three is the same redundancy the input window uses, for the same reason.
-        /// </remarks>
-        const int TeleportAnnounceCount = 3;
-
-        int _teleportAnnouncesLeft;
-
         // --- remote -----------------------------------------------------------------------
         readonly SnapshotInterpolator _interpolator = new SnapshotInterpolator();
-
-        /// <summary>This player's life, once their session has arrived on this peer.</summary>
-        /// <remarks>
-        /// Not a component of this object any more — it moved onto <see cref="PlayerSession"/> in
-        /// ps-3 — so it cannot be fetched in <c>Awake</c> and be relied on. The session and the
-        /// avatar are two spawns, and a client receives them in whichever order synchronization
-        /// hands them over: on a late join the session usually lands first, on a fresh connection
-        /// the avatar can. Null here is a normal state that ends, not a missing reference.
-        /// </remarks>
-        PlayerLife _life;
 
         /// <summary>
         /// True once there is an arena to stand in.
@@ -137,12 +115,6 @@ namespace Snackdown.Gameplay.Player
         {
             get
             {
-                // A player who is out stops moving everywhere at once, because everywhere reads the
-                // same replicated flag. Letting the owner keep simulating a corpse would have them
-                // predicting a character the server no longer advances, and every snapshot would
-                // arrive as a correction.
-                if (_life != null && !_life.IsAlive) return false;
-
                 MatchDirector director = MatchDirector.Current;
 
                 // No director means no match system at all — a bare test scene, where simulating
@@ -152,9 +124,6 @@ namespace Snackdown.Gameplay.Player
                 return director.Phase == MatchPhase.Countdown || director.Phase == MatchPhase.Playing;
             }
         }
-
-        /// <summary>Whether this character counts as a body other players can walk into.</summary>
-        public bool IsSolid => _life == null || _life.IsAlive;
 
         /// <summary>
         /// Global kill switch for client-side prediction, flipped from the debug overlay.
@@ -256,11 +225,6 @@ namespace Snackdown.Gameplay.Player
             _state = PlayerState.AtPosition(transform.position);
             _inputReader = GetComponent<InputReader>();
 
-            // Waits for the session if it has not arrived. Binding once and giving up would leave
-            // the character permanently visible, including after its owner had run out.
-            PlayerSession.MembershipChanged += OnAnySessionChanged;
-            BindLife();
-
             // Only the owner's device drives this character. On every other peer the reader would
             // enable its InputActions and latch the local keyboard's jumps into a character that
             // never reads them. The host counts as owner: its input skips the wire, but it is
@@ -281,49 +245,7 @@ namespace Snackdown.Gameplay.Player
 
         public override void OnNetworkDespawn()
         {
-            PlayerSession.MembershipChanged -= OnAnySessionChanged;
-
-            if (_life != null) _life.AliveChanged -= OnAliveChanged;
-            _life = null;
-
             NetworkSimulationLoop.Unregister(this);
-        }
-
-        void OnAnySessionChanged(PlayerSession _) => BindLife();
-
-        /// <summary>Attaches to this player's life the first time their session is present.</summary>
-        void BindLife()
-        {
-            if (_life != null) return;
-
-            PlayerSession player = PlayerSession.Of(NetworkManager, OwnerClientId);
-            if (player == null || player.Life == null) return;
-
-            _life = player.Life;
-            _life.AliveChanged += OnAliveChanged;
-
-            // Applied on binding as well as on change: the flag may already say this player is out
-            // by the time their session reaches this peer, and a character that only reacts to
-            // changes would be drawn alive until the next one.
-            OnAliveChanged(_life);
-        }
-
-        /// <summary>
-        /// Shows or hides the character as it enters and leaves the round.
-        /// </summary>
-        /// <remarks>
-        /// The visual is hidden rather than the object despawned. Despawning would take the owner's
-        /// connection to this object with it, and the next round reuses the same character rather
-        /// than negotiating a new one. The other two reasons this used to have — the roster entry
-        /// and the life readout — are gone: both now live on the session and outlive the avatar
-        /// already. What is left goes with ps-4.
-        /// </remarks>
-        void OnAliveChanged(PlayerLife life)
-        {
-            if (_smoother == null) return;
-
-            _smoother.gameObject.SetActive(life.IsAlive);
-            if (life.IsAlive) _smoother.Snap();
         }
 
         // ==================================================================================
@@ -492,11 +414,9 @@ namespace Snackdown.Gameplay.Player
             {
                 NetworkObjectId = NetworkObjectId,
                 State = _state,
-                LastProcessedInputTick = _lastProcessedInputTick,
-                IsTeleport = _teleportAnnouncesLeft > 0
+                LastProcessedInputTick = _lastProcessedInputTick
             };
 
-            if (_teleportAnnouncesLeft > 0) _teleportAnnouncesLeft--;
             return snapshot;
         }
 
@@ -535,18 +455,6 @@ namespace Snackdown.Gameplay.Player
             // number cannot answer this.
             if (_latestPredictedTick > ackTick)
                 LastMeasuredRttMs = (_latestPredictedTick - ackTick) * _tickDelta * 1000f;
-
-            if (snapshot.IsTeleport)
-            {
-                // The server moved us on purpose. Replaying inputs across a teleport would carry
-                // over momentum from a place we are no longer in, and counting it as a correction
-                // would blame prediction for something it never got to predict.
-                HardSnapTo(snapshot.State);
-                _hasSyncedOnce = true;
-                _lastAckedTick = ackTick;
-                _buffer.Clear();
-                return;
-            }
 
             if (!_hasSyncedOnce)
             {
@@ -688,10 +596,6 @@ namespace Snackdown.Gameplay.Player
                 if (count >= WorldSnapshotBuffer.MaxBodies) break;
                 if (peer is not PredictedPlayer other || other == this) continue;
 
-                // A player who is out stops being an obstacle. Leaving them solid would let a
-                // corpse block a doorway, and worse, would be a body nobody can see.
-                if (!other.IsSolid) continue;
-
                 _worldScratch[count++] = new PeerBody
                 {
                     Id = other.NetworkObjectId,
@@ -705,19 +609,5 @@ namespace Snackdown.Gameplay.Player
 
         SimulationContext WorldAt(uint tick) => _world.ContextFor(tick, NetworkObjectId, _worldScratch);
 
-        /// <summary>Server-side teleport that every peer will follow through the next snapshot.</summary>
-        /// <remarks>
-        /// The next few snapshots announce this as a teleport rather than letting owners discover
-        /// it as an enormous prediction error. Without that, a spawn placement is indistinguishable
-        /// on the wire from the simulation having gone badly wrong.
-        /// </remarks>
-        public void ServerTeleport(Vector2 position)
-        {
-            if (!IsServer) return;
-            _state = PlayerState.AtPosition(position);
-            _teleportAnnouncesLeft = TeleportAnnounceCount;
-            ApplyLogicalPosition(position, smooth: false);
-            if (_smoother != null) _smoother.Snap();
-        }
     }
 }

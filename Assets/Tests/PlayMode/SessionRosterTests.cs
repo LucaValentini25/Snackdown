@@ -56,8 +56,10 @@ namespace Snackdown.Tests
 
         protected override void Configure(NetworkManager peer, bool isHost)
         {
-            peer.NetworkConfig.PlayerPrefab = _avatarPrefab;
-            peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _sessionPrefab });
+            // The player object is the session, not the character — see ADR D-004. The character is
+            // an ordinary prefab the session spawns per round, so it has to be registered like one.
+            peer.NetworkConfig.PlayerPrefab = _sessionPrefab;
+            peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _avatarPrefab });
             peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _simulationPrefab });
 
             if (isHost)

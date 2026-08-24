@@ -44,13 +44,12 @@ namespace Snackdown.Tests
         /// </remarks>
         private const int FruitKind = 1;
 
-        /// <summary>
-        /// Where the pickup happens, away from the origin.
-        /// </summary>
+        /// <summary>Where the pickup happens. Anywhere, as long as it is where the body is.</summary>
         /// <remarks>
-        /// Both avatars spawn at the origin — NGO places a player object there and no arena has
-        /// loaded to move them — so a fruit dropped there would be standing on two players at once
-        /// and this test would be asserting whichever the overlap happened to return first.
+        /// Since <c>ps-4</c> a character is created at a position rather than created and moved, so
+        /// the test names the spot once and both the body and the fruit are put there. Only the
+        /// client is given a body at all, which is what makes the assertion that the host was not
+        /// credited mean something.
         /// </remarks>
         private static readonly Vector2 PickupSpot = new Vector2(6f, 0f);
 
@@ -82,8 +81,10 @@ namespace Snackdown.Tests
 
         protected override void Configure(NetworkManager peer, bool isHost)
         {
-            peer.NetworkConfig.PlayerPrefab = _avatarPrefab;
-            peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _sessionPrefab });
+            // The player object is the session, not the character — see ADR D-004. The character is
+            // an ordinary prefab the session spawns per round, so it has to be registered like one.
+            peer.NetworkConfig.PlayerPrefab = _sessionPrefab;
+            peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _avatarPrefab });
             peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _simulationPrefab });
             peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _fruitPrefab });
 
@@ -125,17 +126,20 @@ namespace Snackdown.Tests
             ulong clientId = Clients[0].LocalClientId;
 
             yield return WaitFor(
-                () => LifeOn(Host, clientId) != null
-                      && LifeOn(Clients[0], clientId) != null
-                      && AvatarOn(Host, clientId) != null,
-                "both peers to hold the client's life, and the server its avatar");
+                () => LifeOn(Host, clientId) != null && LifeOn(Clients[0], clientId) != null,
+                "both peers to hold the client's life");
 
             float startedAt = LifeOn(Host, clientId).Remaining;
             float worth = _table.Get(FruitKind).LifeSeconds;
 
-            // Parked away from the host, who is standing on the origin this fruit would otherwise
-            // be dropped on.
-            AvatarOn(Host, clientId).ServerTeleport(PickupSpot);
+            // The round is what hands out bodies, and there is no arena here to start one — so the
+            // test gives this player the body directly, through the same call the arena makes.
+            SessionOn(Host, clientId).ServerSpawnAvatar(PickupSpot);
+
+            yield return WaitFor(
+                () => AvatarOn(Host, clientId) != null,
+                "the server to spawn the client's character");
+
             SpawnFruit(PickupSpot);
 
             yield return WaitFor(
@@ -166,8 +170,14 @@ namespace Snackdown.Tests
             ulong clientId = Clients[0].LocalClientId;
 
             yield return WaitFor(
-                () => LifeOn(Host, clientId) != null && AvatarOn(Host, clientId) != null,
-                "the server to hold the client's life and avatar");
+                () => SessionOn(Host, clientId) != null,
+                "the server to hold the client's session");
+
+            SessionOn(Host, clientId).ServerSpawnAvatar(PickupSpot);
+
+            yield return WaitFor(
+                () => AvatarOn(Host, clientId) != null,
+                "the server to spawn the client's character");
 
             // The overlap query includes triggers and the fruit's own collider is inside its own
             // pickup radius. Before the session move, collection matched on any PlayerLife in the

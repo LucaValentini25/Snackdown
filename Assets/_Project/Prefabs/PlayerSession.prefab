@@ -72,6 +72,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Player.PlayerSession
   ShowTopMostFoldoutHeaderGroup: 1
+  _avatarPrefab: {fileID: 2013773515545727018, guid: 910824313aa73844abc97161e8e5faea, type: 3}
 --- !u!114 &6708533512792734870
 MonoBehaviour:
   m_ObjectHideFlags: 0

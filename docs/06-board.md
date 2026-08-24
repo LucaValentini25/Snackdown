@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-24
 
-**Overall:** 59% — 27 done, 0 in progress, 0 blocked, 19 to do, 2 dropped, across 8 epics.
+**Overall:** 61% — 28 done, 0 in progress, 0 blocked, 18 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -17,7 +17,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Connection layer — LAN and Relay behind one flow](#connection-layer-lan-and-relay-behind-one-flow) | 2 | Done | 6/6 |
 | [Gameplay core — the rules, server-authoritative](#gameplay-core-the-rules-server-authoritative) | 3 | Done | 5/5 |
 | [In-match HUD — life bars and round clock](#in-match-hud-life-bars-and-round-clock) | 4 | Done | 3/3 |
-| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 4/8 |
+| [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | In progress | 5/8 |
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | To do | 0/5 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | To do | 0/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 0/6 |
@@ -85,7 +85,7 @@ One networked object per connection that owns identity, life and stats, and spaw
 | `[x]` | PlayerSession exists alongside the avatar, unread | PlayMode — PlayerSessionTests: a joining client gets a session of its own, both peers read the sanitized name, the host's own session carries the name it chose, and a leaving client takes its session with it | Cost two things the task did not anticipate: NetworkSimulation had to become a prefab to be spawnable in a test (D-013), and the session reads its own name out of approval rather than being handed it, because the object that spawns it lives in the assembly this one depends on |
 | `[x]` | Roster becomes an index over live sessions | PlayMode — SessionRosterTests: a client joining a running session sees all four players with their names, skins and ready flags; every peer orders the list the same way; a client cannot ready up a player it does not own | NetworkList and PlayerSlot are deleted as planned, and the roster went with them — it cannot name PlayerSession from Snackdown.Connection, so it moved to Gameplay/Player (D-014). Two things the task did not anticipate: the pre-spawn write ps-1 promised turns out to log a warning on every join and was not done (D-015), and the harness had a real flake — every session bound the same UDP port, so a session now takes one of its own |
 | `[x]` | Life, fruit count and stats move onto the session | PlayMode — FruitPickupTests: a fruit the client walks into adds life and a count on the server and both reach the client, the host is not credited for it, and a fruit nobody is standing on collects nothing and spawns silently | PlayerLife moved as a component onto the PlayerSession prefab rather than being folded into the class (D-016), so the referee, the HUD and the spectator camera did not change at all. Stats stayed at one number — fruit, cumulative for the connection — narrowing D-003, which had said per-round. The four places that reached life through the avatar now resolve owner to session, which is what forced PlayerSession.Of to take the peer it should look in (D-017). Two things found on the way: D-015 was reasoning from a wrong premise and is corrected, and FruitSpawner had been logging a warning per fruit for the same reason |
-| `[ ]` | Flip the spawn — PlayerPrefab becomes the session | death despawns the avatar, the session survives with its final life, next round respawns it | The big one. Removes hide-instead-of-despawn and the spawn-point teleport |
+| `[x]` | Flip the spawn — PlayerPrefab becomes the session | PlayMode — AvatarLifecycleTests: GetPlayerNetworkObject returns the session and connecting alone grants no body; running out despawns the character on both peers while the session keeps its name and the life it ended on; the next round hands back a different character at the point it was asked for, with the life refilled | Both workarounds are gone as planned. The teleport went further than the note expected: with a character created at its spawn point instead of moved there, PlayerSnapshot lost its IsTeleport flag and the packet dropped from 8+42N to 8+41N (D-018). PredictedPlayer lost the life reference, IsSolid and the hide-on-death branch, and HeadBounce lost its alive check. The life reset moved from returning to the lobby onto starting a round, which closes a hole where a rematch from the end screen would have begun on the previous round's leftovers |
 | `[ ]` | Late join arrives as a spectator | a client joining during Playing has no avatar, is not counted alive, and cannot win on the clock | — |
 | `[ ]` | Host can kick, with a reason the kicked client sees | a non-host asking for a kick is ignored by the server | — |
 | `[ ]` | Replicated match settings and difficulty profiles | host lowers starting life to 30 and the client's round starts at 30 | Nothing Simulate() reads is exposed — see D-005 |
@@ -130,6 +130,16 @@ Make the finished work visible to someone who was not here while it was built.
 
 Every choice that closed off an alternative, with the reasoning that closed it. This is
 the part of the board worth reading a year from now.
+
+### D-018 — The teleport flag leaves the wire with the reposition it announced
+
+*2026-08-24* · epic **player-session**
+
+**Chosen:** PredictedPlayer.ServerTeleport, its announce counter and PlayerSnapshot.IsTeleport are deleted. A round spawns a character at its spawn point rather than moving one that already exists. The snapshot is 8+41N bytes instead of 8+42N — 172 rather than 176 with four players.
+
+**Why:** The flag existed for exactly one situation: the server repositioning a character the owner was already predicting, which on the wire is indistinguishable from prediction having gone badly wrong. It was worth a byte per player per tick because the alternative was a spawn placement counted as a 3.8-unit correction, poisoning the one statistic the netcode layer is judged by. That situation no longer occurs — the character is created where it belongs, so every peer starts out agreeing about its position instead of being corrected into agreement. Keeping a public server API and a wire field for a case the game can no longer reach is exactly the leftover CLAUDE.md forbids, and a bool that is always false is worse than no bool.
+
+**Rejected:** Keeping the mechanism as an unused capability and recording it as debt, which leaves dead public API and a field nobody can explain. Repurposing it for a mid-round respawn, which contradicts this task's own test — death despawns the character.
 
 ### D-017 — Looking a player up takes the peer to look in
 
@@ -320,6 +330,7 @@ rather than an oversight.
 
 ## Session log
 
+- **2026-08-24** — Closed ps-4, and with it both workarounds the epic was written to remove: a player who is out is despawned rather than hidden, and a round spawns a character at its spawn point rather than moving one that was already standing somewhere else. The second went further than the task note expected — with nothing left to reposition, PlayerSnapshot could drop its teleport flag, which is the first time this project has taken something off the wire (D-018). Also closed a hole nobody had hit yet: the life reset lived on the way back to the lobby, a path a rematch started from the end screen never travels, so it moved onto the call that hands out a body. The death-to-despawn wiring was checked by cutting it — two of the four new tests then fail on a timeout rather than an assertion, which is what a despawn that never arrives looks like.
 - **2026-08-24** — Closed ps-3. PlayerLife moved onto the session prefab and the fruit now credits a player rather than a body. Both new tests were checked by breaking what they cover: matching the pickup on any NetworkObject instead of on a character makes a fruit collect itself, and writing the fruit's kind before Spawn trips the log assertion. That second one settled a claim I had got wrong in ps-2 — a NetworkVariable written in the server's OnNetworkSpawn is already inside the spawn message, so D-015's talk of deltas was reasoning from a wrong premise and is corrected in place. The port fix from ps-2 also turned out to be half a fix: the leftover socket is not always from this run, so the harness now probes a port before binding it. Related and not fixed: the editor process is holding UDP 7777 from a Play session that ended, which is why the sandbox cannot host without an editor restart — Enter Play Mode Options has domain reload disabled, so a leaked socket outlives the session that opened it.
 - **2026-08-23** — Closed ps-2. The roster stopped replicating a player list and became an index over the sessions, which deleted PlayerSlot and moved the roster out of Snackdown.Connection (D-014). The pre-spawn write ps-1 left as a follow-up turned out to be a console warning per join and was rejected rather than inherited (D-015). Adding the tests surfaced a real flake in the harness: every session bound the same UDP port, and roughly one run in three failed to bind it in whichever test ran next, so a session now takes a port of its own.
 - **2026-08-23** — Closed ps-1. Three things were learned by trying: a prefab cannot be built at runtime without an internal NGO field (D-012), a networked scene object cannot be spawned by a test at all (D-013), and the ambient statics documented in docs/01 as safe because a peer is a process stop being safe the moment a harness runs two peers in one. The last one is recorded as a risk and the architecture doc now says so rather than claiming the opposite. Each new test was checked by breaking the code it covers: removing the session spawn fails exactly the four session tests and none of the handshake ones.

@@ -168,12 +168,29 @@ namespace Snackdown.Gameplay.Player
                 _life.Value = _exactLife;
             }
 
-            if (ranOut && !_reportedDeath)
-            {
-                _reportedDeath = true;
-                _alive.Value = false;
-                Died?.Invoke(this);
-            }
+            if (ranOut) ServerEndRound();
+        }
+
+        /// <summary>Takes this player out of the round, now. Server-only, and idempotent.</summary>
+        /// <remarks>
+        /// Extracted from the drain because running out is not the only way a round ends for one
+        /// player, and because everything that reacts to it — the avatar despawning above all —
+        /// should have exactly one trigger to be wired to rather than one per cause.
+        /// </remarks>
+        public void ServerEndRound()
+        {
+            if (!IsServer || _reportedDeath) return;
+
+            _reportedDeath = true;
+
+            // The life is published as it stands rather than zeroed. Running out is one way to
+            // leave a round and it arrives here already at zero; the others do not, and the end
+            // screen has to be able to say what someone had left when they stopped playing.
+            _sinceLastPublish = 0f;
+            _life.Value = _exactLife;
+            _alive.Value = false;
+
+            Died?.Invoke(this);
         }
 
         void ClientTick()

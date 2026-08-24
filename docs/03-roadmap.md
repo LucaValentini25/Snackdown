@@ -81,9 +81,11 @@ The predicted local player stays responsive at both.
 - [x] Players are solid to each other — predicted client-side against past peer positions, not
       decided by the host. Also the point where `PlayerMotor` became ordered steps, so later
       mechanics are insertions rather than rewrites
-- [x] Death → spectator; last-alive / timeout win conditions; end screen. A player who is out is
-      hidden rather than despawned and their owner gets a free camera, clamped per arena by
-      `ArenaBounds`. The referee replicates a verdict, not the numbers behind it
+- [x] Death → spectator; last-alive / timeout win conditions; end screen. Their owner gets a free
+      camera, clamped per arena by `ArenaBounds`. The referee replicates a verdict, not the numbers
+      behind it. Landed with the character *hidden* rather than despawned, because despawning it
+      would have taken the player with it; Phase 4 separated the two and the body is now genuinely
+      despawned
 - [ ] **In-match HUD** — own life countdown and round clock. `PlayerLife.Fraction` and
       `RoundReferee.RoundRemaining` were written for it and are already replicated, so this is one
       `.uxml` and a controller with no netcode change. Listed here rather than in Phase 4 because the
