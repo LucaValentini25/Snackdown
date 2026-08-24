@@ -27,6 +27,10 @@ namespace Snackdown.Gameplay.Player
     /// same object. It moved here off the avatar: if the avatar has to survive death to keep the
     /// number, it stays the owner of identity and this whole separation achieves nothing. See ADR
     /// D-003.</para>
+    /// <para><b>This is the object NGO spawns per connection.</b> <c>NetworkConfig.PlayerPrefab</c>
+    /// points here, so the auto-spawn and <c>GetPlayerNetworkObject</c> both land on the thing worth
+    /// reaching, and the avatar became an ordinary prefab this object spawns and despawns around a
+    /// round. See ADR D-004.</para>
     /// </remarks>
     [RequireComponent(typeof(NetworkObject))]
     public class PlayerSession : NetworkBehaviour
@@ -89,6 +93,17 @@ namespace Snackdown.Gameplay.Player
         /// <summary>The life clock sitting beside this component. Cached; never null on the prefab.</summary>
         private PlayerLife _life;
 
+        [Tooltip("The character this player wears during a round. Spawned and despawned per round.")]
+        [SerializeField] private GameObject _avatarPrefab;
+
+        /// <summary>The body this player is currently wearing, on the server. Null between rounds.</summary>
+        /// <remarks>
+        /// Server-side only, and not replicated. Every other peer finds a character the same way it
+        /// always did — by owner — and giving them a second route to it would be a reference that
+        /// can disagree with the object graph it describes.
+        /// </remarks>
+        private NetworkObject _avatar;
+
         /// <summary>The name this player was admitted under. Never the raw string they sent.</summary>
         public string Nickname => _nickname.Value.ToString();
 
@@ -103,6 +118,9 @@ namespace Snackdown.Gameplay.Player
 
         /// <summary>This player's life clock, which lives on this object rather than on the avatar.</summary>
         public PlayerLife Life => _life;
+
+        /// <summary>True while this player has a character in the arena. Server-side.</summary>
+        public bool HasAvatar => _avatar != null && _avatar.IsSpawned;
 
         /// <summary>
         /// The session a client has on one peer, or null if it has not arrived there yet.
@@ -152,7 +170,11 @@ namespace Snackdown.Gameplay.Player
                     + "can neither run out nor collect fruit.", this);
             }
 
-            if (IsServer) AdoptApprovedIdentity();
+            if (IsServer)
+            {
+                AdoptApprovedIdentity();
+                if (_life != null) _life.Died += OnDied;
+            }
 
             MembershipChanged?.Invoke(this);
         }
@@ -160,6 +182,8 @@ namespace Snackdown.Gameplay.Player
         public override void OnNetworkDespawn()
         {
             _all.Remove(this);
+
+            if (IsServer && _life != null) _life.Died -= OnDied;
 
             _nickname.OnValueChanged -= OnNicknameChanged;
             _characterIndex.OnValueChanged -= OnCharacterIndexChanged;
@@ -201,6 +225,77 @@ namespace Snackdown.Gameplay.Player
             _nickname.Value = new FixedString32Bytes(admitted);
             _characterIndex.Value = approval?.CharacterOf(OwnerClientId) ?? 0;
         }
+
+        // ==================================================================================
+        //  The body
+        // ==================================================================================
+
+        /// <summary>
+        /// Puts this player into a round: a full life and a character standing at
+        /// <paramref name="at"/>. Server-only.
+        /// </summary>
+        /// <remarks>
+        /// One call for both halves so they cannot come apart. Resetting the life without handing
+        /// out a body leaves a player who is alive and cannot be seen; handing out a body without
+        /// resetting drops them into the arena with whatever the previous round left them — which is
+        /// what used to happen when a second match was started from the end screen, because the
+        /// reset lived on the way back to the lobby and that path was skipped.
+        /// </remarks>
+        public void ServerBeginRound(Vector2 at)
+        {
+            if (!IsServer) return;
+
+            _life?.ServerReset();
+            ServerSpawnAvatar(at);
+        }
+
+        /// <summary>
+        /// Gives this player a character at <paramref name="at"/>, if they do not already have one.
+        /// </summary>
+        /// <remarks>
+        /// <para>Spawned at the position rather than spawned and then moved. The character reads its
+        /// own transform for its starting state, and the spawn message carries that transform, so
+        /// every peer begins agreeing about where this player is instead of being corrected into
+        /// agreement a few snapshots later. That is what let the teleport-announce flag leave
+        /// <c>PlayerSnapshot</c> in this task.</para>
+        /// <para>Owned by the same client that owns this session, so input, prediction and NGO's own
+        /// ownership checks all land on the same player.</para>
+        /// </remarks>
+        public void ServerSpawnAvatar(Vector2 at)
+        {
+            if (!IsServer || HasAvatar) return;
+
+            if (_avatarPrefab == null)
+            {
+                Debug.LogError($"[Snackdown] {name} has no avatar prefab; this player cannot be given a body.", this);
+                return;
+            }
+
+            GameObject body = Instantiate(_avatarPrefab, at, Quaternion.identity);
+
+            _avatar = body.GetComponent<NetworkObject>();
+            _avatar.SpawnWithOwnership(OwnerClientId);
+        }
+
+        /// <summary>Takes this player's character away. Server-only; safe to call when there is none.</summary>
+        /// <remarks>
+        /// A real despawn, not a hidden object. Everything that used to make hiding necessary — the
+        /// roster entry, the life, the fruit count — lives on this object now and is untouched by
+        /// the body going away, which is the whole point of the epic.
+        /// </remarks>
+        public void ServerDespawnAvatar()
+        {
+            if (!IsServer) return;
+
+            if (_avatar != null && _avatar.IsSpawned) _avatar.Despawn();
+            _avatar = null;
+        }
+
+        /// <remarks>
+        /// Running out ends the round for this player and nothing else: the session stays, holding
+        /// the life it ended on for the end screen and the fruit it collected for the scoreboard.
+        /// </remarks>
+        private void OnDied(PlayerLife life) => ServerDespawnAvatar();
 
         // ==================================================================================
         //  Fruit

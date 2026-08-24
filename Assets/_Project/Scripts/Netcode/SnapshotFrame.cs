@@ -22,28 +22,11 @@ namespace Snackdown.Netcode
         /// </remarks>
         public uint LastProcessedInputTick;
 
-        /// <summary>
-        /// Set when this state is the result of the server repositioning the character rather than
-        /// simulating it — a spawn placement, and from Phase 3 on, a respawn.
-        /// </summary>
-        /// <remarks>
-        /// Without this the client cannot tell the two apart, because they look identical on the
-        /// wire: a state far from what was predicted. It would treat a deliberate teleport as a
-        /// prediction failure, replay inputs across it, and count a correction — which quietly
-        /// poisons the one statistic the whole layer is judged by. A spawn placement alone
-        /// contributed an error of 3.8 units against a real correction of 0.29.
-        /// <para>The server keeps setting it for a few consecutive snapshots. Snapshots travel
-        /// unreliably, so a flag sent once is a flag that can be lost — the same reasoning that
-        /// makes input redundant rather than retransmitted.</para>
-        /// </remarks>
-        public bool IsTeleport;
-
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
             serializer.SerializeValue(ref NetworkObjectId);
             State.NetworkSerialize(serializer);
             serializer.SerializeValue(ref LastProcessedInputTick);
-            serializer.SerializeValue(ref IsTeleport);
         }
     }
 
@@ -52,14 +35,18 @@ namespace Snackdown.Netcode
     /// </summary>
     /// <remarks>
     /// One frame per tick rather than one message per player — with four players that is a single
-    /// <b>176-byte payload</b> instead of four messages, and every state inside it shares a timestamp,
+    /// <b>172-byte payload</b> instead of four messages, and every state inside it shares a timestamp,
     /// which is what lets the interpolator line remote characters up against a common clock.
-    /// <para>The size is <c>8 + 42N</c>: a 4-byte tick, a 4-byte count, and 42 bytes per player
-    /// (8 for the object id, 29 for <see cref="PlayerState"/>, 4 for the acknowledged input tick,
-    /// 1 for the teleport flag). On the wire that becomes roughly 240 bytes direct or 280 relayed
-    /// once NGO's RPC metadata and batch header, the transport framing and IP/UDP are added — those
-    /// figures are counted from the serializers and the package source, not measured, because nothing
-    /// in this project has ever counted a byte in flight.</para>
+    /// <para>The size is <c>8 + 41N</c>: a 4-byte tick, a 4-byte count, and 41 bytes per player
+    /// (8 for the object id, 29 for <see cref="PlayerState"/>, 4 for the acknowledged input tick).
+    /// On the wire that becomes roughly 236 bytes direct or 276 relayed once NGO's RPC metadata and
+    /// batch header, the transport framing and IP/UDP are added — those figures are counted from the
+    /// serializers and the package source, not measured, because nothing in this project has ever
+    /// counted a byte in flight.</para>
+    /// <para>It was 42 bytes per player until <c>ps-4</c>. The forty-second was a teleport flag,
+    /// there because the server repositioned an existing character at the start of a round and the
+    /// owner had to be told not to count that as a prediction failure. The round now hands out a new
+    /// character instead of moving the old one, so there is no reposition left to announce.</para>
     /// </remarks>
     public struct SnapshotFrame : INetworkSerializable
     {

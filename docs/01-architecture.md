@@ -146,7 +146,7 @@ These are the invariants every system must respect. If a change would break one 
 | Character controller | **Kinematic, hand-written** — never a dynamic `Rigidbody2D` | Prediction needs a re-runnable pure `Move()`. See [02 — Netcode](02-netcode.md#the-simulation-is-kinematic-by-necessity). |
 | Player-vs-player contact | Solid, and **predicted** — resolved in the motor against buffered peer positions, which on a client are the *interpolated* ones | Waiting for the server to decide it would cost a round trip on every bump. The cost of not waiting is that a client predicts contact against peers as they were rendered, so close contact reliably produces a correction. See [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted). |
 | Ending a round | **Last one standing**, or the most life left when the 3-minute clock runs out | Both were already implied by `MatchConfig`; a shared top value at the clock is reported as a draw rather than broken by client id, because `MaxLife` makes an exact tie reachable. |
-| A player who is out | **Hidden, not despawned** — for now | Both of the reasons this existed are gone. The roster entry moved to `PlayerSession` in `ps-2` and the life moved there in `ps-3`, so neither dies with the avatar any more. What is left is that the avatar is still the object NGO ties to the connection; `ps-4` moves that too and the hiding goes with it. |
+| A player who is out | **Despawned** — and free to pan the camera around the arena | The character was hidden rather than despawned for three phases, because despawning it took the roster entry, the life and the connection's own player object with it. `ps-2` moved the first onto `PlayerSession`, `ps-3` the second, and `ps-4` pointed `NetworkConfig.PlayerPrefab` at the session so the third stopped being true. There is nothing left to preserve, so the body goes. |
 | Character selection | 4 skins, mechanically identical | Ships in Phase 2: the chosen character rides in the **same connection-approval payload** as the nickname, so it reinforces that system instead of adding one. |
 
 ## Who decides a round is over
@@ -159,15 +159,17 @@ The referee replicates a **verdict** — a winner and a reason — not the ingre
 holding the raw life values could reach a different conclusion from the same numbers and disagree
 about who won; a client holding the verdict cannot.
 
-Two things follow from a player being out, and both are replicated as one flag rather than derived:
+Two things follow from a player being out:
 
-- They stop simulating, stop being solid, and stop being stompable.
-- Their owner gets the camera.
+- Their character is despawned, which is what stops them simulating, being solid and being stompable
+  — three checks that used to read a flag and are now questions nobody asks, because there is no
+  object left to ask them about.
+- Their owner gets the camera, which still reads the replicated `IsAlive` flag on their session.
 
-The flag matters because life is *interpolated* on clients — it drains locally between the
-server's once-a-second updates and can reach zero a fraction early. Deriving death from that number
-would let a client bury a player the server still considers alive, and hand their owner a spectator
-camera mid-match.
+The flag is still replicated rather than derived from the number, and that still matters: life is
+*interpolated* on clients — it drains locally between the server's once-a-second updates and can
+reach zero a fraction early. Deriving death from that number would hand a player's owner a spectator
+camera while the server still considers them alive.
 
 ### The camera is never replicated
 

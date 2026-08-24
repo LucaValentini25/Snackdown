@@ -273,7 +273,15 @@ namespace Snackdown.Gameplay.Match
             SessionRoster roster = FindFirstObjectByType<SessionRoster>();
             if (roster != null) roster.ServerClearReady();
 
-            foreach (PlayerLife life in PlayerLife.All) life.ServerReset();
+            // The bodies go with the arena they were standing in. They are not part of it — they
+            // are spawned objects and would outlive the unload — and a character left standing in
+            // no scene at all is the state that used to be avoided by never despawning one.
+            // Resetting the life is not done here: since ps-4 that travels with the next round's
+            // body, so a rematch started from the end screen cannot skip it.
+            foreach (PlayerSession player in PlayerSession.All)
+            {
+                if (player.NetworkManager == NetworkManager) player.ServerDespawnAvatar();
+            }
 
             UnloadCurrentScene();
         }

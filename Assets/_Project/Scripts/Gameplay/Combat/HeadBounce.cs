@@ -16,6 +16,10 @@ namespace Snackdown.Gameplay.Combat
     /// character. Two players landing on each other in the same tick is a real case — both would
     /// claim the stomp if each judged for itself — so the pairing is resolved in one place, in a
     /// fixed order, and each pair is considered exactly once.</para>
+    /// <para>Nothing here asks whether the player below is still in the round. Since <c>ps-4</c> a
+    /// player who is out has no character at all, so there is nothing to stand on and nothing to
+    /// stun — the check that used to be here was reading a flag on a body that should not have been
+    /// there in the first place.</para>
     /// <para>Deliberately outside <c>PlayerMotor</c>. The motor is a pure function of one
     /// character's own state and input, which is what lets a client replay it during
     /// reconciliation; player-versus-player contact depends on where <i>everyone else</i> was at
@@ -71,10 +75,8 @@ namespace Snackdown.Gameplay.Combat
         {
             _candidates.Clear();
 
-            // Players who are out are skipped for the same reason they stop being solid: a stomp
-            // landing on someone who has already lost is a stun nobody will ever see wear off.
             foreach (IPredictedPeer peer in NetworkSimulationLoop.ActivePlayers)
-                if (peer is PredictedPlayer player && player.IsSolid) _candidates.Add(player);
+                if (peer is PredictedPlayer player) _candidates.Add(player);
         }
 
         void Resolve(PredictedPlayer a, PredictedPlayer b, float tickDelta)
@@ -91,11 +93,6 @@ namespace Snackdown.Gameplay.Combat
 
             // Already stunned: no chaining a second stun onto someone who cannot move anyway.
             if (lower.State.IsStunned) return;
-
-            // The life left the avatar in ps-3, so being alive is a question about the player and
-            // not about the object being stood on.
-            PlayerSession lowerPlayer = PlayerSession.Of(NetworkManager, lower.OwnerClientId);
-            if (lowerPlayer != null && lowerPlayer.Life != null && !lowerPlayer.Life.IsAlive) return;
 
             lower.ServerApplyStun(_stunSeconds);
             upper.ServerBounce(_bounceVelocity);

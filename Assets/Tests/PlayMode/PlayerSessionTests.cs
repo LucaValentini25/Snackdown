@@ -60,8 +60,10 @@ namespace Snackdown.Tests
         {
             // Both halves of the wire have to agree on the prefab list and on whether a connection
             // request carries a payload, or the request cannot even be deserialized.
-            peer.NetworkConfig.PlayerPrefab = _avatarPrefab;
-            peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _sessionPrefab });
+            // The player object is the session, not the character — see ADR D-004. The character is
+            // an ordinary prefab the session spawns per round, so it has to be registered like one.
+            peer.NetworkConfig.PlayerPrefab = _sessionPrefab;
+            peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _avatarPrefab });
             peer.NetworkConfig.Prefabs.Add(new NetworkPrefab { Prefab = _simulationPrefab });
 
             if (isHost)

@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Unity.Netcode;
-using UnityEngine;
 
 namespace Snackdown.Gameplay.Player
 {
     /// <summary>
     /// Who is in the session right now: an ordered index over the live
-    /// <see cref="PlayerSession"/> objects, plus the server-side job of creating them.
+    /// <see cref="PlayerSession"/> objects.
     /// </summary>
     /// <remarks>
     /// <para>It used to replicate the list itself, as a <c>NetworkList</c> of a <c>PlayerSlot</c>
@@ -19,23 +18,16 @@ namespace Snackdown.Gameplay.Player
     /// already present, because NGO synchronizes the spawned session objects on join for the same
     /// reason it sent the whole list before — the difference is that the identity now arrives with
     /// the object that owns it instead of alongside it.</para>
+    /// <para>It used to spawn the sessions as well. Since <c>ps-4</c> they are NGO's own player
+    /// object — <c>NetworkConfig.PlayerPrefab</c> points at the session prefab — so the connection
+    /// that creates a player also creates their session, and this is left with nothing to do but
+    /// order them and say when the list changed. See ADR D-004.</para>
     /// <para>Deliberately free of any opinion about how it is drawn. A lobby screen, a HUD and an
     /// end-of-match scoreboard all need the same list, so this exposes it and raises an event when
     /// it changes, and nothing more.</para>
     /// </remarks>
     public class SessionRoster : NetworkBehaviour
     {
-        /// <summary>The per-connection session object spawned for every player who joins.</summary>
-        /// <remarks>
-        /// Still a plain <see cref="GameObject"/> rather than the <see cref="PlayerSession"/> it
-        /// carries, even though this file now lives in the same assembly and could name the type.
-        /// The field has one task left: <c>ps-4</c> makes the session NGO's own
-        /// <c>NetworkConfig.PlayerPrefab</c>, which is a <see cref="GameObject"/> and is assigned in
-        /// the Inspector — retyping this one to lose it two tasks later would mean re-authoring the
-        /// prefab reference twice for nothing.
-        /// </remarks>
-        [SerializeField] private GameObject _sessionPrefab;
-
         /// <summary>Ordered by owner id, so every peer draws the lobby in the same order.</summary>
         /// <remarks>
         /// <see cref="PlayerSession.All"/> is in spawn order, which is not something a client can
@@ -105,17 +97,6 @@ namespace Snackdown.Gameplay.Player
             PlayerSession.MembershipChanged += OnMembershipChanged;
             PlayerSession.DetailsChanged += OnDetailsChanged;
 
-            if (IsServer)
-            {
-                NetworkManager.OnClientConnectedCallback += SpawnSession;
-
-                // Clients already connected when this spawned would otherwise never get a session —
-                // the host itself is always one of them, since it connects before the scene objects
-                // exist. Nothing removes them: NGO destroys an owned object when its owner
-                // disconnects, which is exactly the lifetime wanted.
-                foreach (ulong clientId in NetworkManager.ConnectedClientsIds) SpawnSession(clientId);
-            }
-
             Rebuild();
         }
 
@@ -123,11 +104,6 @@ namespace Snackdown.Gameplay.Player
         {
             PlayerSession.MembershipChanged -= OnMembershipChanged;
             PlayerSession.DetailsChanged -= OnDetailsChanged;
-
-            if (IsServer && NetworkManager != null)
-            {
-                NetworkManager.OnClientConnectedCallback -= SpawnSession;
-            }
 
             if (ReferenceEquals(Current, this)) Current = null;
         }
@@ -157,29 +133,6 @@ namespace Snackdown.Gameplay.Player
             _players.Sort(ByOwnerId);
 
             Changed?.Invoke();
-        }
-
-        /// <summary>
-        /// Gives a newly admitted client its own session object, owned by that client.
-        /// </summary>
-        /// <remarks>
-        /// Spawned with ownership rather than left on the server so that the client can ask things
-        /// of its own session — readying up now, changing skin once the wardrobe lands — through
-        /// Rpcs the server still validates. Ownership is who may ask, not who decides.
-        /// </remarks>
-        private void SpawnSession(ulong clientId)
-        {
-            if (!IsServer) return;
-            if (Of(clientId) != null) return;
-
-            if (_sessionPrefab == null)
-            {
-                Debug.LogError($"[Snackdown] {name} has no session prefab; players will have no identity.", this);
-                return;
-            }
-
-            GameObject session = Instantiate(_sessionPrefab);
-            session.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
         }
 
         /// <summary>Clears every ready flag. Server-only; used when returning to the lobby.</summary>

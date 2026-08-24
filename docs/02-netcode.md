@@ -220,7 +220,7 @@ motion that's smooth regardless of packet jitter or tick rate.
 | Remote transforms | snapshot + interpolation | every tick (server → clients) |
 | Life timer | `NetworkVariable` | ~1 Hz (only when it changes meaningfully) |
 | Match / round state | `NetworkVariable` + events | on change |
-| Fruit spawn / pickup | server spawn/despawn + `NetworkVariable<int>` for the kind, set before `Spawn()` so it rides the spawn message | on event |
+| Fruit spawn / pickup | server spawn/despawn + `NetworkVariable<int>` for the kind, published in the server's `OnNetworkSpawn` so it rides the spawn message | on event |
 
 ## How we'll prove it works
 
