@@ -114,6 +114,7 @@ namespace Snackdown.Gameplay.Match
             if (IsServer)
             {
                 NetworkManager.SceneManager.OnLoadComplete += OnLoadComplete;
+                NetworkManager.OnClientConnectedCallback += OnClientJoined;
                 NetworkManager.OnClientDisconnectCallback += OnClientLeft;
             }
 
@@ -129,6 +130,7 @@ namespace Snackdown.Gameplay.Match
                 if (NetworkManager.SceneManager != null)
                     NetworkManager.SceneManager.OnLoadComplete -= OnLoadComplete;
 
+                NetworkManager.OnClientConnectedCallback -= OnClientJoined;
                 NetworkManager.OnClientDisconnectCallback -= OnClientLeft;
             }
 
@@ -241,6 +243,44 @@ namespace Snackdown.Gameplay.Match
                 if (!_loaded.Contains(connected)) return;
 
             BeginCountdown();
+        }
+
+        /// <summary>True while a round is being played out, from the countdown to the end screen.</summary>
+        /// <remarks>
+        /// <c>Loading</c> is not one of them, and that is the interesting boundary rather than an
+        /// oversight: bodies are handed out when the countdown starts, so somebody who arrives while
+        /// the arena is still loading is in time for this round. Somebody who arrives a moment later
+        /// is not.
+        /// </remarks>
+        bool RoundIsUnderWay =>
+            _phase.Value == MatchPhase.Countdown
+            || _phase.Value == MatchPhase.Playing
+            || _phase.Value == MatchPhase.Ended;
+
+        /// <summary>
+        /// Sits a player out of a round that had already started before they arrived.
+        /// </summary>
+        /// <remarks>
+        /// <para>Otherwise a late joiner is admitted alive with a full life and no character. The
+        /// referee counts them among the living, so the round cannot end by last-one-standing while
+        /// they are connected, and when the clock runs out they win it — they have more life left
+        /// than anyone who has been playing, having spent none of it. Neither failure looks like a
+        /// bug from the outside; the match simply picks the wrong winner.</para>
+        /// <para>Decided here rather than by the session itself, because the phase is the match's to
+        /// read. Asking <c>MatchDirector.Current</c> from the session would be asking a static that
+        /// several peers share inside one test process, and NGO has already spawned the player
+        /// object by the time this callback runs — so the session is there to be told.</para>
+        /// <para>Nothing else is needed to make them a spectator. The camera already follows the
+        /// alive flag, and the next round hands them a body along with everyone else.</para>
+        /// </remarks>
+        void OnClientJoined(ulong clientId)
+        {
+            if (!IsServer || !RoundIsUnderWay) return;
+
+            PlayerSession player = PlayerSession.Of(NetworkManager, clientId);
+            if (player == null || player.Life == null) return;
+
+            player.Life.ServerEndRound();
         }
 
         /// <remarks>

@@ -72,18 +72,23 @@ namespace Snackdown.Gameplay.Player
             ? Mathf.Clamp01(Remaining / Rules.MaxLife)
             : 0f;
 
-        /// <summary>Raised on the server the moment this player runs out.</summary>
-        public event Action<PlayerLife> Died;
+        /// <summary>Raised on the server the moment this player is out of the round.</summary>
+        /// <remarks>
+        /// Named for what happened and not for why. Running out is one cause; arriving after the
+        /// round had already started is the other, and both leave the player in the same state —
+        /// which is the point of having one event rather than one per cause.
+        /// </remarks>
+        public event Action<PlayerLife> LeftRound;
 
         /// <summary>Raised on every peer when this player's alive flag arrives or changes.</summary>
         /// <remarks>
-        /// Separate from <see cref="Died"/> on purpose: that one is the server's decision, this one
-        /// is everybody's notification, and they do not happen at the same moment or on the same
+        /// Separate from <see cref="LeftRound"/> on purpose: that one is the server's decision, this
+        /// one is everybody's notification, and they do not happen at the same moment or on the same
         /// machines.
         /// </remarks>
         public event Action<PlayerLife> AliveChanged;
 
-        bool _reportedDeath;
+        bool _leftRound;
 
         static readonly List<PlayerLife> _all = new List<PlayerLife>();
 
@@ -179,9 +184,9 @@ namespace Snackdown.Gameplay.Player
         /// </remarks>
         public void ServerEndRound()
         {
-            if (!IsServer || _reportedDeath) return;
+            if (!IsServer || _leftRound) return;
 
-            _reportedDeath = true;
+            _leftRound = true;
 
             // The life is published as it stands rather than zeroed. Running out is one way to
             // leave a round and it arrives here already at zero; the others do not, and the end
@@ -190,7 +195,7 @@ namespace Snackdown.Gameplay.Player
             _life.Value = _exactLife;
             _alive.Value = false;
 
-            Died?.Invoke(this);
+            LeftRound?.Invoke(this);
         }
 
         void ClientTick()
@@ -226,7 +231,7 @@ namespace Snackdown.Gameplay.Player
         {
             if (!IsServer) return;
 
-            _reportedDeath = false;
+            _leftRound = false;
             _exactLife = Rules.StartingLife;
             _sinceLastPublish = 0f;
             _life.Value = _exactLife;
