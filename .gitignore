@@ -77,3 +77,9 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Profiler captures. Hundreds of megabytes each, produced per validation run, and the numbers
+# worth keeping out of them are written into docs/05 rather than carried as binaries.
+/ProfilerCaptures/
+*.data
+*.raw

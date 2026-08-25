@@ -59,7 +59,7 @@ Assets/
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
 │   │   │                     MovementConfig, SimulationContext — the state, the input,
 │   │   │                     the replayable step
-│   │   ├── Netcode/          NetworkSimulationLoop, IPredictedPeer, PredictionBuffer,
+│   │   ├── Netcode/          NetworkSimulationLoop, IPredictedPeer, Reconciler, PredictionBuffer,
 │   │   │                     SnapshotFrame, SnapshotInterpolator, WorldSnapshotBuffer,
 │   │   │                     VisualSmoother, ReconciliationStats, RunRecorder
 │   │   ├── Gameplay/
@@ -293,6 +293,12 @@ PlayMode one — which is visibly why the test suite covers `Simulation` and `Ne
 nothing in `Gameplay/Match`. **A DI container would not fix either problem** — it would
 move the first and keep the second. What fixes the second is extracting the logic worth testing out
 of the `MonoBehaviour` that owns the static, which is a per-case decision.
+
+That extraction has since been done once, and it is worth naming as the example: `Reconcile` was
+ninety lines and eight decisions inside `PredictedPlayer`, at zero coverage, in the one place the
+whole netcode argument rests on. `Reconciler` now holds the decisions and the two fields that exist
+only for them, and returns what it decided; moving the transform and telling the smoother stayed
+behind. The tests that follow need no scene, no `NetworkManager` and no Play mode.
 
 ## Assemblies — one per system
 

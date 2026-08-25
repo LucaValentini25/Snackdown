@@ -148,7 +148,7 @@ into the predicted `Move()`), but not worth the scope against the four above.
       handshake is covered. What is still owed to this bullet is the rest of it — that the owner and
       the server converge after a scripted input sequence, and that a dropped snapshot leaves no
       permanent offset
-- [ ] **Fruit distribution test** — a seeded 100k-roll check, so the claim in Phase 3 is true of the
+- [x] **Fruit distribution test** — a seeded 100k-roll check, so the claim in Phase 3 is true of the
       repository and not only of a session that happened once
 - [ ] Final architecture diagrams; a runnable build. No player build has ever been produced, so
       managed stripping, scene-by-name resolution and two separate processes on two machines are all
