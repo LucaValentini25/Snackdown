@@ -1,7 +1,8 @@
+using Snackdown.Connection;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Snackdown.Connection
+namespace Snackdown.Gameplay.Player
 {
     /// <summary>
     /// Owns the connection for as long as the application runs: the provider, the approval it vets
@@ -17,6 +18,11 @@ namespace Snackdown.Connection
     /// <para>Nothing here draws anything, and nothing here is networked. It is the answer to "are we
     /// in a session, whose is it, and how does someone else get in" — three questions the menu used
     /// to answer from its own fields and now asks.</para>
+    /// <para>It composes the connection rather than belonging to it, which is why it sits in the
+    /// gameplay assembly and not in <c>Snackdown.Connection</c> beside the pieces it builds. It has
+    /// to name <see cref="CharacterCatalog"/> to tell approval how many skins there are, and the
+    /// catalog is content — it lives here, in the assembly that already depends on the connection
+    /// layer. The same move D-014 made for the roster, for the same reason.</para>
     /// <para>The provider is built once, on first use rather than on <c>Awake</c>: it needs
     /// <c>NetworkManager.Singleton</c>, which is assigned in that component's own <c>Awake</c> with
     /// nothing ordering the two.</para>
@@ -31,6 +37,9 @@ namespace Snackdown.Connection
 
         [Tooltip("Start on Relay (join by code) instead of direct LAN (join by address).")]
         [SerializeField] private bool _useRelay = true;
+
+        [Tooltip("Skins players can wear. Its length is what approval spreads arrivals across.")]
+        [SerializeField] private CharacterCatalog _skins;
 
         private IConnectionProvider _provider;
         private ConnectionApproval _approval;
@@ -53,6 +62,13 @@ namespace Snackdown.Connection
                     _approval = new ConnectionApproval(
                         NetworkManager.Singleton, GameVersion, _maxPlayers);
 
+                    // Told once, here, because this is the only place that can see both. Approval
+                    // decides which skin an arrival gets and cannot name the catalog: the catalog is
+                    // content and lives in an assembly that depends on the connection layer, not the
+                    // other way round. Left unset it keeps a default that a fifth authored skin
+                    // would be silently clamped away by.
+                    if (_skins != null) _approval.CharacterCount = _skins.Count;
+
                     // The one line that knows there is more than one way to connect. Everything
                     // past this point talks to the interface and cannot tell them apart.
                     _provider = _useRelay
@@ -68,6 +84,9 @@ namespace Snackdown.Connection
 
         /// <summary>Players this session admits.</summary>
         public int MaxPlayers => _maxPlayers;
+
+        /// <summary>Skins a player can be given, straight from the catalog.</summary>
+        public int SkinCount => _skins != null ? _skins.Count : 0;
 
         /// <summary>
         /// What another player needs in order to reach this session — an address or a share code.

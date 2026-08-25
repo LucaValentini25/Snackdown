@@ -55,8 +55,7 @@ Assets/
 │   │   ├── Core/             AppBootstrap, FrameRatePolicy
 │   │   ├── Connection/       IConnectionProvider, DirectConnectionProvider,
 │   │   │                     RelayConnectionProvider, ConnectionApproval, ConnectionPayload,
-│   │   │                     ConnectionRequest, ConnectionResult, SessionConnection,
-│   │   │                     NetworkConfigReport
+│   │   │                     ConnectionRequest, ConnectionResult, NetworkConfigReport
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
 │   │   │                     MovementConfig, SimulationContext — the state, the input,
 │   │   │                     the replayable step
@@ -68,8 +67,9 @@ Assets/
 │   │   │   │                 DifficultyCatalog, MatchOutcome,
 │   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera,
 │   │   │                 SandboxRunner
-│   │   │   ├── Player/       PredictedPlayer, PlayerSession, SessionRoster, PlayerLife,
-│   │   │   │                 PlayerSpawnPoints, CharacterAppearance, CharacterCatalog
+│   │   │   ├── Player/       PredictedPlayer, PlayerSession, SessionRoster, SessionConnection,
+│   │   │   │                 PlayerLife, PlayerSpawnPoints, CharacterAppearance,
+│   │   │   │                 CharacterCatalog
 │   │   │   ├── Fruits/       Fruit, FruitSpawner, FruitTable
 │   │   │   └── Combat/       HeadBounce
 │   │   ├── UI/               MainMenuController, LoadingScreenController,
@@ -123,7 +123,9 @@ As with the character catalog, the index is what crosses the network, so entries
 never reordered.
 
 **The connection outlives the lobby that opened it.** `SessionConnection` sits in bootstrap and owns
-the provider, the approval and the join code; the menu asks it rather than holding them. That is not
+the provider, the approval, the skin catalog and the join code; the menu asks it rather than holding
+them. It lives in `Gameplay` rather than beside the pieces it builds, because it has to name the
+catalog to tell approval how many skins exist — see ADR D-020. That is not
 tidiness — the lobby scene is unloaded whenever a match runs, so everything the menu held privately
 died with it, and *Return to lobby* came back to the host-or-join screen with the session still
 running underneath and the join code gone.
