@@ -61,8 +61,16 @@ namespace Snackdown.Gameplay.Player
         readonly PeerBody[] _worldScratch = new PeerBody[WorldSnapshotBuffer.MaxBodies];
         InputCommand _previous1, _previous2;
         uint _latestPredictedTick;
-        uint _lastAckedTick;
-        bool _hasSyncedOnce;
+
+        /// <summary>
+        /// The decision half of reconciliation, which no longer needs a scene to run.
+        /// </summary>
+        /// <remarks>
+        /// It owns the newest acknowledged tick and whether a baseline exists, because those are
+        /// state that exists only for reconciling. What stays here is the half that needs a
+        /// transform: moving the character, telling the smoother, and recording what happened.
+        /// </remarks>
+        Reconciler _reconciler;
         bool _predictionWasEnabled = true;
 
         // --- server -----------------------------------------------------------------------
@@ -222,6 +230,7 @@ namespace Snackdown.Gameplay.Player
             }
 
             _tickDelta = 1f / NetworkManager.NetworkConfig.TickRate;
+            _reconciler = new Reconciler(_buffer, _world);
             _state = PlayerState.AtPosition(transform.position);
             _inputReader = GetComponent<InputReader>();
 
@@ -303,7 +312,7 @@ namespace Snackdown.Gameplay.Player
         {
             _predictionWasEnabled = PredictionEnabled;
             _buffer.Clear();
-            _hasSyncedOnce = false;   // the next snapshot re-establishes a known-good baseline
+            _reconciler?.Desync();   // the next snapshot re-establishes a known-good baseline
 
             // The rolling window describes current conditions, and the switch just changed them.
             // Averaging across the flip would blend two different regimes into one meaningless
@@ -443,79 +452,46 @@ namespace Snackdown.Gameplay.Player
         /// </remarks>
         void Reconcile(in PlayerSnapshot snapshot)
         {
-            uint ackTick = snapshot.LastProcessedInputTick;
             LastAuthoritativePosition = snapshot.State.Position;
-
-            // Unreliable delivery means frames arrive out of order sometimes. An older one carries
-            // no new information and must not be allowed to undo a newer correction.
-            if (ackTick < _lastAckedTick) return;
 
             // The round trip of our OWN traffic, in ticks: how far our prediction has run past the
             // newest input the server had seen. See LastMeasuredRttMs for why the transport's
-            // number cannot answer this.
+            // number cannot answer this. Measured before the decision, because it is true whatever
+            // the decision turns out to be.
+            uint ackTick = snapshot.LastProcessedInputTick;
             if (_latestPredictedTick > ackTick)
                 LastMeasuredRttMs = (_latestPredictedTick - ackTick) * _tickDelta * 1000f;
 
-            if (!_hasSyncedOnce)
+            ReconcileResult result = _reconciler.Apply(
+                snapshot,
+                _latestPredictedTick,
+                NetworkObjectId,
+                _config,
+                _tickDelta,
+                _reconciliationTolerance,
+                PredictionEnabled,
+                _worldScratch);
+
+            if (result.Outcome == ReconcileOutcome.Agreed) LastPredictionError = result.PredictionError;
+            if (!result.Moved) return;
+
+            _state = result.State;
+
+            if (result.IsHardSnap)
             {
-                HardSnapTo(snapshot.State);
-                _hasSyncedOnce = true;
-                _lastAckedTick = ackTick;
+                HardSnapTo(result.State);
                 return;
             }
 
-            if (!PredictionEnabled)
+            if (result.Outcome == ReconcileOutcome.Replayed)
             {
-                // Unpredicted: just follow the server. Still smoothed, so what the overlay shows
-                // is the latency itself and not a stutter on top of it.
-                _state = snapshot.State;
-                _lastAckedTick = ackTick;
-                ApplyLogicalPosition(_state.Position, smooth: true);
-                return;
+                LastPredictionError = result.PredictionError;
+                LastReplayedTicks = result.ReplayedTicks;
+
+                _stats.Record(Time.time, LastPredictionError, result.ReplayedTicks);
+                _recorder.Record(
+                    Time.time, LastPredictionError, result.ReplayedTicks, LastMeasuredRttMs, TransportRtt());
             }
-
-            if (ackTick == _lastAckedTick) return;
-            _lastAckedTick = ackTick;
-
-            uint pendingTicks = _latestPredictedTick > ackTick ? _latestPredictedTick - ackTick : 0;
-
-            if (pendingTicks > PredictionBuffer.Capacity)
-            {
-                // More pending ticks than the ring can hold: the oldest inputs in the range have
-                // already been overwritten. Replaying anyway would skip them one by one and land
-                // on a state neither side ever computed — wrong, and silently so. Taking the
-                // server's word for it is the honest answer, and at 34 seconds of gap the player
-                // was disconnected in every sense that matters.
-                HardSnapTo(snapshot.State);
-                return;
-            }
-
-            if (!_buffer.TryGetState(ackTick, out PlayerState predicted))
-            {
-                // We have no memory of that tick (buffer wrapped, or we just spawned).
-                // Nothing to compare against, so take the server's word for it.
-                HardSnapTo(snapshot.State);
-                return;
-            }
-
-            LastPredictionError = predicted.PositionErrorTo(snapshot.State);
-            if (LastPredictionError <= _reconciliationTolerance) return;   // prediction was right
-
-            PlayerState replayed = snapshot.State;
-            for (uint t = ackTick + 1; t <= _latestPredictedTick; t++)
-            {
-                // A genuine hole — a tick this client never predicted, as after a spawn or a
-                // toggle. Overflow can no longer reach here; the capacity check above caught it.
-                if (!_buffer.TryGetInput(t, out InputCommand input)) continue;
-
-                replayed = PlayerMotor.Simulate(replayed, input, _config, WorldAt(t), _tickDelta);
-                _buffer.OverwriteState(t, replayed);
-            }
-
-            _state = replayed;
-            LastReplayedTicks = pendingTicks;
-            _stats.Record(Time.time, LastPredictionError, pendingTicks);
-            _recorder.Record(Time.time, LastPredictionError, pendingTicks, LastMeasuredRttMs, TransportRtt());
 
             // Logically instant, visually smooth: the smoother eats the jump.
             ApplyLogicalPosition(_state.Position, smooth: true);

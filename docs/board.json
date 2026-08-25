@@ -105,9 +105,9 @@
       "status": "todo",
       "goal": "Close the gap where no test in the repository can fail because of a networking bug, and no byte has ever been counted.",
       "tasks": [
-        { "id": "vf-1", "title": "Integration test — a dropped snapshot leaves no permanent offset", "status": "todo", "test": "self" },
-        { "id": "vf-2", "title": "Extract Reconcile so it can be tested without a MonoBehaviour", "status": "todo", "test": "EditMode — replay converges after a forced desync" },
-        { "id": "vf-3", "title": "Seeded 100k-roll fruit distribution test", "status": "todo", "test": "self", "notes": "The claim exists in docs; the test that backs it does not" },
+        { "id": "vf-1", "title": "Integration test — a dropped snapshot leaves no permanent offset", "status": "done", "test": "EditMode — ReconcilerTests.ADroppedSnapshot_LeavesNoPermanentOffset: a client wrong from the start loses one snapshot entirely, and the next one puts it exactly where the server would have it at the newest predicted tick", "notes": "Written as a unit test rather than the integration test the title asked for, which vf-2 is what made possible. It drives the real PlayerMotor against a real MovementConfig, so the replay is the same arithmetic the server ran — a fake step would have proved the plumbing and nothing about convergence. The first draft of it was wrong and passed for the wrong reason: it had client and server agreeing by construction, so every snapshot was an agreement and nothing was ever replayed" },
+        { "id": "vf-2", "title": "Extract Reconcile so it can be tested without a MonoBehaviour", "status": "done", "test": "EditMode — ReconcilerTests: replay converges on the server's answer after a forced desync, and each of the eight decisions has a test — first snapshot, out of order, the same one twice, inside tolerance, past the buffer, no memory of the tick, prediction off, and after a desync", "notes": "A Reconciler in Snackdown.Netcode holding the two fields that existed only for reconciling — the newest acknowledged tick and whether a baseline exists — and returning a ReconcileResult the character applies. Position, smoothing and telemetry stayed with the MonoBehaviour, which is the half that needs a transform. This is what docs/01 prescribed for exactly this case" },
+        { "id": "vf-3", "title": "Seeded 100k-roll fruit distribution test", "status": "done", "test": "EditMode — FruitDistributionTests: a hundred thousand seeded rolls against the shipped table land within a point of the weights; the commonest and rarest are the 35% and 1% the docs name; every fruit comes up at least once; the ends of the roll and out-of-range values stay inside the table", "notes": "Against the asset the game ships rather than a table built in the test — what is worth protecting is that this table produces the spread the docs describe. Seeded, with the seed written down: an unseeded test of this shape fails once a month for nobody's reason and teaches everyone to re-run it until it goes green" },
         { "id": "vf-4", "title": "Measure bandwidth with the profiler already installed", "status": "todo", "test": "self", "notes": "Every byte figure in the docs is derived from reading serializers" }
       ]
     },
@@ -312,6 +312,12 @@
 
   "risks": [
     {
+      "title": "The latency measurements in docs/05 predate the reconciler extraction",
+      "impact": "The figures there — median error 0.302 units at 150 ms and 20% loss — were recorded against Reconcile as it lived inside PredictedPlayer. vf-2 moved the decisions out and the branch-by-branch tests say they behave the same, but nothing has re-run the measurement, and a refactor of the headline mechanism is exactly the change whose effect a unit test can miss. The run is a documented manual procedure and takes minutes.",
+      "severity": "medium",
+      "status": "open"
+    },
+    {
       "title": "Sandbox holds a copy of NetworkSimulation, not an instance of the prefab",
       "impact": "D-013 made NetworkSimulation a prefab so the scene and the tests would exercise the same object. Bootstrap holds an instance; Sandbox holds a loose copy with the same components, which does not follow the prefab. Adding LifeBarStyle in wr-5 landed on Bootstrap for free and had to be done by hand in Sandbox, and the next component added there will be forgotten. Cheap to fix by replacing the object with an instance; not done here because it is a scene change with nothing else in this epic depending on it.",
       "severity": "low",
@@ -337,9 +343,9 @@
     },
     {
       "title": "Reconcile has zero test coverage",
-      "impact": "90 lines and 9 branches of the project's headline mechanism, unreachable from EditMode because it lives in a MonoBehaviour.",
+      "impact": "Closed by vf-2. The decision half moved into a Reconciler that needs no scene and has a test per branch. What is still only visible in a session is the applying half — moving the transform and telling the smoother — and the behaviour under real latency, which docs/05 measures by hand.",
       "severity": "high",
-      "status": "open"
+      "status": "closed"
     },
     {
       "title": "No byte of bandwidth has ever been measured",
@@ -459,6 +465,10 @@
     {
       "date": "2026-08-25",
       "entry": "Closed wr-3 and wr-5, and with them the wardrobe epic. Changing skin is an owner-checked Rpc the server refuses outright when the costume is taken, and it tells approval about the change — that table is what hands skins to arrivals, so left alone it would keep an abandoned skin reserved for nobody. For wr-5, LifeBarStyle became a NetworkBehaviour on the session's own object: the host's default is replicated and each machine's own choice is not, which is D-006 exactly. It is the only replicated value in the project that no rule reads, and that is the argument for why the override stays local. Two things worth knowing: the fixture-state trap from wr-6 was waiting in the skin tests as well and was fixed before it bit, and the Sandbox scene turned out to hold a loose copy of NetworkSimulation rather than an instance of the prefab, so it had to be given the component by hand — recorded as a risk."
+    },
+    {
+      "date": "2026-08-25",
+      "entry": "Started the verification epic and closed three of its four. The reconciler came out of the MonoBehaviour it was trapped in, which is what docs/01 had been prescribing for this case since Phase 1, and the mechanism the whole project is pitched on went from zero coverage to a test per branch. vf-1 came free with it — the dropped-snapshot case is a unit test now rather than the integration test the task imagined. Its first draft passed for the wrong reason and is worth recording: it had the client and the server agreeing by construction, so every snapshot was an agreement, nothing was ever replayed, and the assertion compared a state at tick 7 against a position at tick 12. vf-3 was quick because Roll already took its randomness as an argument. What is left is vf-4, measuring bandwidth, which is a different kind of work — and a new risk: the latency figures in docs/05 were measured against the old reconciler and nobody has re-run them."
     }
   ]
 }
