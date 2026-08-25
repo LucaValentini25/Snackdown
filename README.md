@@ -46,17 +46,20 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
 1. Open `Assets/_Project/Scenes/Bootstrap.unity` — the first scene in Build Settings — and press
    Play. Bootstrap holds no visible content of its own; it carries the connection, the roster and
    the match director, and the menu is loaded on top of it.
-2. Type a name and hit **Host a game**. The lobby shows a six-character join code to share.
+2. Type a name and hit **Host a game**. The lobby shows a six-character join code to share. The
+   game is also listed publicly, so anybody can find it without the code.
 3. For a second peer, use **Multiplayer Play Mode** (`Window > Multiplayer > Multiplayer Play Mode`),
-   enable a virtual player, and in that window enter the code and hit **Join a game**.
+   enable a virtual player, and in that window hit **Join a game**. That opens the browser: pick the
+   game out of the list, or type the code and hit **Join**.
 4. Both players hit **Ready**; the host hits **Start match**. Move with `A`/`D` or the arrows, jump
    with `Space`. Collect fruit, stomp heads, outlive the others. When you go out the camera follows
    a survivor — tap left or right to watch somebody else; the strip along the bottom outlines who
    you are on.
 
-**To play over a LAN instead of Relay:** in `Lobby.unity`, uncheck **Use Relay** on the
-`MainMenuController`. The address field relabels itself from *Code* to *Address* and everything else
-in the flow is identical — which is the whole point of the connection layer.
+**To play over a LAN instead of Relay:** in `Bootstrap.unity`, uncheck **Use Relay** on the
+`SessionConnection`. The field on the join screen relabels itself from *Code* to *Address*, the
+browser disappears because a LAN socket has no directory behind it, and everything else in the flow
+is identical — which is the whole point of the connection layer.
 
 To see the netcode do its job, open `Window > Multiplayer > Network Simulator`, apply ~150 ms of
 latency and some packet loss, then use the overlay:

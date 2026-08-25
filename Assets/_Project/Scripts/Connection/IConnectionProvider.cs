@@ -45,6 +45,27 @@ namespace Snackdown.Connection
         /// </summary>
         Task<ConnectionResult> HostAsync(ConnectionRequest request, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// True when this way of connecting can list what there is to join, rather than only
+        /// accepting something the player already knows.
+        /// </summary>
+        /// <remarks>
+        /// A relay has a directory behind it; a LAN socket does not, and finding games on one means
+        /// broadcasting and listening, which is a different feature with a different failure mode.
+        /// So the menu asks rather than assuming, and shows the browser only where there is one.
+        /// </remarks>
+        bool CanBrowse { get; }
+
+        /// <summary>
+        /// Lists the games that are open to anybody. Meaningless unless <see cref="CanBrowse"/>.
+        /// </summary>
+        /// <remarks>
+        /// Returns a snapshot, not a subscription. The list is out of date the moment it arrives —
+        /// a game can fill up or end between the query and the click — so the browser is a
+        /// convenience for finding a session, and joining it is still the thing that can fail.
+        /// </remarks>
+        Task<BrowseResult> BrowseAsync(CancellationToken cancellationToken = default);
+
         /// <summary>Joins an existing session identified by <see cref="ConnectionRequest.Target"/>.</summary>
         Task<ConnectionResult> JoinAsync(ConnectionRequest request, CancellationToken cancellationToken = default);
 

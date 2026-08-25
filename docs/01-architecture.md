@@ -55,7 +55,8 @@ Assets/
 │   │   ├── Core/             AppBootstrap, FrameRatePolicy
 │   │   ├── Connection/       IConnectionProvider, DirectConnectionProvider,
 │   │   │                     RelayConnectionProvider, ConnectionApproval, ConnectionPayload,
-│   │   │                     ConnectionRequest, ConnectionResult, NetworkConfigReport
+│   │   │                     ConnectionRequest, ConnectionResult, JoinTargetKind,
+│   │   │                     SessionListing, BrowseResult, NetworkConfigReport
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
 │   │   │                     MovementConfig, SimulationContext — the state, the input,
 │   │   │                     the replayable step
@@ -211,6 +212,47 @@ along instead of snapped back to the top.
 The camera on this peer is reachable as `SpectatorCamera.Current`, which is how the bottom strip
 outlines whoever is being watched. That readout is not decoration on Arena01: the clamp leaves the
 camera almost no room, so switching target would otherwise have no visible effect at all.
+
+## Finding a game is the connection layer's problem, not the menu's
+
+Joining used to be one field on the front screen, next to Host — where it means nothing, because a
+host never types a code. It is a step of joining now: **Join a game** opens a screen with a list of
+what is open, a field for a code, and a Back button.
+
+The list comes through `IConnectionProvider`, which grew two members and no more:
+
+```csharp
+bool CanBrowse { get; }
+Task<BrowseResult> BrowseAsync(CancellationToken cancellationToken = default);
+```
+
+`CanBrowse` is what the screen asks before offering a browser at all, and the LAN provider answers
+no. There is no directory behind a socket — finding games on one means broadcasting on a port and
+listening, which is a different feature with its own failures, not a query. The section is hidden
+whole rather than left empty: a list with a Refresh button that can never find anything is a broken
+feature, not an absent one.
+
+What comes back is a `SessionListing`, not the service's own type. Four values — an opaque id, a
+name, and the two numbers a row shows. Handing `ISessionInfo` to the menu would put `Unity.Services`
+in the UI assembly and the front screen back in the position the original project's menu was in:
+knowing which service it was talking to.
+
+**A join now says how its target should be read.** A code and a listing id are both strings pointing
+at the same session, and the service has a separate call for each; passing one to the other's call
+fails as *no such session*, which reaches the player as the game having ended. So
+`ConnectionRequest` carries a `JoinTargetKind`, named rather than guessed from the shape of the
+string — guessing works until the day a code looks like an id, and then it is a join that stops
+working for one player in a hundred. `Typed` is the enum's zero, so every call that existed before
+there was a browser still means what it meant.
+
+**Nothing polls.** `QuerySessionsResults` offers `StartPolling`, and taking it would mean a
+background timer writing into a list a screen may no longer be showing, against a service that
+rate-limits. Refresh is a button, which says what it costs.
+
+**Every hosted game is public.** Being listed is not a second kind of session — it is the same one
+with a door somebody can find, and the code still works and is still how you reach a *specific*
+game. A game nobody can find is what the code alone is for, and offering that as a switch is a menu
+decision to make when somebody wants it.
 
 ## Configuration lives in data, not code
 
