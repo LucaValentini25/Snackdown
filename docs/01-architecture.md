@@ -72,10 +72,10 @@ Assets/
 │   │   │   │                 CharacterCatalog
 │   │   │   ├── Fruits/       Fruit, FruitSpawner, FruitTable
 │   │   │   └── Combat/       HeadBounce
-│   │   ├── UI/               MainMenuController, LoadingScreenController,
-│   │   │                     EndScreenController, RoundClockController,
-│   │   │                     LifeBarsController, PlayerNameplate, LifeBarStyle,
-│   │   │                     LifeText, NetDebugOverlay
+│   │   ├── UI/               MainMenuController, NicknamePreference,
+│   │   │                     LoadingScreenController, EndScreenController,
+│   │   │                     RoundClockController, LifeBarsController,
+│   │   │                     PlayerNameplate, LifeBarStyle, LifeText, NetDebugOverlay
 │   │   └── Input/            InputReader, SpectatorInput
 │   ├── UI/                   MainMenu.uxml, LoadingScreen.uxml, EndScreen.uxml,
 │   │                         RoundClock.uxml, LifeBars.uxml, Nameplate.uxml,

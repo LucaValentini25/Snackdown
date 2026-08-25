@@ -105,7 +105,7 @@ namespace Snackdown.UI
             _drain = root.Q<FloatField>("drain-field");
             _roundSeconds = root.Q<FloatField>("round-seconds-field");
 
-            _nickname.value = DefaultNickname();
+            _nickname.value = NicknamePreference.Offered;
 
             // Deferred a frame rather than read here: the provider needs NetworkManager.Singleton,
             // which is assigned in its own Awake with no ordering against this one. Without the
@@ -274,6 +274,10 @@ namespace Snackdown.UI
             }
 
             SetStatus(_menuStatus, string.Empty, isError: false);
+
+            // Remembered on the way in rather than as it is typed: a name abandoned at the menu is
+            // not a choice, and greeting the player with it next time would be one.
+            NicknamePreference.Remember(_nickname.value);
 
             if (Session != null) Session.Remember(result);
 
@@ -643,11 +647,5 @@ namespace Snackdown.UI
             label.EnableInClassList("status--error", isError && !string.IsNullOrEmpty(message));
         }
 
-        /// <summary>A name that is not "Player", so a lobby of four is not four identical rows.</summary>
-        static string DefaultNickname()
-        {
-            string device = SystemInfo.deviceName;
-            return string.IsNullOrWhiteSpace(device) || device == "<unknown>" ? "Player" : device;
-        }
     }
 }
