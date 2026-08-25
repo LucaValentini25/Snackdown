@@ -40,9 +40,11 @@ namespace Snackdown.Netcode
     /// <para>The size is <c>8 + 41N</c>: a 4-byte tick, a 4-byte count, and 41 bytes per player
     /// (8 for the object id, 29 for <see cref="PlayerState"/>, 4 for the acknowledged input tick).
     /// On the wire that becomes roughly 236 bytes direct or 276 relayed once NGO's RPC metadata and
-    /// batch header, the transport framing and IP/UDP are added — those figures are counted from the
-    /// serializers and the package source, not measured, because nothing in this project has ever
-    /// counted a byte in flight.</para>
+    /// batch header, the transport framing and IP/UDP are added.</para>
+    /// <para><b>Measured on 2026-08-25</b>, and the arithmetic above was short. At two players the
+    /// profiler counts 3 001 B/s of RPC traffic leaving the host against the 2 700 B/s this payload
+    /// predicts at 30 Hz — about eleven bytes a snapshot of NGO's own framing, which counting the
+    /// serializers could not see. See <c>docs/05</c>.</para>
     /// <para>It was 42 bytes per player until <c>ps-4</c>. The forty-second was a teleport flag,
     /// there because the server repositioned an existing character at the start of a round and the
     /// owner had to be told not to count that as a prediction failure. The round now hands out a new

@@ -1,7 +1,7 @@
 {
   "project": "Snackdown",
   "updated": "2026-08-25",
-  "currentEpic": "verification",
+  "currentEpic": "polish",
 
   "epics": [
     {
@@ -102,13 +102,13 @@
       "id": "verification",
       "title": "Verification — make the netcode claims checkable",
       "phase": "5",
-      "status": "todo",
+      "status": "done",
       "goal": "Close the gap where no test in the repository can fail because of a networking bug, and no byte has ever been counted.",
       "tasks": [
         { "id": "vf-1", "title": "Integration test — a dropped snapshot leaves no permanent offset", "status": "done", "test": "EditMode — ReconcilerTests.ADroppedSnapshot_LeavesNoPermanentOffset: a client wrong from the start loses one snapshot entirely, and the next one puts it exactly where the server would have it at the newest predicted tick", "notes": "Written as a unit test rather than the integration test the title asked for, which vf-2 is what made possible. It drives the real PlayerMotor against a real MovementConfig, so the replay is the same arithmetic the server ran — a fake step would have proved the plumbing and nothing about convergence. The first draft of it was wrong and passed for the wrong reason: it had client and server agreeing by construction, so every snapshot was an agreement and nothing was ever replayed" },
         { "id": "vf-2", "title": "Extract Reconcile so it can be tested without a MonoBehaviour", "status": "done", "test": "EditMode — ReconcilerTests: replay converges on the server's answer after a forced desync, and each of the eight decisions has a test — first snapshot, out of order, the same one twice, inside tolerance, past the buffer, no memory of the tick, prediction off, and after a desync", "notes": "A Reconciler in Snackdown.Netcode holding the two fields that existed only for reconciling — the newest acknowledged tick and whether a baseline exists — and returning a ReconcileResult the character applies. Position, smoothing and telemetry stayed with the MonoBehaviour, which is the half that needs a transform. This is what docs/01 prescribed for exactly this case" },
         { "id": "vf-3", "title": "Seeded 100k-roll fruit distribution test", "status": "done", "test": "EditMode — FruitDistributionTests: a hundred thousand seeded rolls against the shipped table land within a point of the weights; the commonest and rarest are the 35% and 1% the docs name; every fruit comes up at least once; the ends of the roll and out-of-range values stay inside the table", "notes": "Against the asset the game ships rather than a table built in the test — what is worth protecting is that this table produces the spread the docs describe. Seeded, with the seed written down: an unseeded test of this shape fails once a month for nobody's reason and teaches everyone to re-run it until it goes green" },
-        { "id": "vf-4", "title": "Measure bandwidth with the profiler already installed", "status": "todo", "test": "self", "notes": "Every byte figure in the docs is derived from reading serializers" }
+        { "id": "vf-4", "title": "Measure bandwidth with the profiler already installed", "status": "done", "test": "manual — two profiler captures taken by Luca during real two-peer runs, integrated over the frames of a running match by reading the Network category counters out of the saved .data files. Written into docs/05", "notes": "3 657 B/s out of the host at two players, of which 3 001 is snapshots and 21 is every NetworkVariable in the game. Outgoing is identical at 2% and 20% loss, which is the expected answer and the reason to trust the number: snapshots leave once per tick whatever happens to them afterwards. Incoming falls by 0.74x against the 0.8x that 20% loss predicts, so the two halves confirm each other. The serializer-derived figure was short by about 11 bytes a snapshot — NGO's RPC framing, which reading the payload could not see" }
       ]
     },
     {
@@ -312,9 +312,9 @@
 
   "risks": [
     {
-      "title": "The latency measurements in docs/05 predate the reconciler extraction",
-      "impact": "The figures there — median error 0.302 units at 150 ms and 20% loss — were recorded against Reconcile as it lived inside PredictedPlayer. vf-2 moved the decisions out and the branch-by-branch tests say they behave the same, but nothing has re-run the measurement, and a refactor of the headline mechanism is exactly the change whose effect a unit test can miss. The run is a documented manual procedure and takes minutes.",
-      "severity": "medium",
+      "title": "Whether the reconciler extraction moved the error level is still open",
+      "impact": "Re-measured on 2026-08-25 and the answer is not clean. Scenario B's median error went from 0.302 u to 0.407 u, but median measured RTT went from 367 ms to 433 ms in the same runs and median replayed ticks from 11 to 13 — a client that predicted further ahead disagrees by more, and RTT is not something the profile sets directly. What did not move is the shape: corrections worth exactly one tick of movement were 27% before and 29% after, which is the claim a broken replay would have destroyed. A run at matched RTT would settle it.",
+      "severity": "low",
       "status": "open"
     },
     {
@@ -349,9 +349,9 @@
     },
     {
       "title": "No byte of bandwidth has ever been measured",
-      "impact": "Every figure in the docs is derived from reading the serializers, while the profiler package is installed and its metrics already enabled.",
+      "impact": "Closed by vf-4. Measured from the profiler at two players and written into docs/05, and the derived figure turned out short by the RPC framing rather than wrong. What is still arithmetic is the four-player case, which is now the open item.",
       "severity": "medium",
-      "status": "open"
+      "status": "closed"
     },
     {
       "title": "main is 55 commits behind and no build has ever been produced",
@@ -469,6 +469,10 @@
     {
       "date": "2026-08-25",
       "entry": "Started the verification epic and closed three of its four. The reconciler came out of the MonoBehaviour it was trapped in, which is what docs/01 had been prescribing for this case since Phase 1, and the mechanism the whole project is pitched on went from zero coverage to a test per branch. vf-1 came free with it — the dropped-snapshot case is a unit test now rather than the integration test the task imagined. Its first draft passed for the wrong reason and is worth recording: it had the client and the server agreeing by construction, so every snapshot was an agreement, nothing was ever replayed, and the assertion compared a state at tick 7 against a position at tick 12. vf-3 was quick because Roll already took its randomness as an argument. What is left is vf-4, measuring bandwidth, which is a different kind of work — and a new risk: the latency figures in docs/05 were measured against the old reconciler and nobody has re-run them."
+    },
+    {
+      "date": "2026-08-25",
+      "entry": "Closed vf-4 and with it the verification epic, on a two-peer session Luca ran and I drove the instrumentation for. Bandwidth is measured rather than derived for the first time: 3 657 B/s out of the host at two players, and the figure the docs had been carrying was short by about eleven bytes a snapshot — NGO's RPC framing, which reading the serializers could not see. The measurement checks itself: outgoing is identical at 2% and 20% loss, which is what per-tick snapshots should do, and incoming falls by exactly the factor the loss predicts. The re-measured latency is less tidy and is recorded as such — scenario B's median error rose from 0.302 to 0.407 units, but so did the round trip it was measured at, and the distribution's shape is unchanged. Saying the extraction is proven harmless would be reading more into two unmatched runs than they carry."
     }
   ]
 }

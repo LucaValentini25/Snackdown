@@ -163,7 +163,51 @@ invented numbers. The worst real profile Unity models — `Mobile 2G` — has **
 
 ## Results
 
-Measured 2026-08-06, 30 Hz tick, `MoveSpeed` 7 u/s.
+Two sets, and both are kept. The 2026-08-06 runs are what Phase 1 was signed off on. The 2026-08-25
+runs were taken after `Reconcile` was extracted into `Reconciler` (`vf-2`), because a refactor of the
+headline mechanism is exactly the change a unit test can miss.
+
+### 2026-08-25 — after the reconciler extraction
+
+Measured 30 Hz tick, `MoveSpeed` 7 u/s, two peers via Multiplayer Play Mode.
+
+| | **A — home network** | **B — stress test** |
+|---|---|---|
+| Profile | 150 ms / 20 ms / **2 %** | 150 ms / 50 ms / **20 %** |
+| Duration | 91.8 s | 122.1 s |
+| Corrections | 9 | 140 |
+| **Corrections / s** | 0.098 | **1.146** |
+| **Median error** | 0.472 u *(n=9)* | **0.407 u** |
+| Mean error | 1.332 u | 0.670 u |
+| p95 error | — *(n=9)* | 2.624 u |
+| Max error | 3.233 u | 3.733 u |
+| Median replayed ticks | — | 13 |
+| Max replayed ticks | 23 | 39 |
+| Median measured RTT | 411 ms | 433 ms |
+| Corrections of exactly one tick | — | **29 %** |
+| Corrections of one tick or less | — | 36 % |
+
+**Did the extraction change behaviour?** The honest answer is *not detectably, and the comparison is
+weaker than it looks*. Scenario B is the only one with enough corrections to compare: its median
+error went from **0.302 u to 0.407 u** — but the median measured RTT went from **367 ms to 433 ms**
+in the same runs, and median replayed ticks from 11 to 13. A client that has predicted further ahead
+disagrees by more. The two runs were not taken under matched round trips, and round trip is not
+something the profile sets directly.
+
+What did *not* move is the shape, and that is the part that tests the claim. The share of corrections
+worth exactly one tick of movement is **27 % before and 29 % after**; one tick or less, 39 % and
+36 %. The typical disagreement is still one missing input rather than a diverging simulation, which
+is what [02 — Netcode](02-netcode.md) argues and what a broken replay would have destroyed.
+
+> **Still open.** A run at matched RTT would settle it. Until one exists, this says the mechanism
+> behaves the same in shape and that the level moved with conditions — not that the level is
+> unchanged.
+
+One thing got worse and is worth naming: corrections that replayed **zero** ticks went from 10 of 98
+to 28 of 140 — from 10 % to 20 %. That is the open item below, still undiagnosed, and it is now twice
+as common.
+
+### 2026-08-06 — as Phase 1 shipped
 
 | | **A — home network** | **B — stress test** | **C — worst real case** |
 |---|---|---|---|
@@ -181,7 +225,8 @@ Measured 2026-08-06, 30 Hz tick, `MoveSpeed` 7 u/s.
 
 **Scenario B carries the argument.** 20 % packet loss is nearly three times worse than the worst
 real profile Unity models, and under it the typical disagreement between client and server was
-**0.3 units — about a third of the character's width.**
+**0.3 units — about a third of the character's width.** The 2026-08-25 repeat put it at 0.407 u at a
+higher round trip; either way it is a fraction of a character.
 
 In scenario A the two corrections happened at 1.7 s and 9.3 s. The remaining **69 seconds ran
 without a single correction** at 367 ms round trip.
@@ -220,12 +265,53 @@ differently:
 That asymmetry is the honest limit of the current design: the player you control survives a terrible
 connection; the players you watch do not.
 
+## Bandwidth
+
+Measured 2026-08-25 from the host, with the Unity Profiler's network counters, over the frames of a
+running match. **Two players — the host and one client.**
+
+Every byte figure in this project used to be derived by reading the serializers. These are counted.
+
+| Counter | A — 2 % loss | B — 20 % loss |
+|---|---|---|
+| **Total bytes sent** | 3 657 B/s | 3 669 B/s |
+| Total bytes received | 1 393 B/s | 1 026 B/s |
+| of which RPC sent — the snapshots | 3 001 B/s | 3 002 B/s |
+| of which `NetworkVariable` sent | 21 B/s | 21 B/s |
+
+**Outgoing is identical under both profiles, and that is the expected answer.** Snapshots go out once
+per tick whether or not the last one arrived; packet loss is something that happens to them
+afterwards. Incoming falls from 1 393 to 1 026 B/s — a factor of 0.74 against the 0.8 that 20 % loss
+on the client's input would predict. The two measurements confirm each other, which is the main
+reason to trust either.
+
+**The derived figure was close, and short by the framing.** [`SnapshotFrame`](../Assets/_Project/Scripts/Netcode/SnapshotFrame.cs)
+computes `8 + 41N` bytes of payload; at two players that is 90 bytes, and at 30 Hz, 2 700 B/s. The
+measured RPC traffic is 3 001 B/s — about **11 bytes per snapshot more**, which is NGO's own RPC
+metadata. Reading the serializers was honest arithmetic about the payload and silent about the
+envelope.
+
+`NetworkVariable` traffic is **21 B/s**: the life timer at roughly 1 Hz per player, plus the phase,
+the roster and the match settings, which move only when somebody changes them. The design decision
+in [02 — Netcode](02-netcode.md) to publish life on an interval rather than every frame is what keeps
+that number two orders of magnitude below the snapshots.
+
+> **Two players, not four.** Extrapolating the payload to four gives 172 bytes plus framing, sent to
+> each of three clients — roughly 16 KB/s out of the host. That is arithmetic, not a measurement, and
+> is exactly the kind of claim this section exists to stop making.
+
 ## Open items
 
 - **Scenario C has no recorded run.** Repeat it and export.
-- **Ten corrections in B replayed zero ticks**, meaning the server was level with or ahead of the
-  client's prediction. NGO deliberately runs the client clock ahead so this should not happen; these
-  are moments where the client fell behind. Not diagnosed.
+- **No run at four players.** Everything measured so far is two peers on one machine. The bandwidth
+  figures above extrapolate to four by arithmetic, which is what the rest of this section exists to
+  replace.
+- **The two scenario B runs were not taken at matched RTT**, so whether the reconciler extraction
+  moved the error level is still open. See the note under Results.
+- **Corrections that replay zero ticks**, meaning the server was level with or ahead of the client's
+  prediction. NGO deliberately runs the client clock ahead so this should not happen; these are
+  moments where the client fell behind. Ten of 98 in the 2026-08-06 run, **28 of 140** in the
+  2026-08-25 repeat — twice as common, and still not diagnosed.
 - **`UnityTransport.GetCurrentRtt` is not usable here** and is recorded only for contrast. It reads
   `RttInfo.LastRtt` off the *reliable sequenced* pipeline, while every packet this project sends is
   deliberately unreliable. It reported 218 ms on an idle localhost connection and 1219 ms during a
