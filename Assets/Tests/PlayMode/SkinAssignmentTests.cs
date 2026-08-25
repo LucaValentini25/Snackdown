@@ -38,6 +38,12 @@ namespace Snackdown.Tests
 
         private ConnectionApproval _approval;
 
+        /// <summary>Skins the session admits. Overridden by the test that checks a fifth is reachable.</summary>
+        private int _skinCount = 4;
+
+        /// <summary>What each joining client puts in its payload. Zero unless a test says otherwise.</summary>
+        private int _requestedSkin;
+
         [SetUp]
         public void LoadPrefabs()
         {
@@ -59,6 +65,11 @@ namespace Snackdown.Tests
                 // Zero, like everybody else. The host asking for the same skin as every client is
                 // the situation this task exists for, not a special case set up to pass.
                 _approval.SetLocalPlayer("Host", characterIndex: 0);
+
+                // In the game this comes from CharacterCatalog.Count, handed over by
+                // SessionConnection. The harness has no bootstrap scene, so it says the number
+                // itself — which is also what lets one test ask for a catalog bigger than four.
+                _approval.CharacterCount = _skinCount;
                 _approval.Enable();
                 return;
             }
@@ -68,7 +79,7 @@ namespace Snackdown.Tests
             {
                 GameVersion = GameVersion,
                 Nickname = $"Guest {Clients.Count + 1}",
-                CharacterIndex = 0
+                CharacterIndex = _requestedSkin
             }.ToBytes();
         }
 
@@ -161,6 +172,27 @@ namespace Snackdown.Tests
                 () => RosterOn(Host).Of(arrival) != null
                       && RosterOn(Host).Of(arrival).CharacterIndex == freed,
                 $"the arrival to be given skin {freed}, which the player who left had");
+        }
+
+        [UnityTest]
+        public IEnumerator AFifthSkin_IsReachableOnceTheCatalogSaysThereIsOne()
+        {
+            // The number used to be a constant 4 in ConnectionApproval, so a fifth authored skin was
+            // clamped away with nothing said about it. It comes from CharacterCatalog.Count now, and
+            // this is the difference that makes: the same request lands on 4 rather than on 3.
+            _skinCount = 5;
+            _requestedSkin = 4;
+
+            yield return StartSession(clientCount: 1);
+
+            ulong guest = Clients[0].LocalClientId;
+
+            yield return WaitFor(
+                () => RosterOn(Host) != null && RosterOn(Host).Of(guest) != null,
+                "the server to see the client");
+
+            Assert.AreEqual(4, RosterOn(Host).Of(guest).CharacterIndex,
+                "A skin past the old hardcoded four was clamped away.");
         }
 
         /// <remarks>

@@ -581,6 +581,7 @@ MonoBehaviour:
   _port: 7777
   _maxPlayers: 4
   _useRelay: 1
+  _skins: {fileID: 11400000, guid: 92853318d586d664da8d82fdcc66ac3a, type: 2}
 --- !u!1001 &690686050046683470
 PrefabInstance:
   m_ObjectHideFlags: 0
