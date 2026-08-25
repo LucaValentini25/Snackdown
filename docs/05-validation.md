@@ -161,6 +161,40 @@ invented numbers. The worst real profile Unity models — `Mobile 2G` — has **
 | Mobile 3G | 360 ms | 30 ms | 7 % |
 | Mobile 2G | 520 ms | 50 ms | 7 % |
 
+## Comparing the two peer-contact sources
+
+A client cannot know where a rival is *now*, only where they were when the last snapshot left the
+server. [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted)
+describes the two ways of guessing across that gap; both are implemented and neither has been
+measured. This is how to settle it.
+
+**What is being compared** is the correction rate and the error distribution *when two players are in
+contact* — which is the only situation the setting touches at all. A run where the two never meet
+measures nothing and will look like a tie.
+
+1. Two peers, one hosting, as in the procedure above. Apply **profile B** (150 ms / 50 ms / 20 %) to
+   both — the setting only shows up when the gap between what a client knows and what the server
+   knows is wide.
+2. On the client, check the overlay: `F5 peer contact Interpolated` is the default.
+3. **Fight.** Stand on each other's heads, run into each other, chase. Contact is the whole
+   measurement, and a run spent collecting fruit at opposite ends of the arena is a wasted one.
+   Two minutes is enough.
+4. `F4` to export. The header of the CSV records which source produced it.
+5. Press **`F5`**. The overlay flips to `Authoritative` and **the recording restarts** — deliberately,
+   because a file averaging across both settings describes neither.
+6. Fight again, the same way, for about the same length of time. `F4` again.
+7. Compare the two files on: corrections per second, median error, and the share of corrections worth
+   one tick or less.
+
+> **What would count as an answer.** A halving of the correction rate during contact is a result. A
+> difference inside the run-to-run spread already visible in the two 2026-08-25 scenario B runs is
+> not, and the honest conclusion there is that it does not matter — which is also a finding, and the
+> one that would close this out by keeping the simpler default.
+
+Nothing here is automated, and it is worth being plain about why: the thing being measured is two
+people deliberately colliding, and the harness cannot reach a match at all
+([D-019](06-board.md)).
+
 ## Results
 
 Two sets, and both are kept. The 2026-08-06 runs are what Phase 1 was signed off on. The 2026-08-25

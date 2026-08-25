@@ -70,6 +70,7 @@ latency and some packet loss, then use the overlay:
 | `F2` | Toggle visual smoothing — off shows every raw correction |
 | `F3` | Hide the overlay |
 | `F4` | Export the client's run to CSV — correction rate, error, replayed ticks |
+| `F5` | Swap where rival positions come from when predicting contact — restarts the recording |
 
 The red ghost is where the server says you are; the green box is where you predicted you'd be.
 

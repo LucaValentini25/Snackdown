@@ -119,9 +119,29 @@ resolved it against where the rival actually was.
 This is a design position, not an oversight, and the alternative is not free: filling the buffer from
 authoritative snapshots means the newest tick a client can build a world frame for is *behind* its own
 prediction tick, so the gap has to be extrapolated or held — trading a known offset for an
-extrapolation error. Which trade is better is an open question rather than a settled one; it is
-[tracked in the roadmap](03-roadmap.md) for Phase 4, where the game will be playable enough to feel
-the difference.
+extrapolation error.
+
+**Both are implemented, and which is better is a measurement nobody has taken yet.**
+`PredictedPlayer.PeerContact` chooses, `F5` flips it, and the setting is written into the header of
+every exported run so two files can be compared. `PeerContactSource.Interpolated` is the default and
+is what every number in [05 — Validation](05-validation.md) was measured under.
+
+The authoritative side carries the rival's last known state forward at the velocity it had
+([`PeerExtrapolation`](../Assets/_Project/Scripts/Netcode/PeerExtrapolation.cs)), capped at a quarter
+of a second. The cap is the interesting part: a rival whose snapshots stopped arriving keeps the
+velocity they vanished with, and unbounded that puts them metres inside the scenery. Holding the last
+known position is wrong in a way that stops getting worse.
+
+Each is wrong in its own direction, which is why this needs numbers rather than an argument:
+
+| | Wrong when | What the player sees |
+|---|---|---|
+| `Interpolated` | always, by `interpolation delay + client lead` | the collision you predicted is the one that *looked* like it was going to happen |
+| `Authoritative` | the rival stops, turns or lands | contact predicted against a position nothing on screen is drawing |
+
+Whichever wins, the buffer is filled the same way for prediction and for replay, so a correction
+never comes from a replay disagreeing with itself. The procedure for comparing them is in
+[05 — Validation](05-validation.md#comparing-the-two-peer-contact-sources).
 
 Two rules fall out of this, and they decide where any future mechanic belongs:
 

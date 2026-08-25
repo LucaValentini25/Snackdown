@@ -61,6 +61,25 @@ namespace Snackdown.UI
             if (keyboard.f2Key.wasPressedThisFrame) VisualSmoother.SmoothingEnabled = !VisualSmoother.SmoothingEnabled;
             if (keyboard.f3Key.wasPressedThisFrame) _visible = !_visible;
             if (keyboard.f4Key.wasPressedThisFrame) ExportRun();
+            if (keyboard.f5Key.wasPressedThisFrame) TogglePeerContact();
+        }
+
+        /// <summary>
+        /// Swaps where rival positions come from when predicting contact with them.
+        /// </summary>
+        /// <remarks>
+        /// The recorder is restarted, not kept. A run whose first half was measured one way and
+        /// whose second half was measured the other averages into a number describing neither, and
+        /// the whole reason this key exists is to produce two files that can be compared.
+        /// </remarks>
+        void TogglePeerContact()
+        {
+            PredictedPlayer.PeerContact = PredictedPlayer.PeerContact == PeerContactSource.Interpolated
+                ? PeerContactSource.Authoritative
+                : PeerContactSource.Interpolated;
+
+            foreach (IPredictedPeer peer in NetworkSimulationLoop.ActivePlayers)
+                if (peer is PredictedPlayer player) player.RestartRunRecording();
         }
 
         /// <summary>
@@ -113,7 +132,10 @@ namespace Snackdown.UI
             NetworkManager networkManager = NetworkManager.Singleton;
             if (networkManager == null) return "unknown";
 
-            string tick = $"tick {networkManager.NetworkConfig.TickRate}Hz";
+            // The peer-contact source goes in first because it is the thing two runs are being
+            // compared on, and a file that does not say which setting produced it is not a
+            // measurement of anything.
+            string tick = $"peer contact {PredictedPlayer.PeerContact} | tick {networkManager.NetworkConfig.TickRate}Hz";
             NetworkSimulator simulator = FindFirstObjectByType<NetworkSimulator>();
 
             if (simulator == null || simulator.ConnectionPreset == null)
@@ -205,6 +227,7 @@ namespace Snackdown.UI
             _text.AppendLine();
             _text.AppendLine($"F1 prediction {(PredictedPlayer.PredictionEnabled ? "ON " : "OFF")}   (off = feel the latency)");
             _text.AppendLine($"F2 smoothing  {(VisualSmoother.SmoothingEnabled ? "ON " : "OFF")}   (off = see the corrections)");
+            _text.AppendLine($"F5 peer contact {PredictedPlayer.PeerContact}   (restarts the recording)");
             _text.AppendLine("F3 hide      F4 export run");
 
             if (_lastExport != null && Time.realtimeSinceStartup - _lastExportTime < ExportNoticeSeconds)

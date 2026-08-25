@@ -99,6 +99,18 @@ namespace Snackdown.Netcode
             _next = 0;
             _count = 0;
         }
+
+        /// <summary>Clears the window <i>and</i> the running total, as if the session had just begun.</summary>
+        /// <remarks>
+        /// Separate from <see cref="Clear"/>, which forgets the last few seconds and keeps the count
+        /// since spawn. This one is for the case where the conditions changed underneath: a total
+        /// spanning two different settings answers a question nobody asked.
+        /// </remarks>
+        public void Reset()
+        {
+            Clear();
+            TotalCorrections = 0;
+        }
     }
 
     /// <summary>One window's worth of reconciliation statistics, ready to display or record.</summary>

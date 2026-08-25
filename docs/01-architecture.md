@@ -62,7 +62,8 @@ Assets/
 │   │   │                     the replayable step
 │   │   ├── Netcode/          NetworkSimulationLoop, IPredictedPeer, Reconciler, PredictionBuffer,
 │   │   │                     SnapshotFrame, SnapshotInterpolator, WorldSnapshotBuffer,
-│   │   │                     VisualSmoother, ReconciliationStats, RunRecorder
+│   │   │                     VisualSmoother, ReconciliationStats, RunRecorder,
+│   │   │                     PeerContactSource, PeerExtrapolation, DebugTools
 │   │   ├── Gameplay/
 │   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchSettings,
 │   │   │   │                 DifficultyCatalog, MatchOutcome,
