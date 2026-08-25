@@ -54,6 +54,16 @@ namespace Snackdown.Gameplay.Match
         public string PresetName(int index)
             => _difficulties != null ? _difficulties.Get(index).DisplayName : string.Empty;
 
+        /// <summary>How many arenas there are to choose from, for a menu that lists them.</summary>
+        public int ArenaCount => _arenas != null ? _arenas.Count : 0;
+
+        /// <summary>The name of an arena, for a menu that lists them.</summary>
+        public string ArenaName(int index)
+            => _arenas != null ? _arenas.Get(index).DisplayName : string.Empty;
+
+        /// <summary>Raised on every peer when the arena for the next match changes.</summary>
+        public event Action<int> ArenaChanged;
+
         readonly NetworkVariable<MatchSettings> _settings = new NetworkVariable<MatchSettings>();
 
         /// <summary>Raised on every peer when the numbers change.</summary>
@@ -129,6 +139,7 @@ namespace Snackdown.Gameplay.Match
             Current = this;
             _phase.OnValueChanged += OnPhaseChanged;
             _settings.OnValueChanged += OnSettingsChanged;
+            _arenaIndex.OnValueChanged += OnArenaChanged;
 
             if (IsServer)
             {
@@ -149,6 +160,7 @@ namespace Snackdown.Gameplay.Match
         {
             _phase.OnValueChanged -= OnPhaseChanged;
             _settings.OnValueChanged -= OnSettingsChanged;
+            _arenaIndex.OnValueChanged -= OnArenaChanged;
 
             if (IsServer && NetworkManager != null)
             {
@@ -176,6 +188,39 @@ namespace Snackdown.Gameplay.Match
 
         /// <summary>Asks the server to run on these numbers. Only the host is obeyed.</summary>
         public void RequestSettings(MatchSettings settings) => SettingsRpc(settings);
+
+        /// <summary>Asks the server to play the next match somewhere else. Only the host is obeyed.</summary>
+        public void RequestArena(int index) => ArenaRpc(index);
+
+        [Rpc(SendTo.Server)]
+        void ArenaRpc(int index, RpcParams rpcParams = default)
+        {
+            if (rpcParams.Receive.SenderClientId != NetworkManager.ServerClientId) return;
+
+            ServerSetArena(index);
+        }
+
+        /// <summary>
+        /// Chooses where the next match is played. Server-only, and only between matches.
+        /// </summary>
+        /// <remarks>
+        /// <para>Writes the same variable <see cref="ServerStartMatch"/> writes, rather than a second
+        /// one that would then have to be copied into it. The consequence is the useful one: the
+        /// arena a lobby is about to load is replicated for as long as the lobby is open, so everyone
+        /// can see where they are agreeing to play instead of finding out when it loads.</para>
+        /// <para>Refused once a match is under way, like the numbers. The scene is already loading by
+        /// then and changing the index would only make the director disagree with what is on screen.</para>
+        /// </remarks>
+        public void ServerSetArena(int index)
+        {
+            if (!IsServer) return;
+            if (_phase.Value != MatchPhase.Lobby && _phase.Value != MatchPhase.Ended) return;
+            if (_arenas == null || _arenas.Count == 0) return;
+
+            _arenaIndex.Value = Mathf.Clamp(index, 0, _arenas.Count - 1);
+        }
+
+        void OnArenaChanged(int previous, int current) => ArenaChanged?.Invoke(current);
 
         /// <remarks>
         /// The sender is checked against the server's own id, the same as readying up and kicking:

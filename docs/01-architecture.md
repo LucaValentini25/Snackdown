@@ -83,7 +83,7 @@ Assets/
 │   ├── UI/                   MainMenu.uxml, LoadingScreen.uxml, EndScreen.uxml,
 │   │                         RoundClock.uxml, LifeBars.uxml, Nameplate.uxml,
 │   │                         Snackdown.uss, MenuPanelSettings, WorldSpacePanelSettings
-│   ├── Scenes/               Bootstrap, Lobby, Arena01, Sandbox
+│   ├── Scenes/               Bootstrap, Lobby, Arena01, Arena02, Sandbox
 │   ├── Prefabs/              Player, PlayerSession, Fruit, NetworkSimulation
 │   ├── Art/                  placeholder primitives
 │   └── Settings/             ScriptableObject configs (movement, match, arenas,
@@ -101,18 +101,26 @@ Third-party art sits at the `Assets/` root (as it shipped); **all authored code 
 
 ## Scenes load additively on top of Bootstrap
 
-Three scenes, and the split is what makes several arenas possible:
+Four scenes, two of which are arenas — which is the split paying for itself:
 
 | Scene | Holds | Lifetime |
 |---|---|---|
 | **Bootstrap** | `NetworkManager` and `SessionConnection`, the `NetworkSimulation` prefab instance — `MatchDirector`, `RoundReferee`, `SessionRoster` and the tick loop on one networked object — plus the loading screen, the round clock, the life bars and the end screen | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
-| **Arena01** | Geometry, spawn points, camera | During a match |
+| **Arena01**, **Arena02** | Geometry, spawn points, camera | During a match |
 | **Sandbox** | A copy of Bootstrap that hosts and starts a match on Play | Never in a build; opened by hand |
 
-All four are listed in Build Settings, and **Sandbox is listed with its checkbox off** — present so
+**Arena02 is Arena01 with the red and blue channels of every colour swapped** — warm where the first
+is cool, and identical in every other respect. That is a deliberately small change and worth naming
+as one: swapping two channels preserves each colour's luminance, so the contrast between ground,
+walls and background is exactly what it was and nothing became harder to read. The geometry is the
+same, so this is a palette, not a second level design. What it proves is the part that was untested:
+the catalog, the host's choice of arena, the networked load and the camera clamp all work with more
+than one entry, which no amount of authoring on a single scene could have shown.
+
+All five are listed in Build Settings, and **Sandbox is listed with its checkbox off** — present so
 Unity stops adding it back every time somebody opens it, disabled so it stays out of a player build.
-The other three are enabled because Netcode can only load a scene over the network if it is in that
+The other four are enabled because Netcode can only load a scene over the network if it is in that
 list, which is what an arena is. Removing Sandbox from the list is not a tidy-up: it comes straight
 back the next time the scene is opened, and the churn shows up in every diff.
 
@@ -195,7 +203,7 @@ camera while the server still considers them alive.
 Where a spectator is looking changes no outcome, so it stays local. `ArenaBounds` — a rectangle
 authored per arena — clamps the view, and when a map is smaller than the camera view the clamp
 collapses to its centre and the camera simply holds still. One component covers both kinds of map
-without asking the level designer which kind they built. **Arena01 is the small kind**: it is 26×9
+without asking the level designer which kind they built. **Both arenas are the small kind**: 26×9
 against a 24.9×14 view, so a spectator there gets about half a unit of horizontal slack and nothing
 vertical. Movement becomes visible on the first arena that is bigger than the screen.
 

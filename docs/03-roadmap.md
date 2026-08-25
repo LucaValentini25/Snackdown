@@ -126,8 +126,12 @@ Ordered by value-per-effort; each is independently droppable.
    when nobody is alive to follow. The choice of who to watch is a [`SpectatorTargetRing`](../Assets/_Project/Scripts/Gameplay/Match/SpectatorTargetRing.cs)
    the camera owns but does not contain, so what happens when the watched player dies is a unit test
    rather than something you would need a four-player match to see.
-4. [ ] **A second arena** — mostly level design; the networked scene load comes free from Phase 3, and
-   `ArenaCatalog` plus the `ArenaBounds` camera clamp are already in place, so this is authoring only.
+4. [x] **A second arena** — `Arena02`, the first with the red and blue channels of every colour
+   swapped: warm where the first is cool, identical geometry, and identical contrast because swapping
+   two channels leaves luminance alone. It is a palette rather than a second level design, and it
+   is what proved the parts that a single arena could never exercise — the catalog with more than one
+   entry, and the host choosing between them in the lobby, replicated so everyone can see where they
+   are about to play.
 
 *Power-ups are cut* — the most netcode-interesting item here (timed authoritative effects feeding
 into the predicted `Move()`), but not worth the scope against the four above.

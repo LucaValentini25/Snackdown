@@ -78,6 +78,11 @@
             <ui:VisualElement name="settings-panel" class="settings">
                 <ui:Label text="Rules" class="settings__title" />
 
+                <ui:VisualElement name="arena-row" class="settings__row">
+                    <ui:Label text="Arena" class="settings__label" />
+                    <ui:DropdownField name="arena-field" class="settings__control" />
+                </ui:VisualElement>
+
                 <ui:VisualElement name="preset-row" class="settings__row">
                     <ui:Label text="Preset" class="settings__label" />
                     <ui:DropdownField name="preset-field" class="settings__control" />

@@ -61,6 +61,8 @@ namespace Snackdown.UI
         VisualElement _wardrobeRow;
 
         VisualElement _settingsPanel;
+        VisualElement _arenaRow;
+        DropdownField _arena;
         VisualElement _presetRow;
         DropdownField _preset;
         FloatField _startingLife;
@@ -119,6 +121,8 @@ namespace Snackdown.UI
             _wardrobeRow = root.Q<VisualElement>("wardrobe-row");
 
             _settingsPanel = root.Q<VisualElement>("settings-panel");
+            _arenaRow = root.Q<VisualElement>("arena-row");
+            _arena = root.Q<DropdownField>("arena-field");
             _presetRow = root.Q<VisualElement>("preset-row");
             _preset = root.Q<DropdownField>("preset-field");
             _startingLife = root.Q<FloatField>("starting-life-field");
@@ -146,6 +150,7 @@ namespace Snackdown.UI
             _leave.clicked += OnLeaveClicked;
             _copyCode.clicked += OnCopyCodeClicked;
 
+            _arena.RegisterValueChangedCallback(OnArenaPicked);
             _preset.RegisterValueChangedCallback(OnPresetPicked);
             _startingLife.RegisterValueChangedCallback(OnSettingEdited);
             _maxLife.RegisterValueChangedCallback(OnSettingEdited);
@@ -193,6 +198,7 @@ namespace Snackdown.UI
             _leave.clicked -= OnLeaveClicked;
             _copyCode.clicked -= OnCopyCodeClicked;
 
+            _arena.UnregisterValueChangedCallback(OnArenaPicked);
             _preset.UnregisterValueChangedCallback(OnPresetPicked);
             _startingLife.UnregisterValueChangedCallback(OnSettingEdited);
             _maxLife.UnregisterValueChangedCallback(OnSettingEdited);
@@ -577,7 +583,9 @@ namespace Snackdown.UI
             if (_director == null) return;
 
             _director.SettingsChanged += OnSettingsReplicated;
+            _director.ArenaChanged += OnArenaReplicated;
             FillPresetChoices();
+            FillArenaChoices();
             RefreshSettings();
         }
 
@@ -586,10 +594,38 @@ namespace Snackdown.UI
             if (_director == null) return;
 
             _director.SettingsChanged -= OnSettingsReplicated;
+            _director.ArenaChanged -= OnArenaReplicated;
             _director = null;
         }
 
         void OnSettingsReplicated(MatchSettings settings) => RefreshSettings();
+
+        void OnArenaReplicated(int index) => RefreshSettings();
+
+        /// <remarks>
+        /// Built once from the catalog, like the presets: arenas are authored content and the list
+        /// does not change while a lobby is open. The row disappears with a single arena — a
+        /// dropdown with one entry is a label that looks clickable.
+        /// </remarks>
+        void FillArenaChoices()
+        {
+            _arena.choices.Clear();
+
+            for (int i = 0; i < _director.ArenaCount; i++)
+                _arena.choices.Add(_director.ArenaName(i));
+
+            _arenaRow.EnableInClassList("hidden", _director.ArenaCount < 2);
+        }
+
+        void OnArenaPicked(ChangeEvent<string> change)
+        {
+            if (_fillingFields || _director == null) return;
+
+            int index = _arena.choices.IndexOf(change.newValue);
+            if (index < 0) return;
+
+            _director.RequestArena(index);
+        }
 
         /// <remarks>
         /// The presets are authored content, so the list is built once from whatever the catalog
@@ -631,6 +667,7 @@ namespace Snackdown.UI
             bool changeable = hosting
                               && (_director.Phase == MatchPhase.Lobby || _director.Phase == MatchPhase.Ended);
 
+            _arena.SetEnabled(changeable);
             _preset.SetEnabled(changeable);
             _startingLife.SetEnabled(changeable);
             _maxLife.SetEnabled(changeable);
@@ -638,6 +675,11 @@ namespace Snackdown.UI
             _roundSeconds.SetEnabled(changeable);
 
             _fillingFields = true;
+
+            // Shown to everybody, not only to the host. Which arena is coming is part of what a
+            // player is agreeing to when they ready up.
+            if (_director.ArenaIndex >= 0 && _director.ArenaIndex < _arena.choices.Count)
+                _arena.value = _arena.choices[_director.ArenaIndex];
 
             _startingLife.value = settings.StartingLife;
             _maxLife.value = settings.MaxLife;
@@ -887,7 +929,9 @@ namespace Snackdown.UI
             }
 
             SetStatus(_lobbyStatus, "Loading the arena…", isError: false);
-            director.ServerStartMatch(0);
+            // The arena is already chosen and replicated, so the match starts where the lobby
+            // said it would rather than where this call happens to think.
+            director.ServerStartMatch(director.ArenaIndex);
         }
 
         async void OnLeaveClicked()

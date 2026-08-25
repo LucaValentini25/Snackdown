@@ -51,7 +51,8 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
 3. For a second peer, use **Multiplayer Play Mode** (`Window > Multiplayer > Multiplayer Play Mode`),
    enable a virtual player, and in that window hit **Join a game**. That opens the browser: pick the
    game out of the list, or type the code and hit **Join**.
-4. Both players hit **Ready**; the host hits **Start match**. Move with `A`/`D` or the arrows, jump
+4. The host picks the arena in the lobby's **Rules** panel; everyone sees which one is coming. Both
+   players hit **Ready**; the host hits **Start match**. Move with `A`/`D` or the arrows, jump
    with `Space`. Collect fruit, stomp heads, outlive the others. When you go out the camera follows
    a survivor — tap left or right to watch somebody else; the strip along the bottom outlines who
    you are on.
