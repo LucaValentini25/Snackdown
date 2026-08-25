@@ -161,7 +161,7 @@ namespace Snackdown.Connection
             {
                 Admit(response,
                     request.ClientNetworkId,
-                    SanitizeNickname(_localNickname, request.ClientNetworkId),
+                    NicknameFor(_localNickname, request.ClientNetworkId),
                     CharacterFor(_localCharacterIndex));
                 return;
             }
@@ -188,9 +188,81 @@ namespace Snackdown.Connection
 
             Admit(response,
                 request.ClientNetworkId,
-                SanitizeNickname(payload.Nickname.ToString(), request.ClientNetworkId),
+                NicknameFor(payload.Nickname.ToString(), request.ClientNetworkId),
                 CharacterFor(payload.CharacterIndex));
         }
+
+        /// <summary>
+        /// The name this arrival is admitted under: the one they asked for, made safe, and made
+        /// theirs alone.
+        /// </summary>
+        /// <remarks>
+        /// <para>Two players called the same thing is not a cosmetic problem. The roster, the life
+        /// bars, the nameplates and the end screen all identify a player to a human by their name,
+        /// and a match where the scoreboard says somebody won and two people think it was them is
+        /// worse than one with no names at all.</para>
+        /// <para>Numbered here rather than by whatever draws a list, for the same reason the skin
+        /// is: the name a session publishes is the admitted one, so a list that disambiguated on its
+        /// own would be showing something no other list agreed with.</para>
+        /// </remarks>
+        string NicknameFor(string requested, ulong clientId)
+        {
+            string wanted = SanitizeNickname(requested, clientId);
+            if (!IsNameTaken(wanted)) return wanted;
+
+            // Starts at two because the first one is not "(1)" — the player already using it is
+            // simply called that, and renaming them because somebody else arrived would move a name
+            // out from under a player who did nothing.
+            for (int suffix = 2; suffix <= MaxPlayersEverAdmitted; suffix++)
+            {
+                string candidate = WithSuffix(wanted, suffix);
+                if (!IsNameTaken(candidate)) return candidate;
+            }
+
+            return wanted;
+        }
+
+        /// <summary>
+        /// Puts <c>" (2)"</c> on the end, trimming the name rather than the number to fit.
+        /// </summary>
+        /// <remarks>
+        /// <para>Parentheses rather than a bare digit. "Ana2" is a name somebody could have asked
+        /// for and cannot be told apart from one this added; "Ana (2)" reads as what it is.</para>
+        /// <para>The cap is on the whole thing, so a sixteen-character name loses its last few
+        /// letters to make room. Letting it run over would hand the rest of the project a string
+        /// longer than <see cref="MaxNicknameLength"/> promises, and the first thing to break would
+        /// be the <c>FixedString32Bytes</c> the session carries it in.</para>
+        /// </remarks>
+        static string WithSuffix(string name, int suffix)
+        {
+            string tail = $" ({suffix})";
+            int room = MaxNicknameLength - tail.Length;
+
+            if (room <= 0) return tail.Trim();
+
+            string head = name.Length > room ? name.Substring(0, room).TrimEnd() : name;
+            return head + tail;
+        }
+
+        bool IsNameTaken(string nickname)
+        {
+            foreach (string taken in _approvedNicknames.Values)
+            {
+                if (string.Equals(taken, nickname, StringComparison.Ordinal)) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// How far the numbering will count before giving up and allowing a duplicate.
+        /// </summary>
+        /// <remarks>
+        /// Only as many names can be taken as there are players, so the search cannot run past the
+        /// session's own size — but it is bounded rather than trusted to terminate, because the
+        /// thing being searched is a dictionary that admission itself writes to.
+        /// </remarks>
+        int MaxPlayersEverAdmitted => _maxPlayers + 1;
 
         /// <summary>
         /// The skin this arrival actually gets: the one they asked for if nobody is wearing it,

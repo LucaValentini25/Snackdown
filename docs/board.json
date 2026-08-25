@@ -95,7 +95,7 @@
         { "id": "wr-3", "title": "Wardrobe UI in the lobby, taken skins shown as taken", "status": "todo", "test": "a client asking for a taken skin is refused by the server" },
         { "id": "wr-4", "title": "A random default nickname, and the chosen one remembered", "status": "todo", "test": "a fresh install offers a name from the list rather than the machine's; a player who types one and joins is offered the same name next launch", "notes": "Was only the PlayerPrefs half; Luca asked for the default too, so both are here. Today MainMenuController.DefaultNickname returns SystemInfo.deviceName, which is the computer's name — it reaches every other player through the roster, so this is a small privacy leak as much as it is a dull default. Replaced by a list of names picked at random, overridden by whatever is saved. Still zero PlayerPrefs calls in the project" },
         { "id": "wr-5", "title": "HUD layout preference, host default plus local override", "status": "todo", "test": "—", "notes": "D-006" },
-        { "id": "wr-6", "title": "Two players with the same nickname are told apart", "status": "todo", "test": "three clients all asking for the same name are admitted as it, it (2) and it (3); the one who leaves frees their number for the next arrival", "notes": "Reported by Luca. Belongs in ConnectionApproval next to the sanitising that already happens there — the name a session carries is the admitted one, so the number has to be added before it is handed over rather than by whatever draws the list. Parentheses on purpose: a bare trailing digit is indistinguishable from a name that ends in one" }
+        { "id": "wr-6", "title": "Two players with the same nickname are told apart", "status": "done", "test": "PlayMode — NicknameTests: three players all asking for Ana are admitted as Ana, Ana (2) and Ana (3); every peer sees the same names; a number freed by somebody leaving goes to the next arrival; a name at the cap keeps its suffix and stays inside MaxNicknameLength. Checked by removing the numbering, which fails all four", "notes": "Reported by Luca. In ConnectionApproval next to the sanitising, because the name a session carries is the admitted one — a list that disambiguated on its own would show something no other list agreed with. Numbering starts at two: the player already using the name keeps it plain, since renaming them because somebody else arrived would move a name out from under a player who did nothing. The suffix wins over the name when they do not both fit, so the cap the FixedString32Bytes relies on still holds" }
       ]
     },
     {
@@ -441,6 +441,10 @@
     {
       "date": "2026-08-24",
       "entry": "Closed wr-2 by moving SessionConnection up into Snackdown.Gameplay (D-020), which is the third time this project has answered a layering problem by admitting a file was in the wrong folder — the simulation types in Phase 1, the roster in ps-2, this now. A fifth skin is reachable: the count comes from the catalog rather than from a constant. The part no test can reach is the wiring itself, since the harness has no bootstrap scene, so it was checked in Play by growing the catalog in memory and watching approval follow it from 4 to 5."
+    },
+    {
+      "date": "2026-08-24",
+      "entry": "Closed wr-6, the second of Luca's four. Duplicate names are numbered at admission, beside the sanitising, because the name a session publishes is the admitted one. The tests caught a bug of their own before they caught anything else: NUnit builds one instance per fixture and runs every test in it, so the field holding what each peer asks to be called leaked from the cap test into three others and failed them against a name they never asked for. Reset per test now, and worth remembering — every PlayMode fixture here has state that would do the same."
     }
   ]
 }
