@@ -49,6 +49,8 @@ namespace Snackdown.UI
         Button _copyCode;
         VisualElement _rosterList;
 
+        VisualElement _wardrobeRow;
+
         VisualElement _settingsPanel;
         VisualElement _presetRow;
         DropdownField _preset;
@@ -96,6 +98,8 @@ namespace Snackdown.UI
             _joinCode = root.Q<Label>("join-code");
             _copyCode = root.Q<Button>("copy-code-button");
             _rosterList = root.Q<VisualElement>("roster-list");
+
+            _wardrobeRow = root.Q<VisualElement>("wardrobe-row");
 
             _settingsPanel = root.Q<VisualElement>("settings-panel");
             _presetRow = root.Q<VisualElement>("preset-row");
@@ -582,6 +586,90 @@ namespace Snackdown.UI
             // The rules panel rides the same redraw. Whether the host may still change a number
             // depends on the phase, and nothing else here is watching for that.
             RefreshSettings();
+
+            // So does the wardrobe: which skins are free is a fact about the roster, and the roster
+            // is what just changed.
+            RefreshWardrobe();
+        }
+
+        // ==================================================================================
+        //  Wardrobe
+        // ==================================================================================
+
+        /// <summary>
+        /// Draws one button per skin, showing which are taken and which is yours.
+        /// </summary>
+        /// <remarks>
+        /// <para>Rebuilt rather than patched, like the roster and for the same reason: there are at
+        /// most a handful of buttons, and a full rebuild cannot drift out of step with who is
+        /// wearing what.</para>
+        /// <para>Taken skins are drawn and disabled rather than hidden. A wardrobe that removed
+        /// costumes as people took them would change length while you were reaching for one, and
+        /// leave a player unable to tell "somebody has it" from "it does not exist".</para>
+        /// <para>The buttons are a courtesy. The server refuses a taken skin whatever the screen
+        /// says, which is what makes this safe to be wrong about for a frame.</para>
+        /// </remarks>
+        void RefreshWardrobe()
+        {
+            if (_wardrobeRow == null) return;
+
+            _wardrobeRow.Clear();
+
+            CharacterCatalog catalog = Session != null ? Session.Skins : null;
+            PlayerSession me = _roster != null ? _roster.Local : null;
+
+            // Nothing to choose from, or nobody to choose for. An empty row rather than an empty
+            // frame around nothing.
+            if (catalog == null || catalog.Count == 0 || me == null)
+            {
+                _wardrobeRow.AddToClassList("hidden");
+                return;
+            }
+
+            _wardrobeRow.RemoveFromClassList("hidden");
+
+            bool changeable = _director == null
+                              || _director.Phase == MatchPhase.Lobby
+                              || _director.Phase == MatchPhase.Ended;
+
+            for (int index = 0; index < catalog.Count; index++)
+            {
+                int skin = index;
+                bool mine = me.CharacterIndex == skin;
+                bool taken = !mine && IsSkinTaken(skin);
+
+                var button = new Button(() => _roster?.Local?.RequestCharacter(skin));
+                button.AddToClassList("wardrobe__skin");
+                button.EnableInClassList("wardrobe__skin--yours", mine);
+                button.EnableInClassList("wardrobe__skin--taken", taken);
+
+                CharacterCatalog.Entry entry = catalog.Get(skin);
+                button.tooltip = entry.DisplayName;
+
+                if (entry.Portrait != null) button.style.backgroundImage = new StyleBackground(entry.Portrait);
+                else button.text = entry.DisplayName;
+
+                button.SetEnabled(changeable && !taken && !mine);
+
+                _wardrobeRow.Add(button);
+            }
+        }
+
+        /// <remarks>
+        /// Read off the roster rather than asked of the server. Approval owns the answer and refuses
+        /// anything else, so this only has to be right often enough to keep a player from clicking
+        /// something that will bounce.
+        /// </remarks>
+        bool IsSkinTaken(int skin)
+        {
+            if (_roster == null) return false;
+
+            for (int i = 0; i < _roster.Count; i++)
+            {
+                if (_roster[i].CharacterIndex == skin) return true;
+            }
+
+            return false;
         }
 
         bool IsLocalReady()

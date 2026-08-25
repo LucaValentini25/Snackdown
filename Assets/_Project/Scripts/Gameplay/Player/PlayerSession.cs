@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Snackdown.Connection;
+using Snackdown.Gameplay.Match;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -320,6 +321,52 @@ namespace Snackdown.Gameplay.Player
             _fruitEaten.Value++;
 
             return true;
+        }
+
+        // ==================================================================================
+        //  The wardrobe
+        // ==================================================================================
+
+        /// <summary>Asks the server for a different skin. Does nothing for anyone but the owner.</summary>
+        public void RequestCharacter(int characterIndex)
+        {
+            if (!IsOwner) return;
+
+            SetCharacterRpc(characterIndex);
+        }
+
+        /// <remarks>
+        /// <para>The sender is checked against the owner, the same as readying up: the lobby only
+        /// draws the wardrobe for you, and a button is not a rule. Without it any client could dress
+        /// everybody else.</para>
+        /// <para>Refused outright when the skin is taken rather than quietly given the nearest free
+        /// one. A player who clicked a costume and silently got a different one would think the
+        /// wardrobe was broken; the lobby already shows which are taken, so a request for one is
+        /// either a stale screen or a client that ignored it.</para>
+        /// <para>Refused once a match is under way. Changing costume mid-round would have every peer
+        /// redraw a character into somebody else's outfit in the middle of a fight, and there is no
+        /// reason to allow it that survives being said out loud.</para>
+        /// </remarks>
+        [Rpc(SendTo.Server)]
+        private void SetCharacterRpc(int characterIndex, RpcParams rpcParams = default)
+        {
+            if (rpcParams.Receive.SenderClientId != OwnerClientId) return;
+
+            MatchDirector match = MatchDirector.Current;
+            if (match != null && match.Phase != MatchPhase.Lobby && match.Phase != MatchPhase.Ended) return;
+
+            if (characterIndex == _characterIndex.Value) return;
+
+            ConnectionApproval approval = ConnectionApproval.Current;
+            if (approval == null) return;
+
+            if (characterIndex < 0 || characterIndex >= approval.CharacterCount) return;
+            if (approval.IsCharacterTaken(characterIndex)) return;
+
+            // Told before it is published, so the table that hands skins to arrivals describes what
+            // people are wearing rather than what they walked in wearing.
+            approval.SetCharacterOf(OwnerClientId, characterIndex);
+            _characterIndex.Value = characterIndex;
         }
 
         // ==================================================================================

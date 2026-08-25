@@ -171,6 +171,34 @@
     border-color: var(--bad);
 }
 
+.wardrobe {
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: var(--gap);
+}
+
+.wardrobe__skin {
+    width: 56px;
+    height: 56px;
+    margin: 0 4px;
+    padding: 0;
+    border-width: 2px;
+    border-color: var(--bg);
+    border-radius: 4px;
+    background-color: var(--bg);
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* The one you are wearing, and the ones nobody can have. Border rather than a badge: at 56px a
+   badge is bigger than the thing it labels. */
+.wardrobe__skin--yours {
+    border-color: var(--accent);
+}
+
+.wardrobe__skin--taken {
+    opacity: 0.35;
+}
+
 .settings {
     margin-bottom: var(--gap);
     padding: 8px 10px;

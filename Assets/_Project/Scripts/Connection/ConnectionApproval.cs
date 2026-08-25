@@ -98,9 +98,35 @@ namespace Snackdown.Connection
         public string NicknameOf(ulong clientId)
             => _approvedNicknames.TryGetValue(clientId, out string nickname) ? nickname : null;
 
-        /// <summary>Skin this client was admitted with.</summary>
+        /// <summary>Skin this client is currently wearing.</summary>
         public int CharacterOf(ulong clientId)
             => _approvedCharacters.TryGetValue(clientId, out int index) ? index : 0;
+
+        /// <summary>
+        /// True while somebody in this session is wearing that skin.
+        /// </summary>
+        /// <remarks>
+        /// Asked by the session before it lets a player swap. The set of taken skins lives here
+        /// because this is what hands them out, and two places deciding what is free is how two
+        /// players end up in the same costume.
+        /// </remarks>
+        public bool IsCharacterTaken(int characterIndex) => IsTaken(characterIndex);
+
+        /// <summary>
+        /// Records a skin a player changed into. Server-side, and only for a client already
+        /// admitted.
+        /// </summary>
+        /// <remarks>
+        /// Without this the table would keep describing what everyone arrived in rather than what
+        /// they are wearing, and the next player through the door would be handed a skin somebody
+        /// had swapped into ten minutes earlier.
+        /// </remarks>
+        public void SetCharacterOf(ulong clientId, int characterIndex)
+        {
+            if (!_approvedCharacters.ContainsKey(clientId)) return;
+
+            _approvedCharacters[clientId] = characterIndex;
+        }
 
         /// <summary>
         /// Turns on the approval half of <c>NetworkConfig</c> without registering the server's

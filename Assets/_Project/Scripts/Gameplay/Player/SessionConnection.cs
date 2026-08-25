@@ -88,6 +88,14 @@ namespace Snackdown.Gameplay.Player
         /// <summary>Skins a player can be given, straight from the catalog.</summary>
         public int SkinCount => _skins != null ? _skins.Count : 0;
 
+        /// <summary>The skins themselves, for a screen that has to draw them.</summary>
+        /// <remarks>
+        /// Handed out rather than looked up again by whoever needs it. One reference to the catalog
+        /// is one thing to point at a different asset by mistake; the lobby drawing a wardrobe from
+        /// a catalog the server never saw would show costumes nobody can be given.
+        /// </remarks>
+        public CharacterCatalog Skins => _skins;
+
         /// <summary>
         /// What another player needs in order to reach this session — an address or a share code.
         /// Empty when not hosting.
