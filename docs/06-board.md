@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-24
 
-**Overall:** 69% — 34 done, 0 in progress, 0 blocked, 15 to do, 2 dropped, across 8 epics.
+**Overall:** 71% — 35 done, 0 in progress, 0 blocked, 14 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -18,7 +18,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Gameplay core — the rules, server-authoritative](#gameplay-core-the-rules-server-authoritative) | 3 | Done | 5/5 |
 | [In-match HUD — life bars and round clock](#in-match-hud-life-bars-and-round-clock) | 4 | Done | 3/3 |
 | [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | Done | 8/8 |
-| [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | To do | 3/7 |
+| [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | To do | 4/7 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | To do | 0/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 0/7 |
 
@@ -102,7 +102,7 @@ First free skin on arrival, changeable in the lobby, never two players wearing t
 | `[ ]` | Wardrobe UI in the lobby, taken skins shown as taken | a client asking for a taken skin is refused by the server | — |
 | `[ ]` | A random default nickname, and the chosen one remembered | a fresh install offers a name from the list rather than the machine's; a player who types one and joins is offered the same name next launch | Was only the PlayerPrefs half; Luca asked for the default too, so both are here. Today MainMenuController.DefaultNickname returns SystemInfo.deviceName, which is the computer's name — it reaches every other player through the roster, so this is a small privacy leak as much as it is a dull default. Replaced by a list of names picked at random, overridden by whatever is saved. Still zero PlayerPrefs calls in the project |
 | `[ ]` | HUD layout preference, host default plus local override | — | D-006 |
-| `[ ]` | Two players with the same nickname are told apart | three clients all asking for the same name are admitted as it, it (2) and it (3); the one who leaves frees their number for the next arrival | Reported by Luca. Belongs in ConnectionApproval next to the sanitising that already happens there — the name a session carries is the admitted one, so the number has to be added before it is handed over rather than by whatever draws the list. Parentheses on purpose: a bare trailing digit is indistinguishable from a name that ends in one |
+| `[x]` | Two players with the same nickname are told apart | PlayMode — NicknameTests: three players all asking for Ana are admitted as Ana, Ana (2) and Ana (3); every peer sees the same names; a number freed by somebody leaving goes to the next arrival; a name at the cap keeps its suffix and stays inside MaxNicknameLength. Checked by removing the numbering, which fails all four | Reported by Luca. In ConnectionApproval next to the sanitising, because the name a session carries is the admitted one — a list that disambiguated on its own would show something no other list agreed with. Numbering starts at two: the player already using the name keeps it plain, since renaming them because somebody else arrived would move a name out from under a player who did nothing. The suffix wins over the name when they do not both fit, so the cap the FixedString32Bytes relies on still holds |
 
 ### Verification — make the netcode claims checkable
 
@@ -354,6 +354,7 @@ rather than an oversight.
 
 ## Session log
 
+- **2026-08-24** — Closed wr-6, the second of Luca's four. Duplicate names are numbered at admission, beside the sanitising, because the name a session publishes is the admitted one. The tests caught a bug of their own before they caught anything else: NUnit builds one instance per fixture and runs every test in it, so the field holding what each peer asks to be called leaked from the cap test into three others and failed them against a name they never asked for. Reset per test now, and worth remembering — every PlayMode fixture here has state that would do the same.
 - **2026-08-24** — Closed wr-2 by moving SessionConnection up into Snackdown.Gameplay (D-020), which is the third time this project has answered a layering problem by admitting a file was in the wrong folder — the simulation types in Phase 1, the roster in ps-2, this now. A fifth skin is reachable: the count comes from the catalog rather than from a constant. The part no test can reach is the wiring itself, since the harness has no bootstrap scene, so it was checked in Play by growing the catalog in memory and watching approval follow it from 4 to 5.
 - **2026-08-24** — Closed wr-1. Four players in a session are four different characters now, without anybody having chosen one — nothing sets the skin index in the payload yet, so every arrival asked for zero and every arrival was given it. Writing the test that a freed skin goes to the next arrival turned up a hole in the harness rather than in the game: JoinAnotherClient waited for every client ever started to be synchronized, including the one the test had just disconnected on purpose, so the join failed on a timeout that blamed the arrival. It now counts the clients still listening. wr-2, wiring the count to the catalog, stayed out: the catalog is in the assembly that depends on this one, so it is an assembly decision and not a wiring job.
 - **2026-08-24** — Closed wr-0, the one Luca called crucial. The menu was building and holding the connection itself — provider, approval and join target — in a scene that is unloaded every time a match runs, so returning from one produced a fresh controller that showed the host-or-join screen while the session was still running underneath it. A SessionConnection in the bootstrap scene owns all three now and the menu asks. It also closed a second-order bug nobody had reported: the provider was rebuilt lazily on the next lobby load, constructing a second ConnectionApproval beside the one the static still pointed at. Verified in Play by unloading and reloading the lobby against a live session — what came back was the lobby, with the join code still on it. No automated test: this is scene lifetime and UI Toolkit, and the harness has neither.
