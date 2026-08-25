@@ -75,7 +75,8 @@ Assets/
 │   │   ├── UI/               MainMenuController, NicknamePreference,
 │   │   │                     LoadingScreenController, EndScreenController,
 │   │   │                     RoundClockController, LifeBarsController,
-│   │   │                     PlayerNameplate, LifeBarStyle, LifeText, NetDebugOverlay
+│   │   │                     PlayerNameplate, LifeBarStyle, HudLayoutPreference,
+│   │   │                     LifeText, NetDebugOverlay
 │   │   └── Input/            InputReader, SpectatorInput
 │   ├── UI/                   MainMenu.uxml, LoadingScreen.uxml, EndScreen.uxml,
 │   │                         RoundClock.uxml, LifeBars.uxml, Nameplate.uxml,

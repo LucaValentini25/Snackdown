@@ -32,21 +32,34 @@ namespace Snackdown.Tests
     {
         private const string GameVersion = "test";
 
+        /// <summary>What the shipped catalog holds, and what most of these tests assume.</summary>
+        private const int DefaultSkinCount = 4;
+
         private GameObject _avatarPrefab;
         private GameObject _sessionPrefab;
         private GameObject _simulationPrefab;
 
         private ConnectionApproval _approval;
 
-        /// <summary>Skins the session admits. Overridden by the test that checks a fifth is reachable.</summary>
-        private int _skinCount = 4;
+        /// <summary>
+        /// Skins the session admits, and what each joining client asks for. Reset per test.
+        /// </summary>
+        /// <remarks>
+        /// NUnit builds one instance of a fixture and runs every test in it, so a field one test
+        /// writes is a field the next one inherits. The nickname fixture learned this the hard way:
+        /// the test about the length cap left its name behind and failed three others against
+        /// something they never asked for. Reset in SetUp rather than trusted.
+        /// </remarks>
+        private int _skinCount;
 
-        /// <summary>What each joining client puts in its payload. Zero unless a test says otherwise.</summary>
         private int _requestedSkin;
 
         [SetUp]
         public void LoadPrefabs()
         {
+            _skinCount = DefaultSkinCount;
+            _requestedSkin = 0;
+
             _avatarPrefab = LoadPrefab("Assets/_Project/Prefabs/Player.prefab");
             _sessionPrefab = LoadPrefab("Assets/_Project/Prefabs/PlayerSession.prefab");
             _simulationPrefab = LoadPrefab("Assets/_Project/Prefabs/NetworkSimulation.prefab");
@@ -172,6 +185,120 @@ namespace Snackdown.Tests
                 () => RosterOn(Host).Of(arrival) != null
                       && RosterOn(Host).Of(arrival).CharacterIndex == freed,
                 $"the arrival to be given skin {freed}, which the player who left had");
+        }
+
+        [UnityTest]
+        public IEnumerator AClient_AskingForATakenSkin_IsRefused()
+        {
+            yield return StartSession(clientCount: 1);
+
+            yield return WaitFor(
+                () => RosterOn(Host) != null && RosterOn(Host).Count == 2,
+                "the server to see both players");
+
+            ulong guest = Clients[0].LocalClientId;
+
+            int hostSkin = RosterOn(Host).Of(NetworkManager.ServerClientId).CharacterIndex;
+            int guestSkin = RosterOn(Host).Of(guest).CharacterIndex;
+
+            Assert.AreNotEqual(hostSkin, guestSkin, "the two players started in the same skin");
+
+            // The lobby draws a taken skin disabled, which is a courtesy and not a rule. This is the
+            // request a stale screen — or a client ignoring it — would send anyway.
+            SessionOn(Clients[0], guest).RequestCharacter(hostSkin);
+
+            for (int frame = 0; frame < 20; frame++) yield return null;
+
+            Assert.AreEqual(guestSkin, RosterOn(Host).Of(guest).CharacterIndex,
+                "A client took a skin somebody else was wearing.");
+
+            Assert.AreEqual(hostSkin, RosterOn(Host).Of(NetworkManager.ServerClientId).CharacterIndex,
+                "the host's own skin");
+        }
+
+        [UnityTest]
+        public IEnumerator AClient_CanChangeIntoAFreeSkin()
+        {
+            yield return StartSession(clientCount: 1);
+
+            yield return WaitFor(
+                () => RosterOn(Host) != null && RosterOn(Host).Count == 2,
+                "the server to see both players");
+
+            ulong guest = Clients[0].LocalClientId;
+
+            int free = FreeSkinOn(Host);
+            Assert.GreaterOrEqual(free, 0, "no free skin to change into");
+
+            SessionOn(Clients[0], guest).RequestCharacter(free);
+
+            yield return WaitFor(
+                () => RosterOn(Host).Of(guest).CharacterIndex == free,
+                $"the server to accept the change into skin {free}");
+
+            // Everyone draws a character from the session, so a change the rest of the lobby never
+            // heard about is somebody standing in a costume only they can see.
+            yield return WaitFor(
+                () => RosterOn(Clients[0]).Of(guest) != null
+                      && RosterOn(Clients[0]).Of(guest).CharacterIndex == free,
+                "the client to see its own change");
+        }
+
+        [UnityTest]
+        public IEnumerator ASkinLetGoOf_CanBeTakenByTheNextArrival()
+        {
+            yield return StartSession(clientCount: 1);
+
+            yield return WaitFor(
+                () => RosterOn(Host) != null && RosterOn(Host).Count == 2,
+                "the server to see both players");
+
+            ulong guest = Clients[0].LocalClientId;
+
+            int wasWearing = RosterOn(Host).Of(guest).CharacterIndex;
+            int free = FreeSkinOn(Host);
+
+            SessionOn(Clients[0], guest).RequestCharacter(free);
+
+            yield return WaitFor(
+                () => RosterOn(Host).Of(guest).CharacterIndex == free,
+                "the client to change out of its first skin");
+
+            yield return JoinAnotherClient();
+
+            // The point of telling approval about a change: its table hands skins to arrivals, and
+            // left describing what everybody walked in wearing it would keep the abandoned one
+            // reserved for nobody.
+            yield return WaitFor(
+                () => RosterOn(Host).Of(Clients[1].LocalClientId) != null
+                      && RosterOn(Host).Of(Clients[1].LocalClientId).CharacterIndex == wasWearing,
+                $"the arrival to be given skin {wasWearing}, which was let go of");
+        }
+
+        /// <summary>The lowest skin nobody on that peer's roster is wearing, or -1.</summary>
+        private static int FreeSkinOn(NetworkManager peer)
+        {
+            SessionRoster roster = RosterOn(peer);
+            if (roster == null) return -1;
+
+            for (int skin = 0; skin < DefaultSkinCount; skin++)
+            {
+                bool taken = false;
+                for (int i = 0; i < roster.Count; i++)
+                {
+                    if (roster[i].CharacterIndex == skin) { taken = true; break; }
+                }
+
+                if (!taken) return skin;
+            }
+
+            return -1;
+        }
+
+        private static PlayerSession SessionOn(NetworkManager peer, ulong ownerClientId)
+        {
+            SessionRoster roster = RosterOn(peer);
+            return roster != null ? roster.Of(ownerClientId) : null;
         }
 
         [UnityTest]

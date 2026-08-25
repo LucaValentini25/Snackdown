@@ -41,6 +41,10 @@
                  so laying out four fixed slots here would mean hiding and showing them instead. -->
             <ui:VisualElement name="roster-list" class="roster" />
 
+            <!-- Built in code: one button per catalog entry, and the catalog is content whose
+                 length is not known here. Which are taken changes while the lobby is open. -->
+            <ui:VisualElement name="wardrobe-row" class="wardrobe" />
+
             <!-- The rules panel. Every peer sees the numbers; only the host is given the controls
                  that move them, and only between matches. The rows are laid out here rather than
                  built in code because unlike the roster there is a fixed, known set of them. -->
