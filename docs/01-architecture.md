@@ -66,7 +66,7 @@ Assets/
 │   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchSettings,
 │   │   │   │                 DifficultyCatalog, MatchOutcome,
 │   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera,
-│   │   │                 SandboxRunner
+│   │   │                 SpectatorTargetRing, SandboxRunner
 │   │   │   ├── Player/       PredictedPlayer, PlayerSession, SessionRoster, SessionConnection,
 │   │   │   │                 PlayerLife, PlayerSpawnPoints, CharacterAppearance,
 │   │   │   │                 CharacterCatalog
@@ -191,11 +191,26 @@ camera while the server still considers them alive.
 ### The camera is never replicated
 
 Where a spectator is looking changes no outcome, so it stays local. `ArenaBounds` — a rectangle
-authored per arena — clamps the pan, and when a map is smaller than the camera view the clamp
+authored per arena — clamps the view, and when a map is smaller than the camera view the clamp
 collapses to its centre and the camera simply holds still. One component covers both kinds of map
 without asking the level designer which kind they built. **Arena01 is the small kind**: it is 26×9
 against a 24.9×14 view, so a spectator there gets about half a unit of horizontal slack and nothing
-vertical. Panning becomes visible on the first arena that is bigger than the screen.
+vertical. Movement becomes visible on the first arena that is bigger than the screen.
+
+A spectator **follows a survivor** rather than being handed a free camera, and a tap left or right
+moves to the next one, in the roster order the strip along the bottom already shows. Free panning is
+what happens when there is nobody left alive to follow, which is the end of a round.
+
+Which player that is, is a `SpectatorTargetRing` — a plain class the camera owns, holding the choice
+and nothing about transforms or input. It is the same split as `Reconciler`, made for the same
+reason: the interesting behaviour is what the choice does when the player being watched dies, and
+that is a unit test only if reproducing it does not require a four-player match. It remembers a
+*position* in the list rather than only a client id, so the spectator ends up on the next player
+along instead of snapped back to the top.
+
+The camera on this peer is reachable as `SpectatorCamera.Current`, which is how the bottom strip
+outlines whoever is being watched. That readout is not decoration on Arena01: the clamp leaves the
+camera almost no room, so switching target would otherwise have no visible effect at all.
 
 ## Configuration lives in data, not code
 

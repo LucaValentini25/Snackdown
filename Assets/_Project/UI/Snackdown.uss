@@ -488,3 +488,10 @@
     opacity: 0.45;
 }
 
+/* Who the spectator camera is following. Arena01 is barely larger than the view, so the camera
+   moving is not by itself an answer to "did that do anything?" — this is. */
+.lifebar--watched {
+    border-color: var(--accent);
+    background-color: rgba(238, 108, 92, 0.18);
+}
+

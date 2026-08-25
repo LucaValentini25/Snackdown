@@ -50,7 +50,9 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
 3. For a second peer, use **Multiplayer Play Mode** (`Window > Multiplayer > Multiplayer Play Mode`),
    enable a virtual player, and in that window enter the code and hit **Join a game**.
 4. Both players hit **Ready**; the host hits **Start match**. Move with `A`/`D` or the arrows, jump
-   with `Space`. Collect fruit, stomp heads, outlive the others.
+   with `Space`. Collect fruit, stomp heads, outlive the others. When you go out the camera follows
+   a survivor — tap left or right to watch somebody else; the strip along the bottom outlines who
+   you are on.
 
 **To play over a LAN instead of Relay:** in `Lobby.unity`, uncheck **Use Relay** on the
 `MainMenuController`. The address field relabels itself from *Code* to *Address* and everything else

@@ -120,7 +120,11 @@ Ordered by value-per-effort; each is independently droppable.
    the difference with the HUD in, and because touching it invalidates the [Phase 1
    measurements](05-validation.md) and they would need re-running. See
    [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted).
-3. [ ] **Spectator camera polish** — follow + target switching on death; exercises late-join, already part of the model.
+3. [x] **Spectator camera polish** — the camera follows a survivor on death and a tap left or right
+   moves to the next, in the same order the strip along the bottom shows. Free panning is what is left
+   when nobody is alive to follow. The choice of who to watch is a [`SpectatorTargetRing`](../Assets/_Project/Scripts/Gameplay/Match/SpectatorTargetRing.cs)
+   the camera owns but does not contain, so what happens when the watched player dies is a unit test
+   rather than something you would need a four-player match to see.
 4. [ ] **A second arena** — mostly level design; the networked scene load comes free from Phase 3, and
    `ArenaCatalog` plus the `ArenaBounds` camera clamp are already in place, so this is authoring only.
 

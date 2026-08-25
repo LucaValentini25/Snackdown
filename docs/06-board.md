@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 88% — 43 done, 0 in progress, 0 blocked, 6 to do, 2 dropped, across 8 epics.
+**Overall:** 90% — 44 done, 0 in progress, 0 blocked, 5 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -20,7 +20,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | Done | 8/8 |
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | Done | 7/7 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | Done | 4/4 |
-| [Polish and release](#polish-and-release) | 5 | To do | 1/7 |
+| [Polish and release](#polish-and-release) | 5 | To do | 2/7 |
 
 ### Netcode core — predicted character
 
@@ -122,7 +122,7 @@ Make the finished work visible to someone who was not here while it was built.
 | | Task | Verified by | Notes |
 |:---:|---|---|---|
 | `[ ]` | Decide how peer contact is predicted | — | Touching it invalidates the Phase 1 measurements, which would need re-running |
-| `[ ]` | Spectator camera follows a player and switches targets | — | — |
+| `[x]` | Spectator camera follows a player and switches targets | EditMode — SpectatorTargetRingTests: fourteen cases over the choice of who to watch, including the one the type exists for — the player being watched dies and the camera lands on the next one along rather than back at the top of the roster — plus wrapping at both ends, one player left, everybody dead, and a list that grows for the next round | Following replaced free-look, which asked a player who had just died to go and find the fight first. A tap left or right switches, edge-triggered so holding the stick moves one player rather than scrolling at frame rate, and the roster order is the one the bottom strip already shows. The choice lives in a SpectatorTargetRing the camera owns but does not contain — the same split as Reconciler, for the same reason. Candidates are built from the characters rather than the sessions, because a session has no transform and on a client does not even know which object its avatar is, and filtered by NetworkManager so the two-peer harness does not offer each peer the other one's players. The bottom strip outlines whoever is being watched: Arena01 is 26x9 against a 24.9x14 view, so the camera barely moves and switching would otherwise have no visible effect at all |
 | `[ ]` | A second arena | — | Authoring only — ArenaCatalog and the networked load are already in place |
 | `[ ]` | Public lobby browser | — | D-009 — deferred to the end deliberately |
 | `[x]` | Keep debug tooling out of the player build | — not unit-testable: the flag it turns on is the configuration the tests run in. Verified by reading what the guards cover and by the editor behaving unchanged — F1–F4, the ghost and the CSV export all still work, and the 97 EditMode tests still pass | One flag, DebugTools.Enabled, true in the editor and in development builds. It gates the overlay, the red authoritative ghost and the run recorder — the three things the audit blamed for ~97% of host managed allocation. The overlay destroys itself in Awake rather than returning early from OnGUI, so Unity stops calling it at all. Tried as a const first and reverted: a constant folds, and every guard then compiles to unreachable code and a warning in the editor. NetworkConfigReport was left in on purpose — one log line per connection attempt is what makes a NetworkConfig mismatch diagnosable in a build somebody else is running |
@@ -378,4 +378,5 @@ rather than an oversight.
 - **2026-08-23** — Stood up this board: one JSON source, two generated views, and a rule in CLAUDE.md that closing a task, an epic or a session updates it.
 - **2026-08-23** — Designed the player-session refactor and took ten decisions on it. Confirmed by inspection that the auto-spawn does not need disabling, that every host-configurable parameter is server-read only, and that the EditMode suite is untouched by the change.
 - **2026-08-23** — Read the repository end to end after time away: 64 scripts, six design documents and a ten-domain audit. Conclusion recorded — the netcode is solid and measured; everything unfinished sits in the lobby, identity and configuration layer.
+- **2026-08-25** — Started the polish epic on one branch, as Luca asked — a PR per task had become the slowest part of the work. pl-5 took the overlay, the authoritative ghost and the run recorder out of release builds behind one flag, closing the highest-severity performance risk on the board: the audit had measured the overlay at ~97% of the host's managed allocation and it was in every build. It was written with a const first and reverted, because a constant folds and every guard then compiles to unreachable code and a warning in the editor. pl-2 turned the spectator camera from a free-look into something that follows a survivor and switches on a tap; the choice of who to watch came out into a plain class, which is the third time in this project that making something testable meant moving it out of a MonoBehaviour.
 
