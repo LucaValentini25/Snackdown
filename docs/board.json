@@ -18,7 +18,7 @@
         { "id": "nc-5", "title": "Server snapshots carrying lastProcessedInputTick", "status": "done", "test": "—" },
         { "id": "nc-6", "title": "Reconciliation — rewind to snapshot, replay pending inputs", "status": "done", "test": "none — lives inside a MonoBehaviour and is unreachable from EditMode", "notes": "90 lines, 9 branches, 0% coverage. The project's headline mechanism" },
         { "id": "nc-7", "title": "Snapshot interpolation for remote players", "status": "done", "test": "EditMode — SnapshotInterpolatorTests" },
-        { "id": "nc-8", "title": "Debug overlay: predicted vs authoritative, RTT, corrections", "status": "done", "test": "—", "notes": "Ships in the build and costs ~97% of host managed allocation" },
+        { "id": "nc-8", "title": "Debug overlay: predicted vs authoritative, RTT, corrections", "status": "done", "test": "—", "notes": "Costs ~97% of host managed allocation, which is why pl-5 later took it out of release builds" },
         { "id": "nc-9", "title": "Validated under simulated latency and packet loss", "status": "done", "test": "manual — 150 ms / 20% loss, median error 0.302 units", "notes": "Written up in docs/05" }
       ]
     },
@@ -122,7 +122,7 @@
         { "id": "pl-2", "title": "Spectator camera follows a player and switches targets", "status": "todo", "test": "—" },
         { "id": "pl-3", "title": "A second arena", "status": "todo", "test": "—", "notes": "Authoring only — ArenaCatalog and the networked load are already in place" },
         { "id": "pl-4", "title": "Public lobby browser", "status": "todo", "test": "—", "notes": "D-009 — deferred to the end deliberately" },
-        { "id": "pl-5", "title": "Keep debug tooling out of the player build", "status": "todo", "test": "—" },
+        { "id": "pl-5", "title": "Keep debug tooling out of the player build", "status": "done", "test": "— not unit-testable: the flag it turns on is the configuration the tests run in. Verified by reading what the guards cover and by the editor behaving unchanged — F1–F4, the ghost and the CSV export all still work, and the 97 EditMode tests still pass", "notes": "One flag, DebugTools.Enabled, true in the editor and in development builds. It gates the overlay, the red authoritative ghost and the run recorder — the three things the audit blamed for ~97% of host managed allocation. The overlay destroys itself in Awake rather than returning early from OnGUI, so Unity stops calling it at all. Tried as a const first and reverted: a constant folds, and every guard then compiles to unreachable code and a warning in the editor. NetworkConfigReport was left in on purpose — one log line per connection attempt is what makes a NetworkConfig mismatch diagnosable in a build somebody else is running" },
         { "id": "pl-6", "title": "A runnable build, main brought up to date, a tag", "status": "todo", "test": "—", "notes": "No player build has ever been produced" },
         { "id": "pl-7", "title": "Asking for a code is a step of joining, not of the front screen", "status": "todo", "test": "the front screen offers Host and Join and no code field; choosing Join is what asks for one", "notes": "Reported by Luca: the field sits on the menu next to Host, where it means nothing — a host never types a code. Choosing Join should be what asks for it, on a screen of its own with the field and a Join button. Luca asked for it to travel with pl-4, and it should: a browser and a typed code are two ways through the same step, and building that step twice is how they end up disagreeing" }
       ]
@@ -361,9 +361,9 @@
     },
     {
       "title": "The debug overlay ships enabled and dominates host allocation",
-      "impact": "Its IMGUI pass is ~97% of all managed allocation on the host — 320-600 KB/s against ~12 KB/s from the entire simulation path.",
+      "impact": "Closed by pl-5. The overlay, the authoritative ghost and the run recorder are gated on DebugTools.Enabled and are gone from a release build; the overlay destroys itself in Awake so its OnGUI is never called. Development builds keep all three deliberately — that is where they explain the project. Nothing has re-measured allocation in an actual release build, because pl-6 has not produced one yet.",
       "severity": "medium",
-      "status": "open"
+      "status": "closed"
     },
     {
       "title": "Peer contact is predicted against interpolated positions",

@@ -68,6 +68,12 @@ latency and some packet loss, then use the overlay:
 
 The red ghost is where the server says you are; the green box is where you predicted you'd be.
 
+> **None of this exists in a released build.** The overlay, the ghost and the CSV recorder are the
+> most expensive thing in the project — the overlay's IMGUI pass alone was measured at ~97% of the
+> host's managed allocation — and they are there to explain the netcode, not to play with. They run
+> in the editor and in **development builds**, which is what a build handed to somebody to try
+> should be. A release build drops them entirely.
+
 For the measured results and the procedure that produced them, see
 **[docs/05 — Validation](docs/05-validation.md)**.
 

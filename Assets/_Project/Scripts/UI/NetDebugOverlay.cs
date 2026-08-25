@@ -13,9 +13,15 @@ namespace Snackdown.UI
     /// legible: prediction on/off and visual smoothing on/off.
     /// </summary>
     /// <remarks>
-    /// Netcode that works is invisible by design — which makes it impossible to show. This overlay
-    /// is how the invisible part gets demonstrated: the correction count ticking up while the
-    /// character keeps moving smoothly is the entire thesis of the project on screen at once.
+    /// <para>Netcode that works is invisible by design — which makes it impossible to show. This
+    /// overlay is how the invisible part gets demonstrated: the correction count ticking up while
+    /// the character keeps moving smoothly is the entire thesis of the project on screen at
+    /// once.</para>
+    /// <para><b>It removes itself in a player build.</b> Its <c>OnGUI</c> pass is the most
+    /// expensive thing in the project — the audit measured it at about 97% of all managed allocation
+    /// on the host, 320–600 KB/s against roughly 12 KB/s from the entire simulation path.
+    /// Development builds keep it, because a build handed to somebody to try is exactly where it
+    /// earns that. See <see cref="DebugTools"/>.</para>
     /// </remarks>
     public class NetDebugOverlay : MonoBehaviour
     {
@@ -35,6 +41,16 @@ namespace Snackdown.UI
 
         /// <summary>How long the export confirmation stays on screen.</summary>
         const float ExportNoticeSeconds = 8f;
+
+        /// <remarks>
+        /// Destroyed rather than guarded, so Unity stops calling <c>OnGUI</c> at all. A component
+        /// that returns early still costs a call per frame from the GUI pass; one that is not there
+        /// costs nothing, which is the point of the exercise.
+        /// </remarks>
+        void Awake()
+        {
+            if (!DebugTools.Enabled) Destroy(this);
+        }
 
         void Update()
         {

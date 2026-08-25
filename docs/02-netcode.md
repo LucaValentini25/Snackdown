@@ -226,8 +226,36 @@ motion that's smooth regardless of packet jitter or tick rate.
 
 - **Artificial latency + packet loss** via NGO's Network Simulator — prediction should hide it, and
   reconciliation corrections should be visible in the debug overlay but not felt.
-- A **debug overlay**: predicted vs authoritative position, reconciliation count, RTT, tick.
+- A **debug overlay**: predicted vs authoritative position, reconciliation count, RTT, tick. It is
+  development-only — see [Debug tooling is not part of the game](#debug-tooling-is-not-part-of-the-game).
 - **Multiplayer Play Mode** to run host + client in one editor while developing.
+
+## Debug tooling is not part of the game
+
+Three things exist only to make the netcode visible: the on-screen readout, the red ghost drawing
+where the server says a character is, and the recorder that accumulates a sample per correction and
+writes a CSV on `F4`. Together they are the single most expensive thing in the project — the audit
+measured the overlay's IMGUI pass at roughly **97% of all managed allocation on the host**, 320–600
+KB/s against about 12 KB/s from the entire simulation path.
+
+They are gated on one flag, [`DebugTools.Enabled`](../Assets/_Project/Scripts/Netcode/DebugTools.cs),
+true in the editor and in development builds and false in a release one. One flag rather than an
+`#if` in each file, because a policy written in four places is a policy that can disagree with
+itself.
+
+The overlay does not check the flag on every frame — it **destroys itself in `Awake`**, so Unity
+stops calling `OnGUI` at all. A component that returns early still costs a call per frame; one that
+is not there costs nothing.
+
+Development builds keep all three. That is where they earn their place: a build handed to somebody
+with the correction count ticking up while the character keeps moving is the whole argument on
+screen at once. A release build is the one place they are only a cost.
+
+**One diagnostic deliberately stays.**
+[`NetworkConfigReport`](../Assets/_Project/Scripts/Connection/NetworkConfigReport.cs) logs the hashed
+config once per connection attempt, in every build. NGO reports a mismatch as one sentence naming
+none of the seven fields it hashed; without this line, a join that fails in a build somebody else is
+running is undiagnosable. One string per connection is not the cost this section is about.
 
 ## References
 

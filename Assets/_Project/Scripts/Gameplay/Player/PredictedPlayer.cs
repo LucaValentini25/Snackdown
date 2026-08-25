@@ -141,7 +141,7 @@ namespace Snackdown.Gameplay.Player
         /// </summary>
         public static bool PredictionEnabled = true;
 
-        // --- debug telemetry (read by NetDebugOverlay) ------------------------------------
+        // --- debug telemetry (read by NetDebugOverlay, and only fed when it can be) --------
         readonly ReconciliationStats _stats = new ReconciliationStats();
         readonly RunRecorder _recorder = new RunRecorder();
 
@@ -210,6 +210,7 @@ namespace Snackdown.Gameplay.Player
         /// </remarks>
         public string WriteRunMetrics(string directory, string fileName, string conditions)
         {
+            if (!DebugTools.Enabled) return null;
             if (!IsOwner || IsServer || !_recorder.IsRunning) return null;
 
             string path = _recorder.Write(directory, fileName, Time.time, conditions);
@@ -241,13 +242,17 @@ namespace Snackdown.Gameplay.Player
             if (_inputReader != null) _inputReader.enabled = IsOwner;
 
             if (_smoother != null) _smoother.Snap();
+            // The ghost draws where the server thinks this character is. It is a teaching aid,
+            // and a second sprite following the player around a shipped game is a bug report.
             if (_authoritativeGhost != null)
-                _authoritativeGhost.gameObject.SetActive(IsOwner && !IsServer);
+                _authoritativeGhost.gameObject.SetActive(DebugTools.Enabled && IsOwner && !IsServer);
 
             // Recording starts with the character, not with a keypress: the interesting corrections
             // are the ones right after joining, and a run that only begins once someone remembers
             // to press a key is missing exactly them.
-            if (IsOwner && !IsServer) _recorder.Begin(Time.time);
+            // Recording accumulates a sample per correction for as long as the session lasts,
+            // and nothing in a player build would ever ask for the file.
+            if (DebugTools.Enabled && IsOwner && !IsServer) _recorder.Begin(Time.time);
 
             NetworkSimulationLoop.Register(this);
         }
@@ -488,9 +493,12 @@ namespace Snackdown.Gameplay.Player
                 LastPredictionError = result.PredictionError;
                 LastReplayedTicks = result.ReplayedTicks;
 
-                _stats.Record(Time.time, LastPredictionError, result.ReplayedTicks);
-                _recorder.Record(
-                    Time.time, LastPredictionError, result.ReplayedTicks, LastMeasuredRttMs, TransportRtt());
+                if (DebugTools.Enabled)
+                {
+                    _stats.Record(Time.time, LastPredictionError, result.ReplayedTicks);
+                    _recorder.Record(
+                        Time.time, LastPredictionError, result.ReplayedTicks, LastMeasuredRttMs, TransportRtt());
+                }
             }
 
             // Logically instant, visually smooth: the smoother eats the jump.

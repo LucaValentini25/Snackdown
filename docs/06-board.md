@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 86% — 42 done, 0 in progress, 0 blocked, 7 to do, 2 dropped, across 8 epics.
+**Overall:** 88% — 43 done, 0 in progress, 0 blocked, 6 to do, 2 dropped, across 8 epics.
 
 ## Epics
 
@@ -20,7 +20,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Separate player identity from avatar](#separate-player-identity-from-avatar) | 4 | Done | 8/8 |
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | Done | 7/7 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | Done | 4/4 |
-| [Polish and release](#polish-and-release) | 5 | To do | 0/7 |
+| [Polish and release](#polish-and-release) | 5 | To do | 1/7 |
 
 ### Netcode core — predicted character
 
@@ -35,7 +35,7 @@ A character that responds instantly on the owning client, is decided by the serv
 | `[x]` | Server snapshots carrying lastProcessedInputTick | — | — |
 | `[x]` | Reconciliation — rewind to snapshot, replay pending inputs | none — lives inside a MonoBehaviour and is unreachable from EditMode | 90 lines, 9 branches, 0% coverage. The project's headline mechanism |
 | `[x]` | Snapshot interpolation for remote players | EditMode — SnapshotInterpolatorTests | — |
-| `[x]` | Debug overlay: predicted vs authoritative, RTT, corrections | — | Ships in the build and costs ~97% of host managed allocation |
+| `[x]` | Debug overlay: predicted vs authoritative, RTT, corrections | — | Costs ~97% of host managed allocation, which is why pl-5 later took it out of release builds |
 | `[x]` | Validated under simulated latency and packet loss | manual — 150 ms / 20% loss, median error 0.302 units | Written up in docs/05 |
 
 ### Connection layer — LAN and Relay behind one flow
@@ -125,7 +125,7 @@ Make the finished work visible to someone who was not here while it was built.
 | `[ ]` | Spectator camera follows a player and switches targets | — | — |
 | `[ ]` | A second arena | — | Authoring only — ArenaCatalog and the networked load are already in place |
 | `[ ]` | Public lobby browser | — | D-009 — deferred to the end deliberately |
-| `[ ]` | Keep debug tooling out of the player build | — | — |
+| `[x]` | Keep debug tooling out of the player build | — not unit-testable: the flag it turns on is the configuration the tests run in. Verified by reading what the guards cover and by the editor behaving unchanged — F1–F4, the ghost and the CSV export all still work, and the 97 EditMode tests still pass | One flag, DebugTools.Enabled, true in the editor and in development builds. It gates the overlay, the red authoritative ghost and the run recorder — the three things the audit blamed for ~97% of host managed allocation. The overlay destroys itself in Awake rather than returning early from OnGUI, so Unity stops calling it at all. Tried as a const first and reverted: a constant folds, and every guard then compiles to unreachable code and a warning in the editor. NetworkConfigReport was left in on purpose — one log line per connection attempt is what makes a NetworkConfig mismatch diagnosable in a build somebody else is running |
 | `[ ]` | A runnable build, main brought up to date, a tag | — | No player build has ever been produced |
 | `[ ]` | Asking for a code is a step of joining, not of the front screen | the front screen offers Host and Join and no code field; choosing Join is what asks for one | Reported by Luca: the field sits on the menu next to Host, where it means nothing — a host never types a code. Choosing Join should be what asks for it, on a screen of its own with the field and a Join button. Luca asked for it to travel with pl-4, and it should: a browser and a typed code are two ways through the same step, and building that step twice is how they end up disagreeing |
 
@@ -349,7 +349,7 @@ rather than an oversight.
 | `[x]` | Reconcile has zero test coverage | Closed by vf-2. The decision half moved into a Reconciler that needs no scene and has a test per branch. What is still only visible in a session is the applying half — moving the transform and telling the smoother — and the behaviour under real latency, which docs/05 measures by hand. | closed |
 | `[x]` | No byte of bandwidth has ever been measured | Closed by vf-4. Measured from the profiler at two players and written into docs/05, and the derived figure turned out short by the RPC framing rather than wrong. What is still arithmetic is the four-player case, which is now the open item. | closed |
 | `[ ]` | main is 55 commits behind and no build has ever been produced | A reviewer following the repository link lands on the Phase 0 scaffold. Managed stripping and scene-by-name resolution are unexercised. | open |
-| `[ ]` | The debug overlay ships enabled and dominates host allocation | Its IMGUI pass is ~97% of all managed allocation on the host — 320-600 KB/s against ~12 KB/s from the entire simulation path. | open |
+| `[x]` | The debug overlay ships enabled and dominates host allocation | Closed by pl-5. The overlay, the authoritative ghost and the run recorder are gated on DebugTools.Enabled and are gone from a release build; the overlay destroys itself in Awake so its OnGUI is never called. Development builds keep all three deliberately — that is where they explain the project. Nothing has re-measured allocation in an actual release build, because pl-6 has not produced one yet. | closed |
 | `[ ]` | Peer contact is predicted against interpolated positions | Roughly 0.47 s stale at the measured RTT, so close contact between two moving players reliably corrects. Fixing it invalidates the Phase 1 measurements. | open |
 | `[ ]` | Snapshots broadcast at 30 Hz while the session sits in the lobby | Bandwidth spent on a match that is not running. | open |
 | `[ ]` | FruitSpawner.ServerDespawnAll has no call sites | Fruit survives into the lobby and into the next match. | open |
