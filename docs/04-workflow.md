@@ -93,7 +93,20 @@ at its initial value. A process with a 0% execution rate is not a process, and t
 either to start executing it or to describe what is actually being done. Cutting a `1.0.0` off a build
 that has never been produced would have been the worse of the two.
 
-So: no tags yet, deliberately. When Phase 5 closes and a build exists:
+**A build exists now.** Produced 2026-08-25 for Windows x64, release configuration, 102 MB, no
+errors and no warnings. Four scenes in it — Bootstrap, Lobby and the two arenas, with Sandbox listed
+and disabled — and seven `Snackdown.*` assemblies. Because it is a release build, `DEVELOPMENT_BUILD`
+is undefined, `DebugTools.Enabled` is false, and the overlay, the authoritative ghost and the run
+recorder are not in it.
+
+`Builds/` is gitignored: a 102 MB directory does not belong in a repository, and the artefact people
+download belongs on a GitHub Release. Reproducing it is one call — `File > Build Profiles`, Windows
+x64, **Development Build off**, output `Builds/Windows/Snackdown.exe`.
+
+What is left before a tag is a decision rather than work: bringing `main` up to date and cutting the
+release. Both are Luca's.
+
+So: no tags yet, deliberately. When Phase 5 closes:
 
 - **Versioning:** [SemVer](https://semver.org). While pre-1.0, `0.MINOR.PATCH` — each completed
   phase bumps MINOR, fixes bump PATCH. `1.0.0` is the first release with a build someone can run
