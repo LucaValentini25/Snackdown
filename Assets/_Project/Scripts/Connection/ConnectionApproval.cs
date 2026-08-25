@@ -72,7 +72,16 @@ namespace Snackdown.Connection
         /// </remarks>
         public static ConnectionApproval Current { get; private set; }
 
-        /// <summary>How many character skins exist. Requests outside this range are clamped.</summary>
+        /// <summary>
+        /// How many character skins exist. Requests outside this range are clamped, and arrivals are
+        /// spread across it.
+        /// </summary>
+        /// <remarks>
+        /// Still a number set from outside rather than read from <c>CharacterCatalog</c>, which is
+        /// what would make it true by construction. The catalog is content and lives in the gameplay
+        /// assembly, which depends on this one — so this cannot name it, and the wiring is its own
+        /// task (<c>wr-2</c>). Until then a fifth skin is authored and silently unreachable.
+        /// </remarks>
         public int CharacterCount { get; set; } = 4;
 
         public ConnectionApproval(NetworkManager networkManager, string gameVersion, int maxPlayers)
@@ -153,7 +162,7 @@ namespace Snackdown.Connection
                 Admit(response,
                     request.ClientNetworkId,
                     SanitizeNickname(_localNickname, request.ClientNetworkId),
-                    Mathf.Clamp(_localCharacterIndex, 0, Mathf.Max(0, CharacterCount - 1)));
+                    CharacterFor(_localCharacterIndex));
                 return;
             }
 
@@ -180,7 +189,49 @@ namespace Snackdown.Connection
             Admit(response,
                 request.ClientNetworkId,
                 SanitizeNickname(payload.Nickname.ToString(), request.ClientNetworkId),
-                Mathf.Clamp(payload.CharacterIndex, 0, Mathf.Max(0, CharacterCount - 1)));
+                CharacterFor(payload.CharacterIndex));
+        }
+
+        /// <summary>
+        /// The skin this arrival actually gets: the one they asked for if nobody is wearing it,
+        /// otherwise the lowest one nobody is wearing.
+        /// </summary>
+        /// <remarks>
+        /// <para>Everybody used to get skin 0, and not because of a bug that could be pointed at:
+        /// nothing sets the index in the payload yet, so every request was 0 and every request was
+        /// honoured. Four identical characters in an arena is the kind of thing that reads as the
+        /// skin system being broken rather than as it never having been asked for anything.</para>
+        /// <para>Assigned here rather than by whatever draws the lobby, because this is where the
+        /// set of taken skins is known and where the answer is recorded — the index the session
+        /// publishes is the admitted one, so a skin decided anywhere else would be a second opinion
+        /// about a value that already has an owner.</para>
+        /// <para>When there are more players than skins, the request is clamped and duplicates are
+        /// allowed. Turning somebody away at the door because the wardrobe is full would be a
+        /// refusal a player cannot act on, over something purely cosmetic.</para>
+        /// </remarks>
+        int CharacterFor(int requested)
+        {
+            int count = Mathf.Max(1, CharacterCount);
+            int wanted = Mathf.Clamp(requested, 0, count - 1);
+
+            if (!IsTaken(wanted)) return wanted;
+
+            for (int index = 0; index < count; index++)
+            {
+                if (!IsTaken(index)) return index;
+            }
+
+            return wanted;
+        }
+
+        bool IsTaken(int characterIndex)
+        {
+            foreach (int taken in _approvedCharacters.Values)
+            {
+                if (taken == characterIndex) return true;
+            }
+
+            return false;
         }
 
         void Admit(NetworkManager.ConnectionApprovalResponse response, ulong clientId, string nickname, int characterIndex)
