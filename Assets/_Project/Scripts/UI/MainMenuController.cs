@@ -617,12 +617,18 @@ namespace Snackdown.UI
             _arenaRow.EnableInClassList("hidden", _director.ArenaCount < 2);
         }
 
+        /// <remarks>
+        /// Reads the field's index rather than looking the chosen text up in the list. What is
+        /// replicated is a position in the catalog, and matching on the display name puts a string
+        /// comparison in the middle of that for no reason — two arenas named the same would both
+        /// resolve to the first one, and the failure would be a pick that silently does nothing.
+        /// </remarks>
         void OnArenaPicked(ChangeEvent<string> change)
         {
             if (_fillingFields || _director == null) return;
 
-            int index = _arena.choices.IndexOf(change.newValue);
-            if (index < 0) return;
+            int index = _arena.index;
+            if (index < 0 || index >= _director.ArenaCount) return;
 
             _director.RequestArena(index);
         }
@@ -676,10 +682,16 @@ namespace Snackdown.UI
 
             _fillingFields = true;
 
+            // Rebuilt if the catalog and the list have drifted apart. AttachDirector fills the
+            // choices once, and it can run against a director that has been found but not yet
+            // spawned; a list that stayed short would leave the arena unpickable with no sign of
+            // why.
+            if (_arena.choices.Count != _director.ArenaCount) FillArenaChoices();
+
             // Shown to everybody, not only to the host. Which arena is coming is part of what a
             // player is agreeing to when they ready up.
             if (_director.ArenaIndex >= 0 && _director.ArenaIndex < _arena.choices.Count)
-                _arena.value = _arena.choices[_director.ArenaIndex];
+                _arena.index = _director.ArenaIndex;
 
             _startingLife.value = settings.StartingLife;
             _maxLife.value = settings.MaxLife;
