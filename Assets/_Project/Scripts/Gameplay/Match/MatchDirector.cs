@@ -64,6 +64,25 @@ namespace Snackdown.Gameplay.Match
         /// <summary>Raised on every peer when the arena for the next match changes.</summary>
         public event Action<int> ArenaChanged;
 
+        /// <summary>
+        /// Raised on the server immediately before the arena is dropped, while everything standing
+        /// in it can still be reached.
+        /// </summary>
+        /// <remarks>
+        /// <para>For the things an arena contains that are not <i>part</i> of it. Fruit is the case
+        /// this exists for: the spawner instantiates it without a parent, so it lands in the active
+        /// scene while the spawner lives in the arena — unloading takes the spawner and leaves its
+        /// fruit floating over the lobby and into the next match.</para>
+        /// <para>An event rather than the director reaching into the arena itself. Today the
+        /// dependency runs one way, from the arena's systems to the match; a director that despawned
+        /// fruit would point it both ways for one call, and the next thing an arena needs cleaning
+        /// up would make that two.</para>
+        /// <para>Raised here rather than in either caller. Both routes out of an arena come through
+        /// the unload — returning to the lobby, and starting the next match straight from the end
+        /// screen — and hanging it off one of them would leave the other leaking.</para>
+        /// </remarks>
+        public event Action ArenaUnloading;
+
         readonly NetworkVariable<MatchSettings> _settings = new NetworkVariable<MatchSettings>();
 
         /// <summary>Raised on every peer when the numbers change.</summary>
@@ -295,6 +314,12 @@ namespace Snackdown.Gameplay.Match
             // lobby and arenas come and go on top of it.
             if (UnloadCurrentSceneThen(_arenas.Get(_arenaIndex.Value).SceneName)) return;
 
+            // The refusal already unloaded the arena the bodies were standing in, so they go too.
+            // Without this the session sat in the lobby with characters spawned into no scene at
+            // all and snapshots still going out for them — the state ServerReturnToLobby exists to
+            // avoid, reached through the one door that did not call it.
+            ServerDespawnBodies();
+
             // The load was refused, so nothing will ever report having finished it. Going back to
             // the lobby is the only honest state: the phase said Loading a line ago, and leaving it
             // there is a loading screen that never ends with nothing in the console to explain it.
@@ -338,6 +363,9 @@ namespace Snackdown.Gameplay.Match
         void UnloadCurrentScene()
         {
             if (string.IsNullOrEmpty(_loadedSceneName)) return;
+
+            // Before the unload, while the arena's own systems are still alive to answer.
+            if (IsServer) ArenaUnloading?.Invoke();
 
             Scene previous = SceneManager.GetSceneByName(_loadedSceneName);
 
@@ -469,17 +497,25 @@ namespace Snackdown.Gameplay.Match
             SessionRoster roster = FindFirstObjectByType<SessionRoster>();
             if (roster != null) roster.ServerClearReady();
 
-            // The bodies go with the arena they were standing in. They are not part of it — they
-            // are spawned objects and would outlive the unload — and a character left standing in
-            // no scene at all is the state that used to be avoided by never despawning one.
-            // Resetting the life is not done here: since ps-4 that travels with the next round's
-            // body, so a rematch started from the end screen cannot skip it.
-            foreach (PlayerSession player in PlayerSession.All)
-            {
-                if (player.NetworkManager == NetworkManager) player.ServerDespawnAvatar();
-            }
-
+            ServerDespawnBodies();
             UnloadCurrentScene();
+        }
+
+        /// <summary>Takes away every character belonging to this peer. Server-only.</summary>
+        /// <remarks>
+        /// <para>The bodies go with the arena they were standing in. They are not part of it — they
+        /// are spawned objects and would outlive the unload — and a character left standing in no
+        /// scene at all is the state that used to be avoided by never despawning one.</para>
+        /// <para>Resetting the life is not done here: since ps-4 that travels with the next round's
+        /// body, so a rematch started from the end screen cannot skip it.</para>
+        /// <para>Its own method because there are two ways out of an arena and only one of them used
+        /// to do this. A start that is refused mid-flight unloads and then goes back to the lobby,
+        /// and it left the bodies standing.</para>
+        /// </remarks>
+        void ServerDespawnBodies()
+        {
+            foreach (PlayerSession player in PlayerSession.All)
+                if (player.NetworkManager == NetworkManager) player.ServerDespawnAvatar();
         }
     }
 }
