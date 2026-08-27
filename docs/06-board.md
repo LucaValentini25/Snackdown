@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 98% — 53 done, 1 in progress, 0 blocked, 0 to do, 2 dropped, across 9 epics.
+**Overall:** 88% — 53 done, 1 in progress, 0 blocked, 6 to do, 2 dropped, across 10 epics.
 
 ## Epics
 
@@ -22,6 +22,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | Done | 4/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 6/7 |
 | [Loose ends](#loose-ends) | 5 | To do | 5/5 |
+| [Make it look like a game](#make-it-look-like-a-game) | 5 | To do | 0/6 |
 
 ### Netcode core — predicted character
 
@@ -141,6 +142,19 @@ Clear the small open risks that have been sitting on the board since the epics t
 | `[x]` | Import the whole sprite pack on one pixel grid | — an import change. Checked by reading back the settings: the 112 sprites in the pack now report one configuration, 32 pixels per unit and FullRect, against three before. In the sandbox the character still draws at 1.00 units and the fruit at 1.00 rather than 0.50, which is the change. 128 EditMode tests still pass and the console is clean | 32 everywhere, because that is the grid the art was drawn on: 32-pixel characters, 16-pixel tiles. It leaves the character at exactly the size it already was, so nothing tuned against it moves. The check that settles it is the ratio — the apple has 16 opaque pixels against the character's 27, and after the change it draws at 0.59 of the character's height, which is 16/27. Also switched the pack from Tight meshes to FullRect: Tight fits the mesh to each frame's opaque pixels, so a run cycle gets a different quad per frame and the sprite swims inside its own transform. WhiteSquare stays at 4 — it is not pack art, it is the one-unit block both arenas are built from. Gameplay reads none of this: pickup is a radius in world units and collision is MovementConfig, both authored independently of how big a sprite is drawn |
 | `[x]` | A scene showing every sprite at the size its import settings produce | — it is an authoring aid and nothing runs in it. Checked that all 113 sprites resolved: 120 renderers, none with an empty sprite | Asked for by Luca to fix sprites that are set up wrong. Built as plain SpriteRenderers at scale 1 rather than anything clever, because the whole value is that what is drawn is exactly what the importer produces. A row per source folder, and a strip of 1x1 unit squares with the character beside them so size can be judged against something. It immediately paid for itself: the pack ships three different pixels-per-unit and the terrain is at 100, so a 16x16 tile is 0.16 units against a one-unit character — a sixth of the size the art was drawn at. Listed in Build Settings with its checkbox off, like Sandbox, so Unity stops adding it back |
 | `[x]` | Sandbox holds an instance of the NetworkSimulation prefab, not a copy of it | the sandbox still starts a match on Play with a clean console, and the instance now carries exactly one override — the rules asset. Checked first that nothing else in the scene held a serialized reference into the object being replaced | The drift the risk predicted had already happened and was found by diffing the copy against the prefab before touching anything: two differences, and only one of them was meant. _rules pointing at SandboxMatchConfig is the deliberate override and was kept; _difficulties being null was ps-7 landing on Bootstrap for free and being forgotten here, and it fixed itself by coming from the prefab. That is the argument for D-013 arriving on time rather than as a prediction |
+
+### Make it look like a game
+
+The netcode is finished and invisible. What a stranger sees is untextured boxes and characters that do not move their legs. This epic is the layer that makes the rest of it worth looking at, and it is held to the same rule as everything else: nothing new on the wire that can be derived from what is already there.
+
+| | Task | Verified by | Notes |
+|:---:|---|---|---|
+| `[ ]` | Characters animate, and agree across peers without sending anything | — | D-022. Idle, run, jump, fall and hit, plus the horizontal flip. Derived from PlayerState rather than replicated |
+| `[ ]` | Fruit spins where it stands, and pops when it is collected | — | Purely local. The kind is already replicated and the animation changes no outcome, so it is a view like the HUD is. The pack ships a Collected sheet for the pickup |
+| `[ ]` | A background behind each arena | — | Static tiled, no parallax: the arena is 26x9 against a 24.9x14 view, so the camera barely moves and a parallax would buy nothing it could show. Cool palette for Arena01 and warm for Arena02, which is the difference they already have |
+| `[ ]` | Terrain is a tilemap, and the player does not catch on it | — | The risky one. The motor casts against live colliders, so the arena's colliders ARE the surface reconciliation replays against. Tilemap plus TilemapCollider2D plus CompositeCollider2D in Outlines, tried first because Luca has been caught by a composite trapping the player at edges before; if it does it again the fallback is an editor tool that emits rectangle colliders from the terrain's own shape. Platforms are their own prefab with their own colliders, not part of the tilemap |
+| `[ ]` | Pixel Perfect Camera, with the framing checked afterwards | — | It derives orthographicSize from a reference resolution, so the 24.9x14 view can move — ArenaBounds and the spectator camera clamp are both matched to it and have to be re-checked in the sandbox |
+| `[ ]` | The UI stops looking like a default stylesheet | — | A CC0 pixel-art pack for the UI Toolkit panels, 9-sliced. CC0 matters here beyond taste: this repository is shown to strangers, and a pack needing attribution is a line in the README nobody remembers to keep |
 
 ## Decisions
 
@@ -356,6 +370,16 @@ the part of the board worth reading a year from now.
 **Why:** Being listed is not a second kind of session, it is the same one with a door somebody can find. A browser that only shows the games whose hosts remembered to tick a box is a browser that is usually empty, which is the failure mode the feature exists to avoid. The code alone is already what a game nobody can find looks like.
 
 **Rejected:** A public/private toggle on the front screen. It is one checkbox and can be added the day somebody wants it, but adding it now would mean shipping a browser whose most likely state is empty.
+
+### D-022 — Animation is derived from the replicated state, not replicated itself
+
+*2026-08-26* · epic **visuals**
+
+**Chosen:** Each peer picks a character's clip from the PlayerState it already has — velocity, grounded, stun — rather than receiving animator parameters through NetworkAnimator.
+
+**Why:** The state animation needs already crosses the wire every tick for its own reason, so replicating a second description of it spends bandwidth on something derivable and creates a second source of truth that can disagree with the first. It is also the only correct answer under prediction: NetworkAnimator would drive the owner's own character from the server's timeline, so your legs would move a round trip after your body did. Deriving means the owner animates from its predicted state and a remote from its interpolated one, each matching what is drawn. It is the same argument docs/02 makes for the HUD — every number shown already crossed the network for its own reason.
+
+**Rejected:** NetworkAnimator, which is less code and what Unity documents; and sending a facing bit in the snapshot, which was offered and declined — facing is derived from the sign of the velocity with the last non-zero value held.
 
 ## Known problems
 
