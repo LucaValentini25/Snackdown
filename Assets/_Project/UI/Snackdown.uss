@@ -102,9 +102,24 @@
     background-color: var(--bg);
 }
 
+/* Nothing inside a panel may be squeezed to make it fit.
+ *
+ * Flex shrinks its children by default, and a lobby whose content is taller than the screen does
+ * not report that: it silently compresses every row until the rules panel is five labels drawn on
+ * top of each other and the fields are stripes. Refusing to shrink turns a layout that lies into
+ * one that overflows, which is a problem you can see and therefore fix.
+ */
+.panel > * {
+    flex-shrink: 0;
+}
+
+.settings__row {
+    flex-shrink: 0;
+}
+
 .panel {
     width: 420px;
-    padding: 24px;
+    padding: 16px;
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Frame01a.png");
     -unity-slice-left: 5;
     -unity-slice-top: 7;
@@ -113,8 +128,37 @@
     -unity-slice-scale: 3px;
 }
 
+/* The lobby is the only screen dense enough to run out of height. Side by side, the roster and the
+   rules cost the taller of the two instead of both, which is what buys the room to set the type at
+   a size somebody can read across a room. */
+.panel--wide {
+    width: 560px;
+}
+
+.lobby-columns {
+    flex-direction: row;
+}
+
+.lobby-column {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 4px;
+}
+
+/* Buttons share a row and the width between them. Stacked they cost this panel 150 units of the
+   540 it has, and it is the one screen with no room to spare. */
+.button-row {
+    flex-direction: row;
+}
+
+.button-row > .button {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 5px 3px 0 3px;
+}
+
 .title {
-    font-size: 34px;
+    font-size: 40px;
     -unity-font-style: bold;
     color: var(--ink);
     -unity-text-align: middle-center;
@@ -122,10 +166,10 @@
 }
 
 .subtitle {
-    font-size: 13px;
+    font-size: 15px;
     color: var(--ink);
     -unity-text-align: middle-center;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     white-space: normal;
 }
 
@@ -136,9 +180,9 @@
 }
 
 .field > .unity-base-field__label {
-    min-width: 78px;
+    min-width: 84px;
     color: var(--ink);
-    font-size: 13px;
+    font-size: 15px;
 }
 
 .field > .unity-base-text-field__input {
@@ -161,8 +205,8 @@
    the mouse crosses it — which is why the border was copied from the first state onto the other
    three rather than set four times by hand. */
 .button {
-    height: 40px;
-    margin: 4px 0 0 0;
+    height: 46px;
+    margin: 5px 0 0 0;
     padding: 0 16px;
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_1.png");
     -unity-slice-left: 3;
@@ -173,7 +217,7 @@
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     color: var(--ink);
-    font-size: 15px;
+    font-size: 17px;
     -unity-font-style: bold;
 }
 
@@ -197,8 +241,16 @@
 /* The one button on each screen that is the thing you came to do. It keeps the pack's frame and
    takes the accent on its label, because tinting the whole sprite would flatten the shading the
    frame is drawn with. */
+/* Its own cut, because it is its own art. Button02a has a taller lip than Button01a - 10 pixels of
+   top against 7 - and inheriting the first button's slice made UI Toolkit log the mismatch on every
+   frame it drew. The numbers are the ones set on the sprite in the Sprite Editor, which is where
+   they were measured off the art. */
 .button--primary {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_1.png");
+    -unity-slice-left: 5;
+    -unity-slice-top: 10;
+    -unity-slice-right: 5;
+    -unity-slice-bottom: 6;
 }
 
 .button--primary:hover {
@@ -232,7 +284,7 @@
 
 .roster {
     margin: 4px 0 var(--gap) 0;
-    min-height: 140px;
+    min-height: 120px;
 }
 
 .roster-row {
@@ -251,7 +303,7 @@
 }
 
 .roster-row__name {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink);
 }
 
@@ -387,9 +439,9 @@
 }
 
 .settings__title {
-    font-size: 12px;
+    font-size: 14px;
     color: var(--ink);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     -unity-font-style: bold;
 }
 
@@ -397,19 +449,29 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
 }
 
 .settings__label {
-    font-size: 13px;
+    font-size: 15px;
     color: var(--ink);
 }
 
 /* Fixed rather than growing: four rows whose fields all start at the same x read as a table,
-   and a column that jogs left and right with the length of each label does not. */
+   and a column that jogs left and right with the length of each label does not. Narrower since the
+   rules moved into a column half the panel's width - at the old 150 the longest labels pushed their
+   fields out through the side of the frame. */
 .settings__control {
-    width: 150px;
+    width: 118px;
+    min-width: 118px;
     margin: 0;
+}
+
+/* The label yields, not the control. A clipped "Drain per second" is still readable; a clipped
+   number field is a box with no number in it. */
+.settings__label {
+    flex-shrink: 1;
+    overflow: hidden;
 }
 
 /* Every control here is labelled by a Label of its own in the row, so the one UI Toolkit builds
