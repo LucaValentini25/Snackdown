@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 79% — 55 done, 2 in progress, 0 blocked, 13 to do, 2 dropped, across 10 epics.
+**Overall:** 81% — 57 done, 2 in progress, 0 blocked, 11 to do, 2 dropped, across 10 epics.
 
 ## Epics
 
@@ -22,7 +22,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | Done | 4/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 6/7 |
 | [Loose ends](#loose-ends) | 5 | To do | 5/5 |
-| [Make it look like a game](#make-it-look-like-a-game) | 5 | To do | 2/16 |
+| [Make it look like a game](#make-it-look-like-a-game) | 5 | To do | 4/16 |
 
 ### Netcode core — predicted character
 
@@ -155,8 +155,8 @@ The netcode is finished and invisible. What a stranger sees is untextured boxes 
 | `[ ]` | Terrain is a tilemap, and the player does not catch on it | — | The risky one. The motor casts against live colliders, so the arena's colliders ARE the surface reconciliation replays against. Tilemap plus TilemapCollider2D plus CompositeCollider2D in Outlines, tried first because Luca has been caught by a composite trapping the player at edges before; if it does it again the fallback is an editor tool that emits rectangle colliders from the terrain's own shape. Platforms are their own prefab with their own colliders, not part of the tilemap |
 | `[ ]` | Pixel Perfect Camera, with the framing checked afterwards | — | It derives orthographicSize from a reference resolution, so the 24.9x14 view can move — ArenaBounds and the spectator camera clamp are both matched to it and have to be re-checked in the sandbox |
 | `[x]` | The hover state stops drawing a white frame | — a style fix, verified by the console going quiet and by reading the cause rather than by hovering, which a screenshot cannot capture | A specificity problem, not a colour one. The default runtime theme styles .unity-button:hover, and a pseudo-class selector outranks our plain .button, so the theme's own hover colour and border painted straight through ours — the white frame. Beating it needs a rule of equal rank, so the transparent background and the zero border are repeated on every state instead of being inherited from one. It looks redundant and is load-bearing |
-| `[ ]` | The front screen is laid out, not just styled | — | Luca: the title and subtitle belong outside the panel, large, at the top, with the panel below them; Host and Join are wider than they need to be and should be narrower and centred; the name field does not read as something you type in and wants more height and larger text |
-| `[ ]` | Starting a connection hides the buttons instead of greying them | — | Luca, on both the front screen and the join screen: while an attempt is in flight, display none on everything except Cancel. It contradicts the reasoning in SetBusy, which argued a button that vanishes mid-click reads as a crash - that argument was about a button vanishing under the cursor, and this is the whole row going at once, which reads as a state change. Worth recording that it was a deliberate reversal |
+| `[x]` | The front screen is laid out, not just styled | — looked at. The title reads at 120 real pixels on the dark backdrop, the panel is 600 wide holding one field and two 440-wide centred buttons, and the name field is tall enough to read as something you type in | The title moved out of the panel onto the backdrop, which meant it also had to change ink — it now takes the HUD pair, which exists for exactly this, text on something dark. That caught a rule this stylesheet had not needed before: .title and .title--hero are both a single class, so neither outranks the other and the file's order is the whole tie-break. Declared first, the hero variant lost and the name of the game was painted dark on a dark backdrop |
+| `[x]` | Starting a connection hides the buttons instead of greying them | — needs a real connection attempt to see, so it is on Luca's visual list: press Host and only Cancel and the status line should remain | Luca, on both the front screen and the join screen: while an attempt is in flight, display none on everything except Cancel. It contradicts the reasoning in SetBusy, which argued a button that vanishes mid-click reads as a crash - that argument was about a button vanishing under the cursor, and this is the whole row going at once, which reads as a state change. Worth recording that it was a deliberate reversal |
 | `[ ]` | The wardrobe says which skin is yours instead of implying it is broken | — | Luca: a selected skin currently looks disabled, as if another player had taken it. Taken stays grey; selected gets a border colour that stands out; and the swatch gets a background from the pack behind the character so it contrasts with the sprite instead of sitting on a flat panel |
 | `[ ]` | The lobby stops being cramped and lines up | — | Luca: the whole thing is compressed and can spread out; joining as a client leaves the rules box misaligned with the player list, so either the list gets a box of its own or the two are aligned; the disabled Start match button does not fit its own frame; the room code row can be smaller and Copy can be an icon |
 | `[ ]` | The rules panel reads correctly at a glance | — | Luca: the preset dropdown clips its own selection, and the number fields are too large with their text off-centre |

@@ -359,16 +359,29 @@ namespace Snackdown.UI
         /// wrong — a Cancel that does not appear during an attempt — is worse than the cost of
         /// showing a button nobody can see.
         /// </remarks>
+        /// <summary>
+        /// While an attempt is in flight, the only thing on screen is Cancel.
+        /// </summary>
+        /// <remarks>
+        /// <para><b>Hidden, not disabled — and that reverses what this method used to argue.</b> It
+        /// greyed everything out, on the grounds that a button vanishing mid-click reads as a crash.
+        /// That is true of <i>one</i> button going out from under a cursor. It is not true of the
+        /// whole row going at once, which reads as the screen having changed state, and it leaves a
+        /// panel of dead controls around the single live one.</para>
+        /// <para>The second half of that old argument still holds and is still handled: a second
+        /// attempt cannot be started over a half-open one, because there is nothing left to click.
+        /// </para>
+        /// </remarks>
         void SetBusy(bool busy)
         {
-            // Disabled rather than hidden: a button that vanishes mid-click reads as a crash, and
-            // starting a second attempt over a half-open one fails in ways nobody can explain.
-            _host.SetEnabled(!busy);
-            _join.SetEnabled(!busy);
-            _joinConfirm.SetEnabled(!busy);
-            _refresh.SetEnabled(!busy);
-            _back.SetEnabled(!busy);
-            _browseList.SetEnabled(!busy);
+            _host.EnableInClassList("hidden", busy);
+            _join.EnableInClassList("hidden", busy);
+            _joinConfirm.EnableInClassList("hidden", busy);
+            _refresh.EnableInClassList("hidden", busy);
+            _back.EnableInClassList("hidden", busy);
+            _browseList.EnableInClassList("hidden", busy);
+            _target.EnableInClassList("hidden", busy);
+            _nickname.EnableInClassList("hidden", busy);
 
             _cancel.EnableInClassList("hidden", !busy);
             _joinCancel.EnableInClassList("hidden", !busy);

@@ -135,6 +135,25 @@
     width: 560px;
 }
 
+/* One field and two buttons. At the lobby's width they float in the middle of an empty frame. */
+.panel--narrow {
+    width: 300px;
+}
+
+
+/* A field you type your name into should look like one from across the room. The default height
+   reads as a label with a line under it. */
+.field--tall > .unity-base-text-field__input {
+    height: 40px;
+    font-size: 18px;
+    padding: 0 10px;
+}
+
+.field--tall > .unity-base-field__label {
+    font-size: 16px;
+    -unity-text-align: middle-left;
+}
+
 .lobby-columns {
     flex-direction: row;
 }
@@ -143,6 +162,13 @@
     flex-grow: 1;
     flex-basis: 0;
     margin: 0 4px;
+}
+
+/* Narrower than the panel and centred. Two actions on the front screen do not need the full width
+   of anything; at it they read as a list rather than as a choice. */
+.panel--narrow > .button {
+    width: 220px;
+    align-self: center;
 }
 
 /* Buttons share a row and the width between them. Stacked they cost this panel 150 units of the
@@ -171,6 +197,21 @@
     -unity-text-align: middle-center;
     margin-bottom: 12px;
     white-space: normal;
+}
+
+/* Declared after .title and .subtitle on purpose. Both are a single class, so neither outranks the
+   other and the file's order is the whole tie-break — put these first and the plain rules win, and
+   the name of the game is painted dark ink on a dark backdrop. */
+.title--hero {
+    font-size: 60px;
+    color: var(--hud-ink);
+    margin-bottom: 0;
+}
+
+.subtitle--hero {
+    font-size: 17px;
+    color: var(--hud-ink-dim);
+    margin-bottom: 22px;
 }
 
 /* ── fields ─────────────────────────────────────────────────────────────────────── */
