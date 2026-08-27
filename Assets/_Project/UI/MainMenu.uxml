@@ -74,13 +74,22 @@
             <ui:VisualElement class="lobby-columns">
               <ui:VisualElement class="lobby-column">
 
-            <!-- Rows are built in code: the roster is replicated and its length changes at runtime,
-                 so laying out four fixed slots here would mean hiding and showing them instead. -->
-            <ui:VisualElement name="roster-list" class="roster" />
+                <!-- Boxed, like the rules beside it. Left bare, the players sat on the panel while
+                     the rules sat in a frame, and the two columns read as one thing and one absence
+                     rather than as two lists. -->
+                <ui:VisualElement class="settings">
+                    <ui:Label text="Players" class="settings__title" />
 
-            <!-- Built in code: one button per catalog entry, and the catalog is content whose
-                 length is not known here. Which are taken changes while the lobby is open. -->
-            <ui:VisualElement name="wardrobe-row" class="wardrobe" />
+                    <!-- Rows are built in code: the roster is replicated and its length changes at
+                         runtime, so laying out four fixed slots here would mean hiding and showing
+                         them instead. -->
+                    <ui:VisualElement name="roster-list" class="roster" />
+
+                    <!-- Built in code: one button per catalog entry, and the catalog is content
+                         whose length is not known here. Which are taken changes while the lobby is
+                         open. -->
+                    <ui:VisualElement name="wardrobe-row" class="wardrobe" />
+                </ui:VisualElement>
 
               </ui:VisualElement>
               <ui:VisualElement class="lobby-column">

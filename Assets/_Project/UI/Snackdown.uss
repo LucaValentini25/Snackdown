@@ -132,7 +132,7 @@
    rules cost the taller of the two instead of both, which is what buys the room to set the type at
    a size somebody can read across a room. */
 .panel--wide {
-    width: 560px;
+    width: 620px;
 }
 
 /* One field and two buttons. At the lobby's width they float in the middle of an empty frame. */
@@ -161,7 +161,7 @@
 .lobby-column {
     flex-grow: 1;
     flex-basis: 0;
-    margin: 0 4px;
+    margin: 0 5px;
 }
 
 /* Narrower than the panel and centred. Two actions on the front screen do not need the full width
@@ -464,24 +464,39 @@
     margin-bottom: var(--gap);
 }
 
+/* The pack's own background tile behind the character rather than a flat panel colour. These
+   sprites are drawn with a dark outline meant to sit against something; on the panel's own grey
+   they read as an image that failed to load. Gray at rgb(204,204,204) is the neutral of the seven
+   and does not compete with any of the four characters, which are green, pink, blue and brown. */
 .wardrobe__skin {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 60px;
     margin: 0 4px;
     padding: 0;
     border-width: 2px;
     border-color: var(--panel-edge);
-    border-radius: 4px;
-    background-color: var(--accent-ink);
+    border-radius: 0;
+    background-image: url("project://database/Assets/Pixel Adventure 1/Assets/Background/Gray.png");
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.wardrobe__portrait {
+    flex-grow: 1;
+    margin: 4px;
     -unity-background-scale-mode: scale-to-fit;
 }
 
-/* The one you are wearing, and the ones nobody can have. Border rather than a badge: at 56px a
-   badge is bigger than the thing it labels. */
+/* The one you are wearing. A thicker border in the warm tile plus a colour, because on a light
+   panel a dark red edge two pixels wide is a detail and this has to be the thing you see first. */
 .wardrobe__skin--yours {
+    border-width: 3px;
     border-color: var(--accent);
+    background-image: url("project://database/Assets/Pixel Adventure 1/Assets/Background/Yellow.png");
 }
 
+/* Taken by somebody else. Grey and dimmed, which is what unavailable looks like everywhere else in
+   this stylesheet - and it is now the only thing in the row that looks like that, which is the
+   whole point of the change. */
 .wardrobe__skin--taken {
     opacity: 0.35;
 }
@@ -640,15 +655,18 @@
     opacity: 0.5;
 }
 
+/* Half the width and pushed right. It is a value you read once and hand to somebody; at full width
+   it was the largest thing on a screen whose subject is the players in the room. */
 .join-code-row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: var(--gap);
+    justify-content: flex-end;
+    margin-bottom: 8px;
 }
 
 .join-code {
-    flex-grow: 1;
-    padding: 10px;
+    width: 190px;
+    padding: 7px;
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
@@ -663,7 +681,7 @@
 
 /* Sits next to the code rather than below it, so the pair reads as one control. */
 .button--compact {
-    height: 34px;
+    height: 30px;
     margin: 0 0 0 8px;
     padding: 0 14px;
     font-size: 13px;
