@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 88% — 53 done, 1 in progress, 0 blocked, 6 to do, 2 dropped, across 10 epics.
+**Overall:** 88% — 53 done, 2 in progress, 0 blocked, 5 to do, 2 dropped, across 10 epics.
 
 ## Epics
 
@@ -154,7 +154,7 @@ The netcode is finished and invisible. What a stranger sees is untextured boxes 
 | `[ ]` | A background behind each arena | — | Static tiled, no parallax: the arena is 26x9 against a 24.9x14 view, so the camera barely moves and a parallax would buy nothing it could show. Cool palette for Arena01 and warm for Arena02, which is the difference they already have |
 | `[ ]` | Terrain is a tilemap, and the player does not catch on it | — | The risky one. The motor casts against live colliders, so the arena's colliders ARE the surface reconciliation replays against. Tilemap plus TilemapCollider2D plus CompositeCollider2D in Outlines, tried first because Luca has been caught by a composite trapping the player at edges before; if it does it again the fallback is an editor tool that emits rectangle colliders from the terrain's own shape. Platforms are their own prefab with their own colliders, not part of the tilemap |
 | `[ ]` | Pixel Perfect Camera, with the framing checked afterwards | — | It derives orthographicSize from a reference resolution, so the 24.9x14 view can move — ArenaBounds and the spectator camera clamp are both matched to it and have to be re-checked in the sandbox |
-| `[ ]` | The UI stops looking like a default stylesheet | — | Crusenho's Complete UI Essential Pack, CC BY 4.0, chosen after Kenney's two were rejected on style. See D-023, which is really a decision about the repository rather than about art: the Unity Asset Store was ruled out because its EULA forbids redistribution and a public GitHub repository is redistribution. Blocked until Luca downloads the pack — itch.io's name-your-own-price flow is not something this session can go through |
+| `[~]` | The UI stops looking like a default stylesheet | measured rather than eyeballed, because the mechanism is invisible until it is wrong: in play mode the panel resolves to a slice of 5/7/5/7 at scale 3 on Frame01a, the button to 3/7/3/6 at scale 2 on Button01a_1, and the loading bar to 2/2/2/3 on Bar01a. Whether it looks good is Luca's call and is not something this session can see | Crusenho's Complete UI Essential Pack, CC BY 4.0, chosen after Kenney's two were rejected on style. See D-023, which is really a decision about the repository rather than about art: the Unity Asset Store was ruled out because its EULA forbids redistribution and a public GitHub repository is redistribution. Blocked until Luca downloads the pack — itch.io's name-your-own-price flow is not something this session can go through |
 
 ## Decisions
 
