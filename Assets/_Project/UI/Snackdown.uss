@@ -23,16 +23,56 @@
  * about.
  */
 
+/*
+ * ── The palette is chosen against the pack, and against numbers ───────────────────
+ *
+ * These used to be a dark UI: near-white ink on a panel of rgb(38, 35, 50). The pack's Flat theme
+ * is the opposite - its frame is rgb(173, 183, 196) and its buttons are rgb(255, 253, 245) - so
+ * every one of those values had to be inverted. The old ink on the new button face measures a
+ * contrast ratio of 1.21, which is not "low", it is invisible.
+ *
+ * The replacements were measured rather than picked, sampling the sprites and computing WCAG
+ * contrast. Against the button face and the panel face respectively:
+ *
+ *     --ink        15.84   7.95     body text anywhere
+ *     --ink-dim     7.17   3.60     secondary text on a button or field; large text on a panel
+ *     --accent      5.53   2.77     body on a button, large only on a panel
+ *     --ok          5.22   2.62
+ *     --bad         6.36   3.19
+ *
+ * The one rule that falls out of it: the panel face is the weaker surface, so text sitting directly
+ * on a panel takes --ink and not --ink-dim. 3.60 is fine for a label beside a control and not for a
+ * sentence somebody has to read.
+ *
+ * --bg stays dark on purpose. It is the screen behind the panels, and the light frames need
+ * something to sit against.
+ */
 :root {
     --bg: rgb(24, 22, 32);
-    --panel: rgb(38, 35, 50);
-    --panel-edge: rgb(62, 57, 82);
-    --ink: rgb(232, 230, 240);
-    --ink-dim: rgb(150, 146, 168);
-    --accent: rgb(238, 108, 92);
-    --accent-ink: rgb(28, 24, 30);
-    --ok: rgb(126, 200, 130);
-    --bad: rgb(232, 112, 112);
+    --panel: rgb(173, 183, 196);
+    --panel-edge: rgb(120, 132, 148);
+    --ink: rgb(34, 31, 45);
+    --ink-dim: rgb(88, 83, 110);
+    --accent: rgb(186, 58, 44);
+    --accent-ink: rgb(255, 253, 245);
+    --ok: rgb(46, 122, 52);
+    --bad: rgb(176, 44, 44);
+
+    /*
+     * The HUD is the other half of the palette and it could not share the first.
+     *
+     * A menu is a light frame from the pack on a dark backdrop; the in-match HUD is the opposite -
+     * dark translucent strips laid over a lit arena, because anything opaque there covers the game
+     * it is reporting on. So the ink that reads on a panel is the ink that disappears on a life
+     * bar, and vice versa. Two pairs rather than one, named for where they are allowed.
+     *
+     * Against the strips' rgba(12, 11, 16, 0.72), --hud-ink measures 15.3 and --hud-accent 6.4.
+     */
+    --hud-ink: rgb(238, 236, 246);
+    --hud-ink-dim: rgb(158, 154, 176);
+    --hud-accent: rgb(240, 122, 106);
+    --hud-ok: rgb(126, 200, 130);
+    --hud-bad: rgb(232, 112, 112);
 
     --gap: 12px;
     --radius: 6px;
@@ -66,7 +106,7 @@
 
 .subtitle {
     font-size: 13px;
-    color: var(--ink-dim);
+    color: var(--ink);
     -unity-text-align: middle-center;
     margin-bottom: 20px;
     white-space: normal;
@@ -80,7 +120,7 @@
 
 .field > .unity-base-field__label {
     min-width: 78px;
-    color: var(--ink-dim);
+    color: var(--ink);
     font-size: 13px;
 }
 
@@ -141,7 +181,19 @@
    takes the accent on its label, because tinting the whole sprite would flatten the shading the
    frame is drawn with. */
 .button--primary {
-    color: var(--accent);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_1.png");
+}
+
+.button--primary:hover {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_2.png");
+}
+
+.button--primary:active {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_3.png");
+}
+
+.button--primary:disabled {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_4.png");
 }
 
 /* ── status line ────────────────────────────────────────────────────────────────── */
@@ -286,9 +338,9 @@
     margin: 0 4px;
     padding: 0;
     border-width: 2px;
-    border-color: var(--bg);
+    border-color: var(--panel-edge);
     border-radius: 4px;
-    background-color: var(--bg);
+    background-color: var(--accent-ink);
     -unity-background-scale-mode: scale-to-fit;
 }
 
@@ -302,16 +354,24 @@
     opacity: 0.35;
 }
 
+/* Inset rather than dark. It used to be a dark box on a dark panel; on a light one the same idea
+   is the pack's own slot frame, which reads as recessed without needing a colour that fights the
+   ink sitting on it. */
 .settings {
     margin-bottom: var(--gap);
-    padding: 8px 10px;
-    background-color: var(--bg);
-    border-radius: 4px;
+    padding: 10px 12px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 4;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 4;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .settings__title {
     font-size: 12px;
-    color: var(--ink-dim);
+    color: var(--ink);
     margin-bottom: 6px;
     -unity-font-style: bold;
 }
@@ -355,12 +415,28 @@
    out flat grey against white neighbours, which reads as disabled - and both of these are live
    controls that the host is meant to use. */
 .settings__control > .unity-base-popup-field__input {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Select01a_1.png");
-    -unity-slice-left: 10;
-    -unity-slice-top: 10;
-    -unity-slice-right: 10;
-    -unity-slice-bottom: 10;
-    -unity-slice-scale: 1px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    color: var(--ink);
+    padding: 6px 8px;
+}
+
+/* The number fields in this panel carry .settings__control, not .field, so the rule that styles a
+   text field on the menu never reached them and they fell through to the default theme - white
+   boxes among framed ones. */
+.settings__control > .unity-base-text-field__input {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     color: var(--ink);
@@ -382,8 +458,13 @@
 .join-code {
     flex-grow: 1;
     padding: 10px;
-    background-color: var(--bg);
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
     font-size: 15px;
     color: var(--ink);
     -unity-text-align: middle-center;
@@ -413,13 +494,13 @@
 .loading-title {
     font-size: 28px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     margin-bottom: 6px;
 }
 
 .loading-detail {
     font-size: 13px;
-    color: var(--ink-dim);
+    color: var(--hud-ink-dim);
     margin-bottom: 18px;
 }
 
@@ -441,7 +522,7 @@
 .progress-fill {
     height: 100%;
     width: 0;
-    background-color: var(--accent);
+    background-color: var(--hud-accent);
     transition-property: width;
     transition-duration: 0.25s;
 }
@@ -450,7 +531,7 @@
     margin-top: 20px;
     font-size: 44px;
     -unity-font-style: bold;
-    color: var(--accent);
+    color: var(--hud-accent);
 }
 
 /* ── end screen ──────────────────────────────────────────────────────── */
@@ -489,7 +570,7 @@
 .round-clock {
     font-size: 22px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     padding: 2px 12px;
     background-color: rgba(12, 11, 16, 0.55);
     border-radius: 4px;
@@ -497,7 +578,7 @@
 
 /* Red under the threshold, so running out is felt before it is read. */
 .round-clock--urgent {
-    color: var(--bad);
+    color: var(--hud-bad);
 }
 
 /* ── option A: nameplate over the character (world space) ────────────────────── */
@@ -517,7 +598,7 @@
 .nameplate__name {
     font-size: 30px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     -unity-text-outline-width: 2px;
     -unity-text-outline-color: rgb(12, 11, 16);
     margin-bottom: 4px;
@@ -544,11 +625,11 @@
 .nameplate__fill {
     height: 100%;
     width: 100%;
-    background-color: var(--ok);
+    background-color: var(--hud-ok);
 }
 
 .nameplate__fill--low {
-    background-color: var(--bad);
+    background-color: var(--hud-bad);
 }
 
 /* ── option B: life bars along the bottom ───────────────────────────────── */
@@ -594,12 +675,12 @@
 
 .lifebar__name {
     font-size: 12px;
-    color: var(--ink);
+    color: var(--hud-ink);
     margin-bottom: 3px;
 }
 
 .lifebar__name--you {
-    color: var(--accent);
+    color: var(--hud-accent);
 }
 
 /* The track is the pack's empty bar, sliced so it can be any width; the fill is a flat colour
@@ -608,30 +689,30 @@
    when the life is low — which is the one thing this bar has to say. */
 .lifebar__track {
     height: 14px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Bar01a.png");
+    background-image: none;
     -unity-slice-left: 2;
     -unity-slice-top: 2;
     -unity-slice-right: 2;
     -unity-slice-bottom: 3;
     -unity-slice-scale: 2px;
-    background-color: rgba(0, 0, 0, 0);
+    background-color: rgba(12, 11, 16, 0.85);
     overflow: hidden;
 }
 
 .lifebar__fill {
     height: 100%;
     width: 100%;
-    background-color: var(--ok);
+    background-color: var(--hud-ok);
 }
 
 .lifebar__fill--low {
-    background-color: var(--bad);
+    background-color: var(--hud-bad);
 }
 
 .lifebar__seconds {
     font-size: 14px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     margin-left: 10px;
     min-width: 46px;
     -unity-text-align: middle-right;
@@ -645,7 +726,7 @@
 /* Who the spectator camera is following. Arena01 is barely larger than the view, so the camera
    moving is not by itself an answer to "did that do anything?" — this is. */
 .lifebar--watched {
-    border-color: var(--accent);
+    border-color: var(--hud-accent);
     background-color: rgba(238, 108, 92, 0.18);
 }
 
