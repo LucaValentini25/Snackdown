@@ -321,6 +321,12 @@
 
   "risks": [
     {
+      "title": "Half the lead to the authoritative position may be a constant we chose",
+      "impact": "The ghost trails the character by about three units at the 432ms measured over Relay, and another player sees it worse by the interpolation delay — roughly 3.7 units against a character one unit wide. That is what the round trip costs and is the feature working. What is not known is how the 432ms divides: MaxQueueDepth is 8, so the server tolerates eight queued inputs before draining an extra one, and eight ticks is 267ms that enters the gap whole. Nobody has read the actual queue depth. Luca chose to measure before changing anything, which is right — lowering it trades jitter tolerance for freshness and invalidates docs/05. The procedure is written up there and is two live readings plus a LAN control.",
+      "severity": "medium",
+      "status": "open"
+    },
+    {
       "title": "Neither peer-contact source has been measured",
       "impact": "pl-1 built both and left the choice open, which is what Luca asked for. Nothing has run the comparison in docs/05 yet, so the project still cannot say which is better — only that it can now find out. The default is unchanged, so nothing measured so far is invalidated. The measurement is two people deliberately colliding under 20% loss and cannot be automated: the harness cannot reach a match at all (D-019).",
       "severity": "low",
