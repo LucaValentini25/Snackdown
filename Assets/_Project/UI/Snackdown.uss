@@ -569,9 +569,10 @@
     padding: 6px 8px;
 }
 
-/* The number fields in this panel carry .settings__control, not .field, so the rule that styles a
-   text field on the menu never reached them and they fell through to the default theme - white
-   boxes among framed ones. */
+/* Was written for the rules' number fields, which are steppers now and no longer text fields at
+   all. It stays because .settings__control is a shape, not a place, and the next text field given
+   that class should still be framed rather than falling through to the default theme's white box —
+   which is what these did before it existed. */
 .settings__control > .unity-base-text-field__input {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
     -unity-slice-left: 3;
@@ -583,6 +584,54 @@
     border-width: 0;
     color: var(--ink);
     padding: 6px 8px;
+}
+
+/* ── the number stepper ───────────────────────────────────────────── */
+
+/* A row of arrow, number, arrow. It wears the field frame so it reads as the same kind of control as
+   the dropdowns above it, and the number is centred because it is the whole content — a value
+   pushed against the left edge of a box with an arrow on either side looks like a mistake. */
+.number-stepper {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 26px;
+    padding: 0 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+}
+
+.number-stepper__readout {
+    flex-grow: 1;
+    font-size: 15px;
+    color: var(--ink);
+    -unity-text-align: middle-center;
+}
+
+.number-stepper__arrow {
+    width: 14px;
+    font-size: 14px;
+    color: var(--ink-dim);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+}
+
+.number-stepper__arrow:hover {
+    color: var(--accent);
+}
+
+/* The line that makes this usable without a mouse. On a pad the only way to know which rule you are
+   about to change is that the control says so, and nothing else on this panel has a focus state. */
+.number-stepper:focus {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField02a.png");
+}
+
+.number-stepper:focus > .number-stepper__arrow {
+    color: var(--accent);
 }
 
 /* Disabled has to look different from enabled, now that enabled no longer looks disabled. It is
