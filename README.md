@@ -132,6 +132,18 @@ The four playable characters are the pack's Mask Dude, Ninja Frog, Pink Man and 
 are cosmetic only: nothing in the simulation reads which one you picked, which is what makes them
 mechanically identical rather than merely intended to be.
 
+Interface art: **[Complete UI Essential Pack](https://crusenho.itch.io/complete-ui-essential-pack)**
+by **Crusenho Agus Hennihuno**, released under
+**[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)**. Only the Flat theme's individual
+sprites are bundled. *Changes made:* re-imported for this project — point filtering, no compression,
+full-rect meshes — and the nine-slice borders are declared in
+[`Snackdown.uss`](Assets/_Project/UI/Snackdown.uss) rather than baked into the sprites.
+
+**Both packs are redistributable, and that is why they are here rather than linked.** The Unity Asset
+Store was excluded from this project before any pack was looked at: its EULA forbids redistributing
+an asset, and committing one to a public repository is redistribution. The usual answer — gitignore
+the art and tell people where to buy it — hands anyone who clones this a project that does not open.
+
 Everything else in this repository — every script, test, scene, prefab and document — is original.
 
 ## 📄 License
