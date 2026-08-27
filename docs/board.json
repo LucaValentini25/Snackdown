@@ -321,10 +321,10 @@
 
   "risks": [
     {
-      "title": "Most of the lead to the authoritative position is still unattributed",
-      "impact": "Measured 2026-08-26 over Relay: 400ms of lead, a 3.0 unit gap to the ghost, and a server input queue sitting at 2-3. MaxQueueDepth is exonerated — it is 8 and the queue never approaches it, so lowering it would have cost jitter tolerance for nothing. The queue accounts for about 83ms; the remaining ~317ms is transit plus the lead NGO runs the client clock at, and is not attributed. The gap itself is exactly the round trip drawn, with no unexplained separation on top. What is left is the loopback control in docs/05, which separates the relay hop from the client lead.",
+      "title": "The lead to the authoritative position was unattributed",
+      "impact": "Closed by measurement. Over Relay: 400ms of lead, a 3.0 unit gap, queue at 2-3. On loopback, same match, same build: under 1 unit and a queue of 1-2. The 317ms that was unattributed is the relay hop, and prediction is doing exactly its job. MaxQueueDepth was exonerated on the way — it is 8 and the queue never approaches it, so lowering it would have cost jitter tolerance for nothing. The floor left on loopback is one or two ticks of queue plus NGO's client lead, with nothing to reclaim. Recorded in docs/05 along with why a rendezvous costs what it does: every message crosses the internet twice, which is the price of nobody opening a port.",
       "severity": "low",
-      "status": "open"
+      "status": "closed"
     },
     {
       "title": "Neither peer-contact source has been measured",
@@ -407,6 +407,10 @@
   ],
 
   "log": [
+    {
+      "date": "2026-08-26",
+      "entry": "Closed the question about the gap to the ghost, and it closed the way the project would want: by measurement rather than by tuning. Loopback, same match and same build, puts the gap under a unit and the queue at 1-2, against 3.0 units and 2-3 over Relay. The 317ms nobody could account for is the relay hop — a rendezvous means every message crosses the internet twice, which is the price of nobody having to open a port. Nothing was changed to get there: the input queue was exonerated, the client lead has nothing to reclaim, and the separation Luca was looking at turned out to be the round trip drawn to scale. It is also the whole argument of the project, measured end to end: over a 400ms link the player feels nothing and the entire visible cost is a ghost three units back."
+    },
     {
       "date": "2026-08-26",
       "entry": "Measured the input queue rather than guessing at it, and the guess was wrong in the useful direction. MaxQueueDepth is 8 and the queue sits at 2-3, so the branch that drains an extra command has almost certainly never run and lowering the cap would have bought nothing while costing jitter tolerance. A depth of two or three is what a well-tuned client lead looks like. It accounts for 83ms of a 400ms lead; the rest is transit and NGO's own lead and is still unattributed. Worth recording that the gap Luca was looking at is exactly the round trip and nothing more: 400ms at 7 u/s predicts 2.8 units and 3.0 were measured, so there is no unexplained separation to find. The loopback control is what is left."

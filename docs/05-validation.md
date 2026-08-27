@@ -202,10 +202,35 @@ NGO runs the client's clock at, and is not yet attributed.
 **The gap is exactly the round trip and nothing else.** 400 ms at 7 u/s predicts 2.8 units; 3.0 were
 measured. There is no unexplained separation on top — what is on screen is the latency, drawn.
 
-> **Still open: the LAN control.** Relay is a rendezvous, so every message is relayed rather than
-> sent: a client-to-server command travels client → relay → host, and the round trip pays that twice.
-> With the region chosen by QoS from Argentina that is plausibly most of the 317 ms, but plausibly is
-> not measured. The loopback run below is what settles it.
+### The loopback control — it is the relay hop
+
+The same match with *Use Relay* unchecked, both peers on `127.0.0.1`, so there is no network at all.
+
+| | Relay | Loopback |
+|---|---|---|
+| `authority gap` at full speed | 3.0 u | **under 1 u** |
+| `input queue` on the host | 2–3 | **1–2** |
+
+**The 317 ms is the relay hop, and prediction is doing exactly its job.** Take the network away and
+the ghost sits within a body width of the character; put a relay in and it is three. Nothing in
+between those two runs changed except the path the packets took.
+
+Worth being precise about *why* the relay costs that, because the obvious explanation is the wrong
+one. It is not that Relay is a free or test tier that performs worse — it is a production service and
+adds no artificial delay. The cost is geometric: a rendezvous server means neither peer connects to
+the other, so a command travels **client → relay → host** and the answer comes back the same way. Every
+message crosses the internet twice instead of once, and the region is picked by QoS from wherever the
+players are — from Argentina, plausibly North America. That is the price of not asking anyone to open
+a port, and [01 — Architecture](01-architecture.md) took it deliberately.
+
+What is left on loopback — under a unit, so under about 140 ms of lead — is the floor the machinery
+itself costs: one or two ticks of input queue, NGO's client lead, and tick quantization. There is
+nothing to reclaim there.
+
+> **This is the whole argument, measured.** Over a link with a 400 ms round trip the player feels
+> nothing, because prediction covers it; the entire cost is a ghost three units back that only exists
+> because the overlay draws it. Turn prediction off on the same link and the character takes a second
+> to answer — which is what the run with zero corrections recorded on 2026-08-26 was.
 
 ### The procedure
 
