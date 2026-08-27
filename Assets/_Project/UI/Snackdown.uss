@@ -281,8 +281,42 @@
 /* Fixed rather than growing: four rows whose fields all start at the same x read as a table,
    and a column that jogs left and right with the length of each label does not. */
 .settings__control {
-    width: 130px;
+    width: 150px;
     margin: 0;
+}
+
+/* Every control here is labelled by a Label of its own in the row, so the one UI Toolkit builds
+   inside the field is empty - and an empty label is not free. Unity's runtime theme gives it a
+   min-width, which ate a third of the 130px this column used to be. That is what made "Arena 01"
+   and "Arena 02" both render as "Arena 0": the field had room for every character except the one
+   that told them apart, so the picker looked broken while working perfectly. */
+.settings__control > .unity-base-field__label {
+    display: none;
+}
+
+/* And if a name is ever genuinely too long for the column, it says so rather than quietly
+   reading as a different entry. */
+.settings__control .unity-base-popup-field__text {
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* Dropdowns are painted like the number fields beside them. Left to the default theme they come
+   out flat grey against white neighbours, which reads as disabled - and both of these are live
+   controls that the host is meant to use. */
+.settings__control > .unity-base-popup-field__input {
+    background-color: var(--bg);
+    border-color: var(--panel-edge);
+    border-width: 1px;
+    border-radius: 4px;
+    color: var(--ink);
+    padding: 6px 8px;
+}
+
+/* Disabled has to look different from enabled, now that enabled no longer looks disabled. It is
+   the state a client sees for the whole panel: the rules are visible and not theirs to move. */
+.settings__control:disabled {
+    opacity: 0.5;
 }
 
 .join-code-row {

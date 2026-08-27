@@ -132,10 +132,14 @@ namespace Snackdown.UI
             NetworkManager networkManager = NetworkManager.Singleton;
             if (networkManager == null) return "unknown";
 
-            // The peer-contact source goes in first because it is the thing two runs are being
-            // compared on, and a file that does not say which setting produced it is not a
-            // measurement of anything.
-            string tick = $"peer contact {PredictedPlayer.PeerContact} | tick {networkManager.NetworkConfig.TickRate}Hz";
+            // What the toggles were set to goes in first. A file that does not say which settings
+            // produced it is not a measurement of anything - and prediction earns its place at the
+            // front of that line, because a run recorded with it off is not a reconciliation run at
+            // all. One was exported with zero corrections in sixty-seven seconds and read as the
+            // netcode being broken; it was F1.
+            string tick = $"prediction {(PredictedPlayer.PredictionEnabled ? "ON" : "OFF")}"
+                          + $" | peer contact {PredictedPlayer.PeerContact}"
+                          + $" | tick {networkManager.NetworkConfig.TickRate}Hz";
             NetworkSimulator simulator = FindFirstObjectByType<NetworkSimulator>();
 
             if (simulator == null || simulator.ConnectionPreset == null)
