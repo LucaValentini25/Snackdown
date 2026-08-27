@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using Snackdown.Connection;
 using Snackdown.Gameplay.Match;
@@ -33,12 +34,20 @@ namespace Snackdown.UI
         CancellationTokenSource _attempt;
 
         VisualElement _menuScreen;
+        VisualElement _joinScreen;
         VisualElement _lobbyScreen;
         TextField _nickname;
         TextField _target;
         Button _host;
         Button _join;
         Button _cancel;
+        VisualElement _browseSection;
+        VisualElement _browseList;
+        Button _refresh;
+        Button _joinConfirm;
+        Button _joinCancel;
+        Button _back;
+        Label _joinStatus;
         Button _ready;
         Button _start;
         Button _leave;
@@ -52,6 +61,8 @@ namespace Snackdown.UI
         VisualElement _wardrobeRow;
 
         VisualElement _settingsPanel;
+        VisualElement _arenaRow;
+        DropdownField _arena;
         VisualElement _presetRow;
         DropdownField _preset;
         FloatField _startingLife;
@@ -83,12 +94,20 @@ namespace Snackdown.UI
             VisualElement root = _document.rootVisualElement;
 
             _menuScreen = root.Q<VisualElement>("menu-screen");
+            _joinScreen = root.Q<VisualElement>("join-screen");
             _lobbyScreen = root.Q<VisualElement>("lobby-screen");
             _nickname = root.Q<TextField>("nickname-field");
             _target = root.Q<TextField>("target-field");
             _host = root.Q<Button>("host-button");
             _join = root.Q<Button>("join-button");
             _cancel = root.Q<Button>("cancel-button");
+            _browseSection = root.Q<VisualElement>("browse-section");
+            _browseList = root.Q<VisualElement>("browse-list");
+            _refresh = root.Q<Button>("refresh-button");
+            _joinConfirm = root.Q<Button>("join-confirm-button");
+            _joinCancel = root.Q<Button>("join-cancel-button");
+            _back = root.Q<Button>("back-button");
+            _joinStatus = root.Q<Label>("join-status");
             _ready = root.Q<Button>("ready-button");
             _start = root.Q<Button>("start-button");
             _leave = root.Q<Button>("leave-button");
@@ -102,6 +121,8 @@ namespace Snackdown.UI
             _wardrobeRow = root.Q<VisualElement>("wardrobe-row");
 
             _settingsPanel = root.Q<VisualElement>("settings-panel");
+            _arenaRow = root.Q<VisualElement>("arena-row");
+            _arena = root.Q<DropdownField>("arena-field");
             _presetRow = root.Q<VisualElement>("preset-row");
             _preset = root.Q<DropdownField>("preset-field");
             _startingLife = root.Q<FloatField>("starting-life-field");
@@ -120,11 +141,16 @@ namespace Snackdown.UI
             _host.clicked += OnHostClicked;
             _join.clicked += OnJoinClicked;
             _cancel.clicked += OnCancelClicked;
+            _refresh.clicked += OnRefreshClicked;
+            _joinConfirm.clicked += OnJoinConfirmClicked;
+            _joinCancel.clicked += OnCancelClicked;
+            _back.clicked += OnBackClicked;
             _ready.clicked += OnReadyClicked;
             _start.clicked += OnStartClicked;
             _leave.clicked += OnLeaveClicked;
             _copyCode.clicked += OnCopyCodeClicked;
 
+            _arena.RegisterValueChangedCallback(OnArenaPicked);
             _preset.RegisterValueChangedCallback(OnPresetPicked);
             _startingLife.RegisterValueChangedCallback(OnSettingEdited);
             _maxLife.RegisterValueChangedCallback(OnSettingEdited);
@@ -163,11 +189,16 @@ namespace Snackdown.UI
             _host.clicked -= OnHostClicked;
             _join.clicked -= OnJoinClicked;
             _cancel.clicked -= OnCancelClicked;
+            _refresh.clicked -= OnRefreshClicked;
+            _joinConfirm.clicked -= OnJoinConfirmClicked;
+            _joinCancel.clicked -= OnCancelClicked;
+            _back.clicked -= OnBackClicked;
             _ready.clicked -= OnReadyClicked;
             _start.clicked -= OnStartClicked;
             _leave.clicked -= OnLeaveClicked;
             _copyCode.clicked -= OnCopyCodeClicked;
 
+            _arena.UnregisterValueChangedCallback(OnArenaPicked);
             _preset.UnregisterValueChangedCallback(OnPresetPicked);
             _startingLife.UnregisterValueChangedCallback(OnSettingEdited);
             _maxLife.UnregisterValueChangedCallback(OnSettingEdited);
@@ -215,6 +246,10 @@ namespace Snackdown.UI
 
             _target.label = Provider.JoinsByCode ? "Code" : "Address";
 
+            // Hidden whole rather than left empty: an empty list with a Refresh button that can
+            // never find anything is a broken feature, not an absent one.
+            _browseSection.EnableInClassList("hidden", !Provider.CanBrowse);
+
             if (Provider.JoinsByCode)
             {
                 _target.value = string.Empty;
@@ -234,42 +269,72 @@ namespace Snackdown.UI
         {
             if (Provider == null) return;
 
-            BeginAttempt("Starting…");
+            BeginAttempt(_menuStatus, "Starting…");
             ConnectionResult result = await Provider.HostAsync(
                 ConnectionRequest.Host(_nickname.value), _attempt.Token);
 
-            EndAttempt(result, hosting: true);
+            EndAttempt(result, _menuStatus, hosting: true);
         }
 
-        async void OnJoinClicked()
+        /// <remarks>
+        /// Opens the join screen rather than connecting. The code field used to sit on the front
+        /// screen next to Host, where it means nothing — a host never types one — and a player
+        /// arriving at the game was asked for something they may not have before being told what it
+        /// was for.
+        /// </remarks>
+        void OnJoinClicked() => ShowJoinScreen();
+
+        void OnBackClicked() => ShowMenu();
+
+        async void OnJoinConfirmClicked()
         {
             if (Provider == null) return;
 
-            BeginAttempt("Connecting…");
+            BeginAttempt(_joinStatus, "Connecting…");
             ConnectionResult result = await Provider.JoinAsync(
                 ConnectionRequest.Join(_target.value, _nickname.value), _attempt.Token);
 
-            EndAttempt(result, hosting: false);
+            EndAttempt(result, _joinStatus, hosting: false);
+        }
+
+        /// <remarks>
+        /// The listing is captured by the row that was clicked, so what gets joined is what was on
+        /// screen. Reading a selected index instead would join whichever game had slid into that
+        /// position by the time the click landed.
+        /// </remarks>
+        async void OnListingClicked(SessionListing listing)
+        {
+            if (Provider == null) return;
+
+            BeginAttempt(_joinStatus, $"Joining {listing.Name}…");
+            ConnectionResult result = await Provider.JoinAsync(
+                ConnectionRequest.JoinListed(listing, _nickname.value), _attempt.Token);
+
+            EndAttempt(result, _joinStatus, hosting: false);
         }
 
         void OnCancelClicked() => _attempt?.Cancel();
 
-        void BeginAttempt(string message)
+        void BeginAttempt(Label status, string message)
         {
             _attempt?.Dispose();
             _attempt = new CancellationTokenSource();
 
             SetBusy(true);
-            SetStatus(_menuStatus, message, isError: false);
+            SetStatus(status, message, isError: false);
         }
 
-        void EndAttempt(ConnectionResult result, bool hosting)
+        /// <param name="status">
+        /// The status line of the screen that started this, so a join that failed says so on the
+        /// join screen rather than on a front screen the player is no longer looking at.
+        /// </param>
+        void EndAttempt(ConnectionResult result, Label status, bool hosting)
         {
             SetBusy(false);
 
             if (!result.Success)
             {
-                SetStatus(_menuStatus, result.PlayerFacingMessage, isError: true);
+                SetStatus(status, result.PlayerFacingMessage, isError: true);
 
                 if (!string.IsNullOrEmpty(result.Diagnostic))
                     Debug.LogWarning($"[Snackdown] Connection failed ({result.Failure}): {result.Diagnostic}");
@@ -277,7 +342,7 @@ namespace Snackdown.UI
                 return;
             }
 
-            SetStatus(_menuStatus, string.Empty, isError: false);
+            SetStatus(status, string.Empty, isError: false);
 
             // Remembered on the way in rather than as it is typed: a name abandoned at the menu is
             // not a choice, and greeting the player with it next time would be one.
@@ -288,18 +353,26 @@ namespace Snackdown.UI
             ShowLobby(hosting, result.JoinTarget);
         }
 
+        /// <remarks>
+        /// Both Cancel buttons are toggled although only one screen is visible. Tracking which one
+        /// to touch would mean this method knowing where the player is, and the cost of getting it
+        /// wrong — a Cancel that does not appear during an attempt — is worse than the cost of
+        /// showing a button nobody can see.
+        /// </remarks>
         void SetBusy(bool busy)
         {
             // Disabled rather than hidden: a button that vanishes mid-click reads as a crash, and
             // starting a second attempt over a half-open one fails in ways nobody can explain.
             _host.SetEnabled(!busy);
             _join.SetEnabled(!busy);
-            _cancel.EnableInClassList("hidden", !busy);
-        }
+            _joinConfirm.SetEnabled(!busy);
+            _refresh.SetEnabled(!busy);
+            _back.SetEnabled(!busy);
+            _browseList.SetEnabled(!busy);
 
-        // ==================================================================================
-        //  Lobby
-        // ==================================================================================
+            _cancel.EnableInClassList("hidden", !busy);
+            _joinCancel.EnableInClassList("hidden", !busy);
+        }
 
         void ShowMenu()
         {
@@ -307,13 +380,121 @@ namespace Snackdown.UI
             DetachRoster();
 
             _menuScreen.RemoveFromClassList("hidden");
+            _joinScreen.AddToClassList("hidden");
             _lobbyScreen.AddToClassList("hidden");
             SetBusy(false);
         }
 
+        // ==================================================================================
+        //  Join
+        // ==================================================================================
+
+        /// <remarks>
+        /// The browse starts with the screen rather than waiting for a Refresh. Opening onto an
+        /// empty list with a button that would fill it asks the player to do the one thing the
+        /// screen exists to do for them.
+        /// </remarks>
+        void ShowJoinScreen()
+        {
+            _menuScreen.AddToClassList("hidden");
+            _joinScreen.RemoveFromClassList("hidden");
+            _lobbyScreen.AddToClassList("hidden");
+
+            SetBusy(false);
+            SetStatus(_joinStatus, string.Empty, isError: false);
+
+            if (Provider != null && Provider.CanBrowse) RefreshListings();
+        }
+
+        void OnRefreshClicked() => RefreshListings();
+
+        /// <remarks>
+        /// <para>Nothing polls. The service rate-limits queries and a timer writing into a list the
+        /// player may have left would be spending someone's quota on a screen nobody is looking
+        /// at.</para>
+        /// <para>The result is dropped if the screen has been left in the meantime, which is what
+        /// the visibility check is doing at the end: this is an <c>async void</c> whose await can
+        /// outlive the reason it was started.</para>
+        /// </remarks>
+        async void RefreshListings()
+        {
+            if (Provider == null || !Provider.CanBrowse) return;
+
+            _refresh.SetEnabled(false);
+            SetStatus(_joinStatus, "Looking for games…", isError: false);
+
+            BrowseResult result = await Provider.BrowseAsync();
+
+            if (_joinScreen == null || _joinScreen.ClassListContains("hidden")) return;
+
+            _refresh.SetEnabled(true);
+
+            if (!result.Success)
+            {
+                SetStatus(_joinStatus, result.PlayerFacingMessage, isError: true);
+
+                if (!string.IsNullOrEmpty(result.Diagnostic))
+                    Debug.LogWarning($"[Snackdown] Browsing failed ({result.Failure}): {result.Diagnostic}");
+
+                return;
+            }
+
+            SetStatus(_joinStatus, string.Empty, isError: false);
+            RenderListings(result.Sessions);
+        }
+
+        /// <remarks>
+        /// Rebuilt rather than diffed. The roster below is diffed because a row disappearing under a
+        /// cursor mid-match matters; this list is redrawn only when the player asked for it to be.
+        /// </remarks>
+        void RenderListings(IReadOnlyList<SessionListing> sessions)
+        {
+            _browseList.Clear();
+
+            if (sessions.Count == 0)
+            {
+                var empty = new Label("Nobody is hosting right now. Start one, or type a code.");
+                empty.AddToClassList("browse__empty");
+                _browseList.Add(empty);
+                return;
+            }
+
+            for (int i = 0; i < sessions.Count; i++)
+            {
+                SessionListing listing = sessions[i];
+
+                // A Button rather than a clickable div, so it is reachable by keyboard and reads as
+                // a control to anything inspecting the panel.
+                var row = new Button(() => OnListingClicked(listing));
+                row.AddToClassList("browse__row");
+                row.text = string.Empty;
+
+                var name = new Label(listing.Name);
+                name.AddToClassList("browse__name");
+
+                var slots = new Label($"{listing.Players}/{listing.MaxPlayers}");
+                slots.AddToClassList("browse__slots");
+
+                if (listing.IsFull)
+                {
+                    row.SetEnabled(false);
+                    row.AddToClassList("browse__row--full");
+                }
+
+                row.Add(name);
+                row.Add(slots);
+                _browseList.Add(row);
+            }
+        }
+
+        // ==================================================================================
+        //  Lobby
+        // ==================================================================================
+
         void ShowLobby(bool hosting, string joinTarget)
         {
             _menuScreen.AddToClassList("hidden");
+            _joinScreen.AddToClassList("hidden");
             _lobbyScreen.RemoveFromClassList("hidden");
 
             _rawJoinTarget = joinTarget ?? string.Empty;
@@ -402,7 +583,9 @@ namespace Snackdown.UI
             if (_director == null) return;
 
             _director.SettingsChanged += OnSettingsReplicated;
+            _director.ArenaChanged += OnArenaReplicated;
             FillPresetChoices();
+            FillArenaChoices();
             RefreshSettings();
         }
 
@@ -411,10 +594,44 @@ namespace Snackdown.UI
             if (_director == null) return;
 
             _director.SettingsChanged -= OnSettingsReplicated;
+            _director.ArenaChanged -= OnArenaReplicated;
             _director = null;
         }
 
         void OnSettingsReplicated(MatchSettings settings) => RefreshSettings();
+
+        void OnArenaReplicated(int index) => RefreshSettings();
+
+        /// <remarks>
+        /// Built once from the catalog, like the presets: arenas are authored content and the list
+        /// does not change while a lobby is open. The row disappears with a single arena — a
+        /// dropdown with one entry is a label that looks clickable.
+        /// </remarks>
+        void FillArenaChoices()
+        {
+            _arena.choices.Clear();
+
+            for (int i = 0; i < _director.ArenaCount; i++)
+                _arena.choices.Add(_director.ArenaName(i));
+
+            _arenaRow.EnableInClassList("hidden", _director.ArenaCount < 2);
+        }
+
+        /// <remarks>
+        /// Reads the field's index rather than looking the chosen text up in the list. What is
+        /// replicated is a position in the catalog, and matching on the display name puts a string
+        /// comparison in the middle of that for no reason — two arenas named the same would both
+        /// resolve to the first one, and the failure would be a pick that silently does nothing.
+        /// </remarks>
+        void OnArenaPicked(ChangeEvent<string> change)
+        {
+            if (_fillingFields || _director == null) return;
+
+            int index = _arena.index;
+            if (index < 0 || index >= _director.ArenaCount) return;
+
+            _director.RequestArena(index);
+        }
 
         /// <remarks>
         /// The presets are authored content, so the list is built once from whatever the catalog
@@ -456,6 +673,7 @@ namespace Snackdown.UI
             bool changeable = hosting
                               && (_director.Phase == MatchPhase.Lobby || _director.Phase == MatchPhase.Ended);
 
+            _arena.SetEnabled(changeable);
             _preset.SetEnabled(changeable);
             _startingLife.SetEnabled(changeable);
             _maxLife.SetEnabled(changeable);
@@ -463,6 +681,17 @@ namespace Snackdown.UI
             _roundSeconds.SetEnabled(changeable);
 
             _fillingFields = true;
+
+            // Rebuilt if the catalog and the list have drifted apart. AttachDirector fills the
+            // choices once, and it can run against a director that has been found but not yet
+            // spawned; a list that stayed short would leave the arena unpickable with no sign of
+            // why.
+            if (_arena.choices.Count != _director.ArenaCount) FillArenaChoices();
+
+            // Shown to everybody, not only to the host. Which arena is coming is part of what a
+            // player is agreeing to when they ready up.
+            if (_director.ArenaIndex >= 0 && _director.ArenaIndex < _arena.choices.Count)
+                _arena.index = _director.ArenaIndex;
 
             _startingLife.value = settings.StartingLife;
             _maxLife.value = settings.MaxLife;
@@ -712,7 +941,9 @@ namespace Snackdown.UI
             }
 
             SetStatus(_lobbyStatus, "Loading the arena…", isError: false);
-            director.ServerStartMatch(0);
+            // The arena is already chosen and replicated, so the match starts where the lobby
+            // said it would rather than where this call happens to think.
+            director.ServerStartMatch(director.ArenaIndex);
         }
 
         async void OnLeaveClicked()

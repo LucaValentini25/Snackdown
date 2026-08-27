@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Unity.Netcode;
@@ -38,6 +39,7 @@ namespace Snackdown.Connection
 
         public string DisplayName => "Online / Relay";
         public bool JoinsByCode => true;
+        public bool CanBrowse => true;
 
         /// <summary>The code other players type to join, once hosting. Empty otherwise.</summary>
         public string JoinCode => _session?.Code ?? string.Empty;
@@ -75,7 +77,17 @@ namespace Snackdown.Connection
             {
                 var options = new SessionOptions
                 {
-                    MaxPlayers = _maxPlayers
+                    // Named after whoever started it, because the browser shows this and the SDK's
+                    // default is a GUID — a list of those is a list of nothing.
+                    Name = SessionNameFor(request.Nickname),
+                    MaxPlayers = _maxPlayers,
+
+                    // Public, so it appears in the browser. The join code still works and is still
+                    // the way to reach a specific game; being listed is not a second kind of
+                    // session, it is the same one with a door somebody can find. A game nobody can
+                    // find is what the code is for, and adding that switch is a menu decision, not
+                    // a connection one.
+                    IsPrivate = false
                 }.WithRelayNetwork();
 
                 _session = await MultiplayerService.Instance.CreateSessionAsync(options);
@@ -98,12 +110,82 @@ namespace Snackdown.Connection
             }
         }
 
+        /// <summary>
+        /// Asks the service what is open to anybody right now.
+        /// </summary>
+        /// <remarks>
+        /// <para>Signs in first, like every other call here: a query is an authenticated request,
+        /// and a player who opens the browser before ever hosting has not signed in yet.</para>
+        /// <para>Full games are filtered out by the service rather than by this method. Asking for
+        /// only what has room is one fewer round trip's worth of rows over the wire, and it is the
+        /// question the player is actually asking.</para>
+        /// <para>Nothing polls. <c>QuerySessionsResults</c> offers <c>StartPolling</c>, and taking
+        /// it would mean a background timer writing into a list a screen may no longer be showing,
+        /// against a service that rate-limits. A Refresh button says what it costs.</para>
+        /// </remarks>
+        public async Task<BrowseResult> BrowseAsync(CancellationToken cancellationToken = default)
+        {
+            ConnectionResult ready = await PrepareAsync(cancellationToken);
+            if (!ready.Success) return BrowseResult.Failed(ready.Failure, ready.Diagnostic);
+
+            try
+            {
+                var options = new QuerySessionsOptions
+                {
+                    Count = MaxListedSessions,
+                    FilterOptions = new List<FilterOption>
+                    {
+                        new FilterOption(FilterField.AvailableSlots, "0", FilterOperation.Greater)
+                    }
+                };
+
+                QuerySessionsResults results = await MultiplayerService.Instance.QuerySessionsAsync(options);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var listings = new List<SessionListing>(results.Sessions.Count);
+
+                for (int i = 0; i < results.Sessions.Count; i++)
+                {
+                    ISessionInfo session = results.Sessions[i];
+                    if (session.IsLocked || session.HasPassword) continue;
+
+                    listings.Add(new SessionListing(
+                        session.Id,
+                        session.Name,
+                        session.MaxPlayers - session.AvailableSlots,
+                        session.MaxPlayers));
+                }
+
+                return BrowseResult.Ok(listings);
+            }
+            catch (OperationCanceledException)
+            {
+                return BrowseResult.Failed(ConnectionFailure.Cancelled);
+            }
+            catch (SessionException e)
+            {
+                return BrowseResult.Failed(Classify(e), e.Message);
+            }
+            catch (Exception e)
+            {
+                return BrowseResult.Failed(ConnectionFailure.Error, e.Message);
+            }
+        }
+
+        /// <summary>How many games the browser will ask for at once.</summary>
+        /// <remarks>
+        /// The service defaults to a hundred and supports paging. A menu that needs a second page
+        /// of a game this size is a problem worth having and not one worth building for now — the
+        /// list is sorted by nothing in particular, so a longer one would not be more useful.
+        /// </remarks>
+        const int MaxListedSessions = 25;
+
         public async Task<ConnectionResult> JoinAsync(ConnectionRequest request, CancellationToken cancellationToken = default)
         {
-            string code = request.Target?.Trim();
+            string target = request.Target?.Trim();
 
-            if (string.IsNullOrEmpty(code))
-                return ConnectionResult.Failed(ConnectionFailure.NotFound, "no join code given");
+            if (string.IsNullOrEmpty(target))
+                return ConnectionResult.Failed(ConnectionFailure.NotFound, "no join target given");
 
             ConnectionResult ready = await PrepareAsync(cancellationToken);
             if (!ready.Success) return ready;
@@ -125,7 +207,11 @@ namespace Snackdown.Connection
 
             try
             {
-                _session = await MultiplayerService.Instance.JoinSessionByCodeAsync(code.ToUpperInvariant());
+                // A code is uppercased because a player typed it; an id is not, because nobody did.
+                _session = request.TargetKind == JoinTargetKind.Listing
+                    ? await MultiplayerService.Instance.JoinSessionByIdAsync(target)
+                    : await MultiplayerService.Instance.JoinSessionByCodeAsync(target.ToUpperInvariant());
+
                 return ConnectionResult.Ok();
             }
             catch (OperationCanceledException)
@@ -246,6 +332,18 @@ namespace Snackdown.Connection
 
             _ => ConnectionFailure.Error
         };
+
+        /// <summary>What the browser will show for a game this player is hosting.</summary>
+        /// <remarks>
+        /// The nickname is the only thing anybody has typed by this point, and it is already capped
+        /// and trimmed by <see cref="ConnectionApproval"/> on the way in. A blank one still has to
+        /// produce something readable, because the name is what a stranger clicks.
+        /// </remarks>
+        static string SessionNameFor(string nickname)
+        {
+            string trimmed = nickname?.Trim();
+            return string.IsNullOrEmpty(trimmed) ? "A Snackdown game" : $"{trimmed}'s game";
+        }
 
         static string Truncate(string value, int maxLength)
         {

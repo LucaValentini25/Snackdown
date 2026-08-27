@@ -55,18 +55,20 @@ Assets/
 │   │   ├── Core/             AppBootstrap, FrameRatePolicy
 │   │   ├── Connection/       IConnectionProvider, DirectConnectionProvider,
 │   │   │                     RelayConnectionProvider, ConnectionApproval, ConnectionPayload,
-│   │   │                     ConnectionRequest, ConnectionResult, NetworkConfigReport
+│   │   │                     ConnectionRequest, ConnectionResult, JoinTargetKind,
+│   │   │                     SessionListing, BrowseResult, NetworkConfigReport
 │   │   ├── Simulation/       PlayerState, InputCommand, InputPacket, PlayerMotor,
 │   │   │                     MovementConfig, SimulationContext — the state, the input,
 │   │   │                     the replayable step
 │   │   ├── Netcode/          NetworkSimulationLoop, IPredictedPeer, Reconciler, PredictionBuffer,
 │   │   │                     SnapshotFrame, SnapshotInterpolator, WorldSnapshotBuffer,
-│   │   │                     VisualSmoother, ReconciliationStats, RunRecorder
+│   │   │                     VisualSmoother, ReconciliationStats, RunRecorder,
+│   │   │                     PeerContactSource, PeerExtrapolation, DebugTools
 │   │   ├── Gameplay/
 │   │   │   ├── Match/        MatchDirector, MatchPhase, MatchConfig, MatchSettings,
 │   │   │   │                 DifficultyCatalog, MatchOutcome,
 │   │   │   │                 RoundReferee, ArenaCatalog, ArenaBounds, SpectatorCamera,
-│   │   │                 SandboxRunner
+│   │   │                 SpectatorTargetRing, SandboxRunner
 │   │   │   ├── Player/       PredictedPlayer, PlayerSession, SessionRoster, SessionConnection,
 │   │   │   │                 PlayerLife, PlayerSpawnPoints, CharacterAppearance,
 │   │   │   │                 CharacterCatalog
@@ -81,7 +83,7 @@ Assets/
 │   ├── UI/                   MainMenu.uxml, LoadingScreen.uxml, EndScreen.uxml,
 │   │                         RoundClock.uxml, LifeBars.uxml, Nameplate.uxml,
 │   │                         Snackdown.uss, MenuPanelSettings, WorldSpacePanelSettings
-│   ├── Scenes/               Bootstrap, Lobby, Arena01, Sandbox
+│   ├── Scenes/               Bootstrap, Lobby, Arena01, Arena02, Sandbox
 │   ├── Prefabs/              Player, PlayerSession, Fruit, NetworkSimulation
 │   ├── Art/                  placeholder primitives
 │   └── Settings/             ScriptableObject configs (movement, match, arenas,
@@ -99,18 +101,26 @@ Third-party art sits at the `Assets/` root (as it shipped); **all authored code 
 
 ## Scenes load additively on top of Bootstrap
 
-Three scenes, and the split is what makes several arenas possible:
+Four scenes, two of which are arenas — which is the split paying for itself:
 
 | Scene | Holds | Lifetime |
 |---|---|---|
 | **Bootstrap** | `NetworkManager` and `SessionConnection`, the `NetworkSimulation` prefab instance — `MatchDirector`, `RoundReferee`, `SessionRoster` and the tick loop on one networked object — plus the loading screen, the round clock, the life bars and the end screen | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
-| **Arena01** | Geometry, spawn points, camera | During a match |
+| **Arena01**, **Arena02** | Geometry, spawn points, camera | During a match |
 | **Sandbox** | A copy of Bootstrap that hosts and starts a match on Play | Never in a build; opened by hand |
 
-All four are listed in Build Settings, and **Sandbox is listed with its checkbox off** — present so
+**Arena02 is Arena01 with the red and blue channels of every colour swapped** — warm where the first
+is cool, and identical in every other respect. That is a deliberately small change and worth naming
+as one: swapping two channels preserves each colour's luminance, so the contrast between ground,
+walls and background is exactly what it was and nothing became harder to read. The geometry is the
+same, so this is a palette, not a second level design. What it proves is the part that was untested:
+the catalog, the host's choice of arena, the networked load and the camera clamp all work with more
+than one entry, which no amount of authoring on a single scene could have shown.
+
+All five are listed in Build Settings, and **Sandbox is listed with its checkbox off** — present so
 Unity stops adding it back every time somebody opens it, disabled so it stays out of a player build.
-The other three are enabled because Netcode can only load a scene over the network if it is in that
+The other four are enabled because Netcode can only load a scene over the network if it is in that
 list, which is what an arena is. Removing Sandbox from the list is not a tidy-up: it comes straight
 back the next time the scene is opened, and the churn shows up in every diff.
 
@@ -191,11 +201,67 @@ camera while the server still considers them alive.
 ### The camera is never replicated
 
 Where a spectator is looking changes no outcome, so it stays local. `ArenaBounds` — a rectangle
-authored per arena — clamps the pan, and when a map is smaller than the camera view the clamp
+authored per arena — clamps the view, and when a map is smaller than the camera view the clamp
 collapses to its centre and the camera simply holds still. One component covers both kinds of map
-without asking the level designer which kind they built. **Arena01 is the small kind**: it is 26×9
+without asking the level designer which kind they built. **Both arenas are the small kind**: 26×9
 against a 24.9×14 view, so a spectator there gets about half a unit of horizontal slack and nothing
-vertical. Panning becomes visible on the first arena that is bigger than the screen.
+vertical. Movement becomes visible on the first arena that is bigger than the screen.
+
+A spectator **follows a survivor** rather than being handed a free camera, and a tap left or right
+moves to the next one, in the roster order the strip along the bottom already shows. Free panning is
+what happens when there is nobody left alive to follow, which is the end of a round.
+
+Which player that is, is a `SpectatorTargetRing` — a plain class the camera owns, holding the choice
+and nothing about transforms or input. It is the same split as `Reconciler`, made for the same
+reason: the interesting behaviour is what the choice does when the player being watched dies, and
+that is a unit test only if reproducing it does not require a four-player match. It remembers a
+*position* in the list rather than only a client id, so the spectator ends up on the next player
+along instead of snapped back to the top.
+
+The camera on this peer is reachable as `SpectatorCamera.Current`, which is how the bottom strip
+outlines whoever is being watched. That readout is not decoration on Arena01: the clamp leaves the
+camera almost no room, so switching target would otherwise have no visible effect at all.
+
+## Finding a game is the connection layer's problem, not the menu's
+
+Joining used to be one field on the front screen, next to Host — where it means nothing, because a
+host never types a code. It is a step of joining now: **Join a game** opens a screen with a list of
+what is open, a field for a code, and a Back button.
+
+The list comes through `IConnectionProvider`, which grew two members and no more:
+
+```csharp
+bool CanBrowse { get; }
+Task<BrowseResult> BrowseAsync(CancellationToken cancellationToken = default);
+```
+
+`CanBrowse` is what the screen asks before offering a browser at all, and the LAN provider answers
+no. There is no directory behind a socket — finding games on one means broadcasting on a port and
+listening, which is a different feature with its own failures, not a query. The section is hidden
+whole rather than left empty: a list with a Refresh button that can never find anything is a broken
+feature, not an absent one.
+
+What comes back is a `SessionListing`, not the service's own type. Four values — an opaque id, a
+name, and the two numbers a row shows. Handing `ISessionInfo` to the menu would put `Unity.Services`
+in the UI assembly and the front screen back in the position the original project's menu was in:
+knowing which service it was talking to.
+
+**A join now says how its target should be read.** A code and a listing id are both strings pointing
+at the same session, and the service has a separate call for each; passing one to the other's call
+fails as *no such session*, which reaches the player as the game having ended. So
+`ConnectionRequest` carries a `JoinTargetKind`, named rather than guessed from the shape of the
+string — guessing works until the day a code looks like an id, and then it is a join that stops
+working for one player in a hundred. `Typed` is the enum's zero, so every call that existed before
+there was a browser still means what it meant.
+
+**Nothing polls.** `QuerySessionsResults` offers `StartPolling`, and taking it would mean a
+background timer writing into a list a screen may no longer be showing, against a service that
+rate-limits. Refresh is a button, which says what it costs.
+
+**Every hosted game is public.** Being listed is not a second kind of session — it is the same one
+with a door somebody can find, and the code still works and is still how you reach a *specific*
+game. A game nobody can find is what the code alone is for, and offering that as a switch is a menu
+decision to make when somebody wants it.
 
 ## Configuration lives in data, not code
 

@@ -51,6 +51,13 @@ namespace Snackdown.Gameplay.Player
         InputReader _inputReader;
         float _tickDelta = 1f / 30f;
 
+        // --- remote peers -----------------------------------------------------------------
+
+        /// <summary>The newest state the server sent for this character, on peers that do not own it.</summary>
+        PlayerState _authoritativeState;
+        uint _authoritativeTick;
+        bool _hasAuthoritativeState;
+
         // --- owner ------------------------------------------------------------------------
         readonly PredictionBuffer _buffer = new PredictionBuffer();
 
@@ -141,7 +148,20 @@ namespace Snackdown.Gameplay.Player
         /// </summary>
         public static bool PredictionEnabled = true;
 
-        // --- debug telemetry (read by NetDebugOverlay) ------------------------------------
+        /// <summary>
+        /// Where clients take rival positions from when predicting contact. See
+        /// <see cref="PeerContactSource"/>.
+        /// </summary>
+        /// <remarks>
+        /// Static, like <see cref="PredictionEnabled"/> and for the same reason: it is a property of
+        /// this peer's whole simulation rather than of one character, and it exists to be flipped
+        /// between two measured runs without a rebuild. Nothing replicates it — it changes what a
+        /// client guesses, never what the server decides, so two peers disagreeing about it produces
+        /// nothing worse than two different correction rates.
+        /// </remarks>
+        public static PeerContactSource PeerContact = PeerContactSource.Interpolated;
+
+        // --- debug telemetry (read by NetDebugOverlay, and only fed when it can be) --------
         readonly ReconciliationStats _stats = new ReconciliationStats();
         readonly RunRecorder _recorder = new RunRecorder();
 
@@ -149,6 +169,18 @@ namespace Snackdown.Gameplay.Player
         public float LastPredictionError { get; private set; }
         public uint LastReplayedTicks { get; private set; }
         public Vector2 LastAuthoritativePosition { get; private set; }
+
+        /// <summary>How far ahead of the server this character is being drawn, in world units.</summary>
+        /// <remarks>
+        /// <para>The distance to the red ghost, which is the most visible thing in the game and
+        /// until now the only one with no number attached. It is not an error: it is the round trip
+        /// expressed as distance, and at 7 units a second a second of lead is seven units against a
+        /// character one unit wide.</para>
+        /// <para>Exposed as a float rather than letting the overlay do the subtraction, so the UI
+        /// assembly does not have to reference the simulation to read one number off a debug view.
+        /// </para>
+        /// </remarks>
+        public float AuthorityGap => Vector2.Distance(_state.Position, LastAuthoritativePosition);
         public int ServerQueueDepth => _incomingInputs.Count;
         public int StarvedTicks { get; private set; }
         public PlayerState State => _state;
@@ -208,8 +240,23 @@ namespace Snackdown.Gameplay.Player
         /// several runs in one session, and a recorder that only ever accumulates would blend the
         /// calm minute and the hostile one into a single average describing neither.
         /// </remarks>
+        /// <summary>Throws away the run so far and starts a new one from now.</summary>
+        /// <remarks>
+        /// For the one case where the conditions changed under a running measurement: flipping
+        /// <see cref="PeerContact"/> mid-session. Averaging across that produces a number that
+        /// describes neither setting.
+        /// </remarks>
+        public void RestartRunRecording()
+        {
+            if (!DebugTools.Enabled || !IsOwner || IsServer) return;
+
+            _stats.Reset();
+            _recorder.Begin(Time.time);
+        }
+
         public string WriteRunMetrics(string directory, string fileName, string conditions)
         {
+            if (!DebugTools.Enabled) return null;
             if (!IsOwner || IsServer || !_recorder.IsRunning) return null;
 
             string path = _recorder.Write(directory, fileName, Time.time, conditions);
@@ -241,13 +288,17 @@ namespace Snackdown.Gameplay.Player
             if (_inputReader != null) _inputReader.enabled = IsOwner;
 
             if (_smoother != null) _smoother.Snap();
+            // The ghost draws where the server thinks this character is. It is a teaching aid,
+            // and a second sprite following the player around a shipped game is a bug report.
             if (_authoritativeGhost != null)
-                _authoritativeGhost.gameObject.SetActive(IsOwner && !IsServer);
+                _authoritativeGhost.gameObject.SetActive(DebugTools.Enabled && IsOwner && !IsServer);
 
             // Recording starts with the character, not with a keypress: the interesting corrections
             // are the ones right after joining, and a run that only begins once someone remembers
             // to press a key is missing exactly them.
-            if (IsOwner && !IsServer) _recorder.Begin(Time.time);
+            // Recording accumulates a sample per correction for as long as the session lasts,
+            // and nothing in a player build would ever ask for the file.
+            if (DebugTools.Enabled && IsOwner && !IsServer) _recorder.Begin(Time.time);
 
             NetworkSimulationLoop.Register(this);
         }
@@ -433,12 +484,47 @@ namespace Snackdown.Gameplay.Player
         //  Client — reconcile (owner) / interpolate (remote)
         // ==================================================================================
 
-        public void ApplySnapshot(in PlayerSnapshot snapshot, double snapshotTime)
+        public void ApplySnapshot(in PlayerSnapshot snapshot, double snapshotTime, uint serverTick)
         {
             if (IsServer) return;
 
-            if (IsOwner) Reconcile(snapshot);
-            else _interpolator.Push(snapshotTime, snapshot.State);
+            if (IsOwner)
+            {
+                Reconcile(snapshot);
+                return;
+            }
+
+            // Kept whether or not anyone reads it. It is one struct assignment per snapshot, and
+            // making it conditional on the current PeerContactSource would mean the buffer being
+            // empty for a quarter of a second after somebody flipped the switch mid-run — which is
+            // exactly when the two are being compared.
+            _authoritativeState = snapshot.State;
+            _authoritativeTick = serverTick;
+            _hasAuthoritativeState = true;
+
+            _interpolator.Push(snapshotTime, snapshot.State);
+        }
+
+        /// <summary>
+        /// Where this character was according to the server, carried forward to a given tick.
+        /// </summary>
+        /// <remarks>
+        /// <para>Answers for the character it is called on, from that character's own newest
+        /// snapshot — so a client asking about three rivals gets three states from the same frame,
+        /// each carried forward by the same gap.</para>
+        /// <para>The carrying-forward is <see cref="PeerExtrapolation"/>, which is where the cap on
+        /// it lives and where the two awkward cases are tested.</para>
+        /// <para>Falls back to the live state when there is no snapshot: on the server that is the
+        /// authoritative position already, and on a client it is the frame before the first snapshot
+        /// for a character that has only just spawned.</para>
+        /// </remarks>
+        Vector2 AuthoritativePositionAt(uint tick, float tickDelta)
+        {
+            if (!_hasAuthoritativeState) return _state.Position;
+
+            return PeerExtrapolation.PositionAt(
+                _authoritativeState.Position, _authoritativeState.Velocity,
+                _authoritativeTick, tick, tickDelta);
         }
 
         /// <summary>
@@ -488,9 +574,12 @@ namespace Snackdown.Gameplay.Player
                 LastPredictionError = result.PredictionError;
                 LastReplayedTicks = result.ReplayedTicks;
 
-                _stats.Record(Time.time, LastPredictionError, result.ReplayedTicks);
-                _recorder.Record(
-                    Time.time, LastPredictionError, result.ReplayedTicks, LastMeasuredRttMs, TransportRtt());
+                if (DebugTools.Enabled)
+                {
+                    _stats.Record(Time.time, LastPredictionError, result.ReplayedTicks);
+                    _recorder.Record(
+                        Time.time, LastPredictionError, result.ReplayedTicks, LastMeasuredRttMs, TransportRtt());
+                }
             }
 
             // Logically instant, visually smooth: the smoother eats the jump.
@@ -558,10 +647,14 @@ namespace Snackdown.Gameplay.Player
         /// Records where every other character is on this tick, so the tick can be replayed later.
         /// </summary>
         /// <remarks>
-        /// Read from the live characters, but only ever for the tick happening <i>now</i> — the
-        /// buffer is what a replay reads from. Sampling live positions during a replay would test
+        /// <para>Read from the live characters, but only ever for the tick happening <i>now</i> —
+        /// the buffer is what a replay reads from. Sampling live positions during a replay would test
         /// tick 40 against everyone's position at tick 52 and produce a state the server never
-        /// computed.
+        /// computed.</para>
+        /// <para>Where "where they are" comes from is <see cref="PeerContact"/>. On the server both
+        /// answers are the same one, because its own state <i>is</i> the authority; the switch only
+        /// changes what a client writes down. Either way prediction and replay read the same buffer,
+        /// so a correction never comes from a replay disagreeing with itself.</para>
         /// </remarks>
         void CaptureWorld(uint tick)
         {
@@ -575,7 +668,9 @@ namespace Snackdown.Gameplay.Player
                 _worldScratch[count++] = new PeerBody
                 {
                     Id = other.NetworkObjectId,
-                    Position = other.State.Position,
+                    Position = PeerContact == PeerContactSource.Interpolated
+                        ? other.State.Position
+                        : other.AuthoritativePositionAt(tick, _tickDelta),
                     Size = other._config != null ? other._config.ColliderSize : Vector2.one
                 };
             }

@@ -46,15 +46,21 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
 1. Open `Assets/_Project/Scenes/Bootstrap.unity` — the first scene in Build Settings — and press
    Play. Bootstrap holds no visible content of its own; it carries the connection, the roster and
    the match director, and the menu is loaded on top of it.
-2. Type a name and hit **Host a game**. The lobby shows a six-character join code to share.
+2. Type a name and hit **Host a game**. The lobby shows a six-character join code to share. The
+   game is also listed publicly, so anybody can find it without the code.
 3. For a second peer, use **Multiplayer Play Mode** (`Window > Multiplayer > Multiplayer Play Mode`),
-   enable a virtual player, and in that window enter the code and hit **Join a game**.
-4. Both players hit **Ready**; the host hits **Start match**. Move with `A`/`D` or the arrows, jump
-   with `Space`. Collect fruit, stomp heads, outlive the others.
+   enable a virtual player, and in that window hit **Join a game**. That opens the browser: pick the
+   game out of the list, or type the code and hit **Join**.
+4. The host picks the arena in the lobby's **Rules** panel; everyone sees which one is coming. Both
+   players hit **Ready**; the host hits **Start match**. Move with `A`/`D` or the arrows, jump
+   with `Space`. Collect fruit, stomp heads, outlive the others. When you go out the camera follows
+   a survivor — tap left or right to watch somebody else; the strip along the bottom outlines who
+   you are on.
 
-**To play over a LAN instead of Relay:** in `Lobby.unity`, uncheck **Use Relay** on the
-`MainMenuController`. The address field relabels itself from *Code* to *Address* and everything else
-in the flow is identical — which is the whole point of the connection layer.
+**To play over a LAN instead of Relay:** in `Bootstrap.unity`, uncheck **Use Relay** on the
+`SessionConnection`. The field on the join screen relabels itself from *Code* to *Address*, the
+browser disappears because a LAN socket has no directory behind it, and everything else in the flow
+is identical — which is the whole point of the connection layer.
 
 To see the netcode do its job, open `Window > Multiplayer > Network Simulator`, apply ~150 ms of
 latency and some packet loss, then use the overlay:
@@ -65,8 +71,15 @@ latency and some packet loss, then use the overlay:
 | `F2` | Toggle visual smoothing — off shows every raw correction |
 | `F3` | Hide the overlay |
 | `F4` | Export the client's run to CSV — correction rate, error, replayed ticks |
+| `F5` | Swap where rival positions come from when predicting contact — restarts the recording |
 
 The red ghost is where the server says you are; the green box is where you predicted you'd be.
+
+> **None of this exists in a released build.** The overlay, the ghost and the CSV recorder are the
+> most expensive thing in the project — the overlay's IMGUI pass alone was measured at ~97% of the
+> host's managed allocation — and they are there to explain the netcode, not to play with. They run
+> in the editor and in **development builds**, which is what a build handed to somebody to try
+> should be. A release build drops them entirely.
 
 For the measured results and the procedure that produced them, see
 **[docs/05 — Validation](docs/05-validation.md)**.

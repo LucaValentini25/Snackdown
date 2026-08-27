@@ -147,6 +147,11 @@ namespace Snackdown.UI
 
         void UpdateEntries()
         {
+            // Asked once for the whole strip rather than once per row: it is a scene lookup, and
+            // the answer cannot change between two rows of the same frame.
+            SpectatorCamera spectator = SpectatorCamera.Current;
+            bool watchingSomeone = spectator != null && spectator.IsWatchingSomeone;
+
             for (int i = 0; i < PlayerLife.All.Count; i++)
             {
                 PlayerLife life = PlayerLife.All[i];
@@ -161,6 +166,8 @@ namespace Snackdown.UI
                 // A player who is out keeps their entry, dimmed. Removing it would shuffle everyone
                 // else along the strip at the exact moment a reader is looking for what changed.
                 entry.Container.EnableInClassList("lifebar--out", !life.IsAlive);
+                entry.Container.EnableInClassList("lifebar--watched",
+                    watchingSomeone && spectator.WatchedClientId == life.OwnerClientId);
                 entry.Fill.EnableInClassList("lifebar__fill--low",
                     life.IsAlive && life.Remaining <= _lowLifeSeconds);
             }

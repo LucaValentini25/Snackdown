@@ -40,6 +40,17 @@ namespace Snackdown.Connection
         public string DisplayName => "Direct / LAN";
         public bool JoinsByCode => false;
 
+        /// <remarks>
+        /// There is no directory behind a LAN socket. Listing games on one means broadcasting on a
+        /// port and listening for answers — a real feature with its own failures, not a query, and
+        /// not one this project needs while Relay is how it is meant to be played. The menu asks
+        /// this rather than assuming, and simply does not offer a browser here.
+        /// </remarks>
+        public bool CanBrowse => false;
+
+        public Task<BrowseResult> BrowseAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(BrowseResult.Failed(ConnectionFailure.Error, "a LAN connection has nothing to browse"));
+
         /// <summary>Who was admitted under what name. Null when hosting without approval.</summary>
         public ConnectionApproval Approval => _approval;
 

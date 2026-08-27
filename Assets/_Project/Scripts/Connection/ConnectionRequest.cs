@@ -15,6 +15,9 @@ namespace Snackdown.Connection
         /// <summary>Address, join code, or empty when hosting a provider that generates its own.</summary>
         public string Target;
 
+        /// <summary>How to read <see cref="Target"/>.</summary>
+        public JoinTargetKind TargetKind;
+
         /// <summary>The player's chosen name. Validated on arrival — never trusted as sent.</summary>
         public string Nickname;
 
@@ -31,8 +34,19 @@ namespace Snackdown.Connection
         public static ConnectionRequest Join(string target, string nickname, int characterIndex = 0) => new ConnectionRequest
         {
             Target = target,
+            TargetKind = JoinTargetKind.Typed,
             Nickname = nickname,
             CharacterIndex = characterIndex
         };
+
+        /// <summary>Joins something the player picked out of the browser rather than typed.</summary>
+        public static ConnectionRequest JoinListed(SessionListing listing, string nickname, int characterIndex = 0)
+            => new ConnectionRequest
+            {
+                Target = listing.Id,
+                TargetKind = JoinTargetKind.Listing,
+                Nickname = nickname,
+                CharacterIndex = characterIndex
+            };
     }
 }

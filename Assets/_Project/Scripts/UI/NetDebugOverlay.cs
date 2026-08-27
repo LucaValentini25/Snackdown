@@ -13,9 +13,15 @@ namespace Snackdown.UI
     /// legible: prediction on/off and visual smoothing on/off.
     /// </summary>
     /// <remarks>
-    /// Netcode that works is invisible by design — which makes it impossible to show. This overlay
-    /// is how the invisible part gets demonstrated: the correction count ticking up while the
-    /// character keeps moving smoothly is the entire thesis of the project on screen at once.
+    /// <para>Netcode that works is invisible by design — which makes it impossible to show. This
+    /// overlay is how the invisible part gets demonstrated: the correction count ticking up while
+    /// the character keeps moving smoothly is the entire thesis of the project on screen at
+    /// once.</para>
+    /// <para><b>It removes itself in a player build.</b> Its <c>OnGUI</c> pass is the most
+    /// expensive thing in the project — the audit measured it at about 97% of all managed allocation
+    /// on the host, 320–600 KB/s against roughly 12 KB/s from the entire simulation path.
+    /// Development builds keep it, because a build handed to somebody to try is exactly where it
+    /// earns that. See <see cref="DebugTools"/>.</para>
     /// </remarks>
     public class NetDebugOverlay : MonoBehaviour
     {
@@ -36,6 +42,16 @@ namespace Snackdown.UI
         /// <summary>How long the export confirmation stays on screen.</summary>
         const float ExportNoticeSeconds = 8f;
 
+        /// <remarks>
+        /// Destroyed rather than guarded, so Unity stops calling <c>OnGUI</c> at all. A component
+        /// that returns early still costs a call per frame from the GUI pass; one that is not there
+        /// costs nothing, which is the point of the exercise.
+        /// </remarks>
+        void Awake()
+        {
+            if (!DebugTools.Enabled) Destroy(this);
+        }
+
         void Update()
         {
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
@@ -45,6 +61,25 @@ namespace Snackdown.UI
             if (keyboard.f2Key.wasPressedThisFrame) VisualSmoother.SmoothingEnabled = !VisualSmoother.SmoothingEnabled;
             if (keyboard.f3Key.wasPressedThisFrame) _visible = !_visible;
             if (keyboard.f4Key.wasPressedThisFrame) ExportRun();
+            if (keyboard.f5Key.wasPressedThisFrame) TogglePeerContact();
+        }
+
+        /// <summary>
+        /// Swaps where rival positions come from when predicting contact with them.
+        /// </summary>
+        /// <remarks>
+        /// The recorder is restarted, not kept. A run whose first half was measured one way and
+        /// whose second half was measured the other averages into a number describing neither, and
+        /// the whole reason this key exists is to produce two files that can be compared.
+        /// </remarks>
+        void TogglePeerContact()
+        {
+            PredictedPlayer.PeerContact = PredictedPlayer.PeerContact == PeerContactSource.Interpolated
+                ? PeerContactSource.Authoritative
+                : PeerContactSource.Interpolated;
+
+            foreach (IPredictedPeer peer in NetworkSimulationLoop.ActivePlayers)
+                if (peer is PredictedPlayer player) player.RestartRunRecording();
         }
 
         /// <summary>
@@ -97,7 +132,14 @@ namespace Snackdown.UI
             NetworkManager networkManager = NetworkManager.Singleton;
             if (networkManager == null) return "unknown";
 
-            string tick = $"tick {networkManager.NetworkConfig.TickRate}Hz";
+            // What the toggles were set to goes in first. A file that does not say which settings
+            // produced it is not a measurement of anything - and prediction earns its place at the
+            // front of that line, because a run recorded with it off is not a reconciliation run at
+            // all. One was exported with zero corrections in sixty-seven seconds and read as the
+            // netcode being broken; it was F1.
+            string tick = $"prediction {(PredictedPlayer.PredictionEnabled ? "ON" : "OFF")}"
+                          + $" | peer contact {PredictedPlayer.PeerContact}"
+                          + $" | tick {networkManager.NetworkConfig.TickRate}Hz";
             NetworkSimulator simulator = FindFirstObjectByType<NetworkSimulator>();
 
             if (simulator == null || simulator.ConnectionPreset == null)
@@ -171,6 +213,12 @@ namespace Snackdown.UI
                     _text.AppendLine($"   rtt (ours)   {player.LastMeasuredRttMs:F0} ms  measured on our own traffic");
                     _text.AppendLine($"   authority    {player.LastAuthoritativePosition:F2}");
 
+                    // The distance to the red ghost, which is the one thing on this screen you can
+                    // see without reading it. Naming it turns "the ghost is miles away" into a
+                    // number that can be compared against the round trip that produced it: at 7 u/s
+                    // a lead of one second is seven units, and the character is one unit wide.
+                    _text.AppendLine($"   authority gap {player.AuthorityGap:F2} u   (this is the round trip, drawn)");
+
                     if (player.IsRecording)
                         _text.AppendLine($"   recording    {player.RecordedDuration:F0}s, {player.RecordedCorrections} samples");
                 }
@@ -189,6 +237,7 @@ namespace Snackdown.UI
             _text.AppendLine();
             _text.AppendLine($"F1 prediction {(PredictedPlayer.PredictionEnabled ? "ON " : "OFF")}   (off = feel the latency)");
             _text.AppendLine($"F2 smoothing  {(VisualSmoother.SmoothingEnabled ? "ON " : "OFF")}   (off = see the corrections)");
+            _text.AppendLine($"F5 peer contact {PredictedPlayer.PeerContact}   (restarts the recording)");
             _text.AppendLine("F3 hide      F4 export run");
 
             if (_lastExport != null && Time.realtimeSinceStartup - _lastExportTime < ExportNoticeSeconds)

@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Menu and lobby in one document, one screen visible at a time.
+    Menu, join and lobby in one document, one screen visible at a time.
 
-    Two screens rather than two documents because they share the connection attempt: the menu starts
-    it and the lobby is what you land in when it succeeds. Swapping documents mid-attempt would mean
-    rebuilding the controller's element references at the least convenient moment.
+    Three screens rather than three documents because they share the connection attempt: the menu or
+    the join screen starts it and the lobby is what you land in when it succeeds. Swapping documents
+    mid-attempt would mean rebuilding the controller's element references at the least convenient
+    moment.
 -->
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
@@ -16,13 +17,39 @@
             <ui:Label name="menu-subtitle" text="Last one standing wins." class="subtitle" />
 
             <ui:TextField name="nickname-field" label="Name" max-length="16" class="field" />
-            <ui:TextField name="target-field" label="Address" class="field" />
 
             <ui:Button name="host-button" text="Host a game" class="button button--primary" />
             <ui:Button name="join-button" text="Join a game" class="button" />
             <ui:Button name="cancel-button" text="Cancel" class="button hidden" />
 
             <ui:Label name="menu-status" class="status" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+
+    <!-- ── join ──────────────────────────────────────────────────────── -->
+    <!--
+        Asking for a code is a step of joining, not of the front screen. It used to sit next to Host,
+        where it means nothing: a host never types one.
+    -->
+    <ui:VisualElement name="join-screen" class="screen hidden">
+        <ui:VisualElement class="panel">
+            <ui:Label text="Join a game" class="title" />
+            <ui:Label name="join-subtitle" text="Pick a game, or type a code." class="subtitle" />
+
+            <!-- Hidden whole for a provider with nothing to browse, which is the LAN one. -->
+            <ui:VisualElement name="browse-section">
+                <!-- Rows are built in code: what is open changes between one refresh and the next. -->
+                <ui:VisualElement name="browse-list" class="browse" />
+                <ui:Button name="refresh-button" text="Refresh" class="button button--compact" />
+            </ui:VisualElement>
+
+            <ui:TextField name="target-field" label="Code" class="field" />
+
+            <ui:Button name="join-confirm-button" text="Join" class="button button--primary" />
+            <ui:Button name="join-cancel-button" text="Cancel" class="button hidden" />
+            <ui:Button name="back-button" text="Back" class="button" />
+
+            <ui:Label name="join-status" class="status" />
         </ui:VisualElement>
     </ui:VisualElement>
 
@@ -50,6 +77,11 @@
                  built in code because unlike the roster there is a fixed, known set of them. -->
             <ui:VisualElement name="settings-panel" class="settings">
                 <ui:Label text="Rules" class="settings__title" />
+
+                <ui:VisualElement name="arena-row" class="settings__row">
+                    <ui:Label text="Arena" class="settings__label" />
+                    <ui:DropdownField name="arena-field" class="settings__control" />
+                </ui:VisualElement>
 
                 <ui:VisualElement name="preset-row" class="settings__row">
                     <ui:Label text="Preset" class="settings__label" />

@@ -112,17 +112,26 @@ Ordered by value-per-effort; each is independently droppable.
    fighting-game arrangement — with `F3` swapping between them at runtime. Either way it puts
    **nothing new on the wire**: every number shown already crossed the network for its own reason,
    so these are views rather than second copies of facts that can disagree with the first.
-2. [ ] **Decide how peer contact is predicted** — today a client resolves contact against
-   *interpolated* peer positions, so it is offset from the server by the interpolation delay plus its
-   own lead, and close contact between two moving players reliably corrects. The documented options are
-   to key the world buffer off authoritative snapshots and extrapolate the gap, or to keep the current
-   behaviour as a stated limit. Belongs here rather than in Phase 3 because choosing well means feeling
-   the difference with the HUD in, and because touching it invalidates the [Phase 1
-   measurements](05-validation.md) and they would need re-running. See
+2. [x] **Decide how peer contact is predicted** — both options are built and the choice is a switch
+   rather than an argument. `PredictedPlayer.PeerContact` picks between resolving contact against
+   *interpolated* peer positions (the default, and what every number in
+   [05 — Validation](05-validation.md) was measured under) and against the last authoritative
+   snapshot carried forward at its velocity. `F5` flips it, the setting is written into every
+   exported run, and the recording restarts so the two never average together. **What is still open
+   is the measurement**, which is two people deliberately colliding and cannot be automated — the
+   procedure is [in 05](05-validation.md#comparing-the-two-peer-contact-sources). See
    [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted).
-3. [ ] **Spectator camera polish** — follow + target switching on death; exercises late-join, already part of the model.
-4. [ ] **A second arena** — mostly level design; the networked scene load comes free from Phase 3, and
-   `ArenaCatalog` plus the `ArenaBounds` camera clamp are already in place, so this is authoring only.
+3. [x] **Spectator camera polish** — the camera follows a survivor on death and a tap left or right
+   moves to the next, in the same order the strip along the bottom shows. Free panning is what is left
+   when nobody is alive to follow. The choice of who to watch is a [`SpectatorTargetRing`](../Assets/_Project/Scripts/Gameplay/Match/SpectatorTargetRing.cs)
+   the camera owns but does not contain, so what happens when the watched player dies is a unit test
+   rather than something you would need a four-player match to see.
+4. [x] **A second arena** — `Arena02`, the first with the red and blue channels of every colour
+   swapped: warm where the first is cool, identical geometry, and identical contrast because swapping
+   two channels leaves luminance alone. It is a palette rather than a second level design, and it
+   is what proved the parts that a single arena could never exercise — the catalog with more than one
+   entry, and the host choosing between them in the lobby, replicated so everyone can see where they
+   are about to play.
 
 *Power-ups are cut* — the most netcode-interesting item here (timed authoritative effects feeding
 into the predicted `Move()`), but not worth the scope against the four above.

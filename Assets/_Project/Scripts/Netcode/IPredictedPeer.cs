@@ -35,6 +35,13 @@ namespace Snackdown.Netcode
         PlayerSnapshot BuildSnapshot();
 
         /// <summary>Reconcile against it if we own it; interpolate toward it if we do not.</summary>
-        void ApplySnapshot(in PlayerSnapshot snapshot, double snapshotTime);
+        /// <param name="serverTick">
+        /// The tick the frame describes. Carried as well as <paramref name="snapshotTime"/> because
+        /// the two answer different questions: the time lines remote characters up against the
+        /// render clock, and the tick is what says how far a state has to be carried forward to
+        /// reach the one being predicted. Deriving one from the other at each call would be the same
+        /// division written in two places, waiting to disagree about rounding.
+        /// </param>
+        void ApplySnapshot(in PlayerSnapshot snapshot, double snapshotTime, uint serverTick);
     }
 }

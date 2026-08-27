@@ -131,7 +131,7 @@ namespace Snackdown.Netcode
                     continue;   // spawn message hasn't landed yet; the next snapshot will do
 
                 if (networkObject.TryGetComponent(out IPredictedPeer player))
-                    player.ApplySnapshot(snapshot, snapshotTime);
+                    player.ApplySnapshot(snapshot, snapshotTime, frame.Tick);
             }
         }
     }

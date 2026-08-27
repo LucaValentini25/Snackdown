@@ -161,6 +161,135 @@ invented numbers. The worst real profile Unity models — `Mobile 2G` — has **
 | Mobile 3G | 360 ms | 30 ms | 7 % |
 | Mobile 2G | 520 ms | 50 ms | 7 % |
 
+## Where the gap to the ghost comes from
+
+The red ghost trails the character by the round trip, drawn. That is the feature, not a fault: the
+point of prediction is that the player feels nothing, and the price is that the server — and
+therefore every other player — is behind them. The overlay now names the distance as
+`authority gap`, so it can be compared against the round trip that produced it.
+
+**The arithmetic.** At 30 Hz and `MoveSpeed` 7 u/s, a lead of 432 ms — the mean measured on
+2026-08-25 over Relay — is 13 ticks, or **3.0 units** while running. The character is one unit wide,
+so the ghost sits about three body widths back. What another player sees is worse by the
+interpolation delay they render remote characters at: 0.53 s, or **3.7 units**.
+
+**What is unknown is how that 432 ms divides.** One term is ours rather than the network's:
+[`PredictedPlayer.MaxQueueDepth`](../Assets/_Project/Scripts/Gameplay/Player/PredictedPlayer.cs) is 8,
+so the server tolerates eight queued inputs before draining an extra one per tick. Eight ticks is
+**267 ms**, and it enters the gap whole — the server acts on an input eight ticks old, so the
+authoritative position is already that stale before a packet leaves. Whether the queue actually sits
+that deep has never been measured.
+
+### 2026-08-26 — the queue is not where the lead is
+
+Read live over Relay, two peers, client running at full speed.
+
+| | |
+|---|---|
+| `rtt (ours)` on the client | **400 ms** |
+| `authority gap` on the client | **3.0 u** |
+| `input queue` on the host, for the client | **2–3**, briefly 4–5, 1–2 after a restart |
+
+**`MaxQueueDepth` is exonerated.** It is 8, and the queue never approaches it — so the branch that
+drains an extra command has almost certainly never run, and lowering the cap to 3 would have changed
+nothing while costing jitter tolerance. A steady depth of two or three is what a well-tuned client
+lead looks like: the client sends just far enough ahead that the server always has a command waiting
+and never a pile of them.
+
+That accounts for about **83 ms** of the 400. The remaining **~317 ms** is real transit plus the lead
+NGO runs the client's clock at, and is not yet attributed.
+
+**The gap is exactly the round trip and nothing else.** 400 ms at 7 u/s predicts 2.8 units; 3.0 were
+measured. There is no unexplained separation on top — what is on screen is the latency, drawn.
+
+### The loopback control — it is the relay hop
+
+The same match with *Use Relay* unchecked, both peers on `127.0.0.1`, so there is no network at all.
+
+| | Relay | Loopback |
+|---|---|---|
+| `authority gap` at full speed | 3.0 u | **under 1 u** |
+| `input queue` on the host | 2–3 | **1–2** |
+
+**The 317 ms is the relay hop, and prediction is doing exactly its job.** Take the network away and
+the ghost sits within a body width of the character; put a relay in and it is three. Nothing in
+between those two runs changed except the path the packets took.
+
+Worth being precise about *why* the relay costs that, because the obvious explanation is the wrong
+one. It is not that Relay is a free or test tier that performs worse — it is a production service and
+adds no artificial delay. The cost is geometric: a rendezvous server means neither peer connects to
+the other, so a command travels **client → relay → host** and the answer comes back the same way. Every
+message crosses the internet twice instead of once, and the region is picked by QoS from wherever the
+players are — from Argentina, plausibly North America. That is the price of not asking anyone to open
+a port, and [01 — Architecture](01-architecture.md) took it deliberately.
+
+What is left on loopback — under a unit, so under about 140 ms of lead — is the floor the machinery
+itself costs: one or two ticks of input queue, NGO's client lead, and tick quantization. There is
+nothing to reclaim there.
+
+> **This is the whole argument, measured.** Over a link with a 400 ms round trip the player feels
+> nothing, because prediction covers it; the entire cost is a ghost three units back that only exists
+> because the overlay draws it. Turn prediction off on the same link and the character takes a second
+> to answer — which is what the run with zero corrections recorded on 2026-08-26 was.
+
+### The procedure
+
+Two peers, host and client, exactly as above. Nothing is exported: both readings are live.
+
+1. **On the host**, open the overlay (`F3`) and find the client's line: `[#1] authoritative`. Watch
+   `input queue` for a few seconds while the client runs around. A value pinned near 8 and a value
+   bouncing between 0 and 2 are different findings, and the instantaneous number tells them apart at
+   a glance. Note `starved` as well — it is the cost side of the same trade.
+2. **On the client**, read `authority gap` and `rtt (ours)` from the same overlay while moving at
+   full speed. `gap ≈ rtt × 7 / 1000` is the relationship to check.
+3. **Repeat both over a LAN.** Uncheck *Use Relay* on `SessionConnection` in `Bootstrap.unity`. This
+   is the control: it removes the internet from the measurement and leaves the buffering and NGO's
+   client lead in place.
+
+> **What the answers mean.** If the gap collapses on a LAN, the cost is the Relay path and prediction
+> is doing its job — the number is what playing across the internet from here costs. If it stays
+> large on a LAN, the cost is the queue depth and the client lead, and `MaxQueueDepth` is worth
+> lowering. Lowering it trades jitter tolerance for freshness: a shallower queue means the server
+> runs out of input more often under bursty loss and repeats the last command, which reads as
+> micro-stutter on the remote character.
+
+Changing `MaxQueueDepth` touches the network model and invalidates the results below, so it is not a
+tuning knob to reach for before the reading exists.
+
+## Comparing the two peer-contact sources
+
+A client cannot know where a rival is *now*, only where they were when the last snapshot left the
+server. [02 — Netcode](02-netcode.md#characters-collide-with-each-other-and-it-is-predicted)
+describes the two ways of guessing across that gap; both are implemented and neither has been
+measured. This is how to settle it.
+
+**What is being compared** is the correction rate and the error distribution *when two players are in
+contact* — which is the only situation the setting touches at all. A run where the two never meet
+measures nothing and will look like a tie.
+
+1. Two peers, one hosting, as in the procedure above. Apply **profile B** (150 ms / 50 ms / 20 %) to
+   both — the setting only shows up when the gap between what a client knows and what the server
+   knows is wide.
+2. On the client, check the overlay: `F5 peer contact Interpolated` is the default.
+3. **Fight.** Stand on each other's heads, run into each other, chase. Contact is the whole
+   measurement, and a run spent collecting fruit at opposite ends of the arena is a wasted one.
+   Two minutes is enough.
+4. `F4` to export. The header of the CSV records which source produced it.
+5. Press **`F5`**. The overlay flips to `Authoritative` and **the recording restarts** — deliberately,
+   because a file averaging across both settings describes neither.
+6. Fight again, the same way, for about the same length of time. `F4` again.
+7. Compare the two files on: corrections per second, median error, and the share of corrections worth
+   one tick or less.
+
+> **What would count as an answer.** A halving of the correction rate during contact is a result. A
+> difference inside the run-to-run spread already visible in the two 2026-08-25 scenario B runs is
+> not, and the honest conclusion there is that it does not matter — which is also a finding, and the
+> one that would close this out by keeping the simpler default.
+
+Nothing here is automated, and it is worth being plain about why: the thing being measured is two
+people deliberately colliding, and the harness cannot reach a match at all
+([D-019](06-board.md)).
+
 ## Results
 
 Two sets, and both are kept. The 2026-08-06 runs are what Phase 1 was signed off on. The 2026-08-25
