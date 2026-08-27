@@ -601,6 +601,66 @@
     padding: 6px 8px;
 }
 
+/* ── icon buttons ────────────────────────────────────────────────── */
+
+/* Square, wordless, and sized to the icon. Copy, Paste and Refresh were full-width buttons with a
+   word on them, which is the right shape for an action you came to the screen to perform and the
+   wrong one for a convenience that sits beside a field.
+
+   The three icons are drawn for this project rather than taken from the pack. Crusenho's set has
+   arrows, a check, a cross, a play and a plus, and none of them means copy, paste or refresh — an
+   icon that says something else is worse than a word. They are 16x16 in the pack's own three
+   colours, so they sit in the same set even though they are not from it. */
+.icon-button {
+    width: 30px;
+    height: 30px;
+    margin: 0 0 0 6px;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.icon-button:hover {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    opacity: 0.7;
+}
+
+.icon-button:disabled {
+    opacity: 0.35;
+}
+
+.icon-button--copy {
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Copy.png");
+}
+
+.icon-button--paste {
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Paste.png");
+}
+
+.icon-button--refresh {
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Refresh.png");
+}
+
+/* The list's own header: a title on the left, the refresh on the right. */
+.browse-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.code-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.code-row__field {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+
 /* ── the number stepper ───────────────────────────────────────────── */
 
 /* A row of arrow, number, arrow. It wears the field frame so it reads as the same kind of control as

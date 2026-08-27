@@ -42,12 +42,21 @@
 
             <!-- Hidden whole for a provider with nothing to browse, which is the LAN one. -->
             <ui:VisualElement name="browse-section">
+                <!-- The refresh sits on the list's own header rather than under it as a full-width
+                     button. It acts on the list, so it belongs to the list. -->
+                <ui:VisualElement class="browse-header">
+                    <ui:Label text="Open games" class="settings__title" />
+                    <ui:Button name="refresh-button" tooltip="Refresh" class="icon-button icon-button--refresh" />
+                </ui:VisualElement>
+
                 <!-- Rows are built in code: what is open changes between one refresh and the next. -->
                 <ui:VisualElement name="browse-list" class="browse" />
-                <ui:Button name="refresh-button" text="Refresh" class="button button--compact" />
             </ui:VisualElement>
 
-            <ui:TextField name="target-field" label="Code" class="field" />
+            <ui:VisualElement class="code-row">
+                <ui:TextField name="target-field" label="Code" class="field field--tall code-row__field" />
+                <ui:Button name="paste-button" tooltip="Paste" class="icon-button icon-button--paste" />
+            </ui:VisualElement>
 
             <ui:Button name="join-confirm-button" text="Join" class="button button--primary" />
             <ui:Button name="join-cancel-button" text="Cancel" class="button hidden" />
@@ -68,7 +77,7 @@
 
             <ui:VisualElement name="join-code-row" class="join-code-row">
                 <ui:Label name="join-code" class="join-code" />
-                <ui:Button name="copy-code-button" text="Copy" class="button button--compact" />
+                <ui:Button name="copy-code-button" tooltip="Copy" class="icon-button icon-button--copy" />
             </ui:VisualElement>
 
             <ui:VisualElement class="lobby-columns">

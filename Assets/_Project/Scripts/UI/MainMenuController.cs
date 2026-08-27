@@ -56,6 +56,7 @@ namespace Snackdown.UI
         Label _lobbySubtitle;
         Label _joinCode;
         Button _copyCode;
+        Button _paste;
         VisualElement _rosterList;
 
         VisualElement _wardrobeRow;
@@ -116,6 +117,7 @@ namespace Snackdown.UI
             _lobbySubtitle = root.Q<Label>("lobby-subtitle");
             _joinCode = root.Q<Label>("join-code");
             _copyCode = root.Q<Button>("copy-code-button");
+            _paste = root.Q<Button>("paste-button");
             _rosterList = root.Q<VisualElement>("roster-list");
 
             _wardrobeRow = root.Q<VisualElement>("wardrobe-row");
@@ -149,6 +151,7 @@ namespace Snackdown.UI
             _start.clicked += OnStartClicked;
             _leave.clicked += OnLeaveClicked;
             _copyCode.clicked += OnCopyCodeClicked;
+            _paste.clicked += OnPasteClicked;
 
             _arena.RegisterValueChangedCallback(OnArenaPicked);
             _preset.RegisterValueChangedCallback(OnPresetPicked);
@@ -197,6 +200,7 @@ namespace Snackdown.UI
             _start.clicked -= OnStartClicked;
             _leave.clicked -= OnLeaveClicked;
             _copyCode.clicked -= OnCopyCodeClicked;
+            _paste.clicked -= OnPasteClicked;
 
             _arena.UnregisterValueChangedCallback(OnArenaPicked);
             _preset.UnregisterValueChangedCallback(OnPresetPicked);
@@ -954,6 +958,21 @@ namespace Snackdown.UI
 
             GUIUtility.systemCopyBuffer = _rawJoinTarget;
             SetStatus(_lobbyStatus, $"Copied  {_rawJoinTarget}", isError: false);
+        }
+
+        /// <summary>Fills the code field from the clipboard.</summary>
+        /// <remarks>
+        /// The other half of Copy, and the half that matters more: a code arrives in a chat window
+        /// and typing six characters read off another screen is where they get mistyped. Trimmed
+        /// because a code copied out of a message usually brings a space with it, and the provider
+        /// would report that as a game that does not exist.
+        /// </remarks>
+        void OnPasteClicked()
+        {
+            string clipboard = GUIUtility.systemCopyBuffer;
+            if (string.IsNullOrWhiteSpace(clipboard)) return;
+
+            _target.value = clipboard.Trim();
         }
 
         /// <remarks>
