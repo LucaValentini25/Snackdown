@@ -302,9 +302,29 @@ game draws it. Nothing runs; the point is that what you see *is* what the import
 a wrong pixels-per-unit shows up as a sprite the wrong size next to a ruler rather than as a feeling
 that something is off in the arena.
 
-It is what makes the pack's three different pixels-per-unit visible at a glance. A 32×32 character at
-32 is one unit; a 32×32 fruit at 64 is half a unit; a 16×16 terrain tile at **100 is 0.16 units** —
-about a sixth of a character, where the pack drew it to be half of one.
+It is what made the pack's three different pixels-per-unit visible at a glance, and they are one now.
+The art was drawn on a single pixel grid — 32-pixel characters, 16-pixel tiles — and it is imported on
+one: **every sprite in the pack is at 32 pixels per unit.** A 32×32 character frame is one world unit,
+a 16×16 tile is half of one, and a 32×32 fruit frame is a unit whose apple occupies the middle
+16 pixels. Measured against the character's own 27 opaque pixels, the apple's 16 come out at 0.59 of
+its height — which is 16/27, the ratio the artist drew.
+
+Before that they were at 32, 64 and 100, and the last one was doing the damage: a 16-pixel tile at 100
+is 0.16 units against a one-unit character, a sixth of the size the art intends. Nothing in the game
+used those sprites yet, which is why it had gone unnoticed and why fixing it cost nothing.
+
+`WhiteSquare.png` stays at 4, deliberately. It is not pack art — it is a 4×4 white block that exists
+to be exactly one unit, and both arenas are built out of it.
+
+**The gameplay does not read any of this.** A fruit is collected by
+`Fruit._pickupRadius`, a number in world units, and a character collides through
+`MovementConfig.ColliderSize`. Both are authored independently of how big the sprite is drawn, which
+is why re-importing the whole pack changed what the game looks like and nothing about how it plays.
+
+Two settings come with the grid and matter as much. **Point filtering and no compression** were
+already right. **`FullRect` meshes were not**: the pack imported with `Tight`, which fits the mesh to
+the opaque pixels of each frame, so every frame of a run cycle gets a slightly different quad and the
+sprite swims inside its own transform. Pixel art wants the full rectangle every time.
 
 ## Art has a size; it is not scaled to one
 
