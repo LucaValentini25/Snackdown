@@ -1,7 +1,7 @@
 {
   "project": "Snackdown",
   "updated": "2026-08-25",
-  "currentEpic": "loose-ends",
+  "currentEpic": "visuals",
 
   "epics": [
     {
@@ -140,10 +140,34 @@
         { "id": "le-4", "title": "A scene showing every sprite at the size its import settings produce", "status": "done", "test": "— it is an authoring aid and nothing runs in it. Checked that all 113 sprites resolved: 120 renderers, none with an empty sprite", "notes": "Asked for by Luca to fix sprites that are set up wrong. Built as plain SpriteRenderers at scale 1 rather than anything clever, because the whole value is that what is drawn is exactly what the importer produces. A row per source folder, and a strip of 1x1 unit squares with the character beside them so size can be judged against something. It immediately paid for itself: the pack ships three different pixels-per-unit and the terrain is at 100, so a 16x16 tile is 0.16 units against a one-unit character — a sixth of the size the art was drawn at. Listed in Build Settings with its checkbox off, like Sandbox, so Unity stops adding it back" },
         { "id": "le-3", "title": "Sandbox holds an instance of the NetworkSimulation prefab, not a copy of it", "status": "done", "test": "the sandbox still starts a match on Play with a clean console, and the instance now carries exactly one override — the rules asset. Checked first that nothing else in the scene held a serialized reference into the object being replaced", "notes": "The drift the risk predicted had already happened and was found by diffing the copy against the prefab before touching anything: two differences, and only one of them was meant. _rules pointing at SandboxMatchConfig is the deliberate override and was kept; _difficulties being null was ps-7 landing on Bootstrap for free and being forgotten here, and it fixed itself by coming from the prefab. That is the argument for D-013 arriving on time rather than as a prediction" }
       ]
+    },
+    {
+      "id": "visuals",
+      "title": "Make it look like a game",
+      "phase": "5",
+      "status": "todo",
+      "goal": "The netcode is finished and invisible. What a stranger sees is untextured boxes and characters that do not move their legs. This epic is the layer that makes the rest of it worth looking at, and it is held to the same rule as everything else: nothing new on the wire that can be derived from what is already there.",
+      "tasks": [
+        { "id": "vp-1", "title": "Characters animate, and agree across peers without sending anything", "status": "todo", "test": "—", "notes": "D-022. Idle, run, jump, fall and hit, plus the horizontal flip. Derived from PlayerState rather than replicated" },
+        { "id": "vp-2", "title": "Fruit spins where it stands, and pops when it is collected", "status": "todo", "test": "—", "notes": "Purely local. The kind is already replicated and the animation changes no outcome, so it is a view like the HUD is. The pack ships a Collected sheet for the pickup" },
+        { "id": "vp-3", "title": "A background behind each arena", "status": "todo", "test": "—", "notes": "Static tiled, no parallax: the arena is 26x9 against a 24.9x14 view, so the camera barely moves and a parallax would buy nothing it could show. Cool palette for Arena01 and warm for Arena02, which is the difference they already have" },
+        { "id": "vp-4", "title": "Terrain is a tilemap, and the player does not catch on it", "status": "todo", "test": "—", "notes": "The risky one. The motor casts against live colliders, so the arena's colliders ARE the surface reconciliation replays against. Tilemap plus TilemapCollider2D plus CompositeCollider2D in Outlines, tried first because Luca has been caught by a composite trapping the player at edges before; if it does it again the fallback is an editor tool that emits rectangle colliders from the terrain's own shape. Platforms are their own prefab with their own colliders, not part of the tilemap" },
+        { "id": "vp-5", "title": "Pixel Perfect Camera, with the framing checked afterwards", "status": "todo", "test": "—", "notes": "It derives orthographicSize from a reference resolution, so the 24.9x14 view can move — ArenaBounds and the spectator camera clamp are both matched to it and have to be re-checked in the sandbox" },
+        { "id": "vp-6", "title": "The UI stops looking like a default stylesheet", "status": "todo", "test": "—", "notes": "A CC0 pixel-art pack for the UI Toolkit panels, 9-sliced. CC0 matters here beyond taste: this repository is shown to strangers, and a pack needing attribution is a line in the README nobody remembers to keep" }
+      ]
     }
   ],
 
   "decisions": [
+    {
+      "id": "D-022",
+      "date": "2026-08-26",
+      "epic": "visuals",
+      "title": "Animation is derived from the replicated state, not replicated itself",
+      "choice": "Each peer picks a character's clip from the PlayerState it already has — velocity, grounded, stun — rather than receiving animator parameters through NetworkAnimator.",
+      "why": "The state animation needs already crosses the wire every tick for its own reason, so replicating a second description of it spends bandwidth on something derivable and creates a second source of truth that can disagree with the first. It is also the only correct answer under prediction: NetworkAnimator would drive the owner's own character from the server's timeline, so your legs would move a round trip after your body did. Deriving means the owner animates from its predicted state and a remote from its interpolated one, each matching what is drawn. It is the same argument docs/02 makes for the HUD — every number shown already crossed the network for its own reason.",
+      "rejected": "NetworkAnimator, which is less code and what Unity documents; and sending a facing bit in the snapshot, which was offered and declined — facing is derived from the sign of the velocity with the last non-zero value held."
+    },
     {
       "id": "D-021",
       "date": "2026-08-25",
