@@ -61,6 +61,18 @@ namespace Snackdown.Gameplay.Match
         public string ArenaName(int index)
             => _arenas != null ? _arenas.Get(index).DisplayName : string.Empty;
 
+        /// <summary>
+        /// The preview image of an arena, for a menu that shows one. Null when no catalog is
+        /// assigned or the entry has no sprite.
+        /// </summary>
+        /// <remarks>
+        /// A missing preview is not an error here, unlike a missing scene name: the picker can fall
+        /// back to the name, and refusing to show a lobby because an arena has no artwork yet would
+        /// make authoring content harder for no gain.
+        /// </remarks>
+        public Sprite ArenaPreview(int index)
+            => _arenas != null ? _arenas.Get(index).Preview : null;
+
         /// <summary>Raised on every peer when the arena for the next match changes.</summary>
         public event Action<int> ArenaChanged;
 

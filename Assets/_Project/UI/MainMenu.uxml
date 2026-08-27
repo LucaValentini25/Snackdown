@@ -12,11 +12,15 @@
 
     <!-- ── menu ────────────────────────────────────────────────────────────────── -->
     <ui:VisualElement name="menu-screen" class="screen">
-        <ui:VisualElement class="panel">
-            <ui:Label text="Snackdown" class="title" />
-            <ui:Label name="menu-subtitle" text="Last one standing wins." class="subtitle" />
+        <!-- The name of the game is not a heading inside a form. It sits above the panel, on the
+             backdrop, at a size that says what you are looking at from across a room. -->
+        <ui:Label text="Snackdown" class="title title--hero" />
+        <ui:Label name="menu-subtitle" text="Last one standing wins." class="subtitle subtitle--hero" />
 
-            <ui:TextField name="nickname-field" label="Name" max-length="16" class="field" />
+        <!-- Narrow, because it holds one field and two buttons. A panel as wide as the lobby's
+             makes both of them look like they are missing something. -->
+        <ui:VisualElement class="panel panel--narrow">
+            <ui:TextField name="nickname-field" label="Name" max-length="16" class="field field--tall" />
 
             <ui:Button name="host-button" text="Host a game" class="button button--primary" />
             <ui:Button name="join-button" text="Join a game" class="button" />
