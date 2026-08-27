@@ -100,6 +100,7 @@
                     <ui:VisualElement name="wardrobe-row" class="wardrobe" />
                 </ui:VisualElement>
 
+
               </ui:VisualElement>
               <ui:VisualElement class="lobby-column">
 
@@ -108,11 +109,6 @@
                  built in code because unlike the roster there is a fixed, known set of them. -->
             <ui:VisualElement name="settings-panel" class="settings">
                 <ui:Label text="Rules" class="settings__title" />
-
-                <ui:VisualElement name="arena-row" class="settings__row">
-                    <ui:Label text="Arena" class="settings__label" />
-                    <ui:DropdownField name="arena-field" class="settings__control" />
-                </ui:VisualElement>
 
                 <ui:VisualElement name="preset-row" class="settings__row">
                     <ui:Label text="Preset" class="settings__label" />
@@ -124,25 +120,38 @@
                      MatchSettings.Clamped enforces, so the control cannot offer the server a value
                      it will refuse. -->
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Starting life" class="settings__label" />
+                    <ui:Label text="Start life" class="settings__label" />
                     <Snackdown.UI.NumberStepper name="starting-life-field" class="settings__control" low-value="5" high-value="600" step="5" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Life ceiling" class="settings__label" />
+                    <ui:Label text="Ceiling" class="settings__label" />
                     <Snackdown.UI.NumberStepper name="max-life-field" class="settings__control" low-value="5" high-value="600" step="5" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Drain per second" class="settings__label" />
+                    <ui:Label text="Drain /s" class="settings__label" />
                     <Snackdown.UI.NumberStepper name="drain-field" class="settings__control" low-value="0.1" high-value="10" step="0.1" format-string="0.0" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Round seconds" class="settings__label" />
+                    <ui:Label text="Round" class="settings__label" />
                     <Snackdown.UI.NumberStepper name="round-seconds-field" class="settings__control" low-value="0" high-value="3600" step="10" />
                 </ui:VisualElement>
             </ui:VisualElement>
+
+              </ui:VisualElement>
+              <ui:VisualElement class="lobby-column">
+
+                <!-- The arena is a place, not a number, so it is shown rather than named. It left
+                     the rules panel because a picture beside four figures makes the figures look
+                     like a caption, and it has a column of its own because stacked under the rules
+                     it made that column half as tall again as the panel could hold. -->
+                <ui:VisualElement name="arena-row" class="settings">
+                    <ui:Label text="Arena" class="settings__title" />
+                    <ui:VisualElement name="arena-preview" class="arena-preview" />
+                    <ui:DropdownField name="arena-field" class="arena-picker" />
+                </ui:VisualElement>
 
               </ui:VisualElement>
             </ui:VisualElement>

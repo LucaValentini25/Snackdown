@@ -63,6 +63,7 @@ namespace Snackdown.UI
 
         VisualElement _settingsPanel;
         VisualElement _arenaRow;
+        VisualElement _arenaPreview;
         DropdownField _arena;
         VisualElement _presetRow;
         DropdownField _preset;
@@ -124,6 +125,7 @@ namespace Snackdown.UI
 
             _settingsPanel = root.Q<VisualElement>("settings-panel");
             _arenaRow = root.Q<VisualElement>("arena-row");
+            _arenaPreview = root.Q<VisualElement>("arena-preview");
             _arena = root.Q<DropdownField>("arena-field");
             _presetRow = root.Q<VisualElement>("preset-row");
             _preset = root.Q<DropdownField>("preset-field");
@@ -640,6 +642,22 @@ namespace Snackdown.UI
         /// comparison in the middle of that for no reason — two arenas named the same would both
         /// resolve to the first one, and the failure would be a pick that silently does nothing.
         /// </remarks>
+        /// <summary>Puts the chosen arena's picture in the box above its dropdown.</summary>
+        /// <remarks>
+        /// A missing preview leaves the box empty rather than logging: the catalog treats the image
+        /// as optional — unlike the scene name, which <c>Validate</c> refuses to be without — so an
+        /// arena added without one still works, it just does not sell itself.
+        /// </remarks>
+        void ShowArenaPreview(int index)
+        {
+            if (_arenaPreview == null || _director == null) return;
+
+            Sprite preview = _director.ArenaPreview(index);
+            _arenaPreview.style.backgroundImage = preview != null
+                ? new StyleBackground(preview)
+                : new StyleBackground();
+        }
+
         void OnArenaPicked(ChangeEvent<string> change)
         {
             if (_fillingFields || _director == null) return;
@@ -709,6 +727,8 @@ namespace Snackdown.UI
             // player is agreeing to when they ready up.
             if (_director.ArenaIndex >= 0 && _director.ArenaIndex < _arena.choices.Count)
                 _arena.index = _director.ArenaIndex;
+
+            ShowArenaPreview(_director.ArenaIndex);
 
             _startingLife.value = settings.StartingLife;
             _maxLife.value = settings.MaxLife;
