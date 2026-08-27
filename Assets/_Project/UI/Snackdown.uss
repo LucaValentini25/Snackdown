@@ -4,6 +4,23 @@
  * Deliberately built from a handful of variables rather than per-element values: the palette and
  * spacing are the two things that change when placeholder art is replaced with real art, and having
  * them in one block is the difference between editing five lines and hunting through the file.
+ *
+ * ── The nine-slice numbers live here, and that is not an accident ──────────────────
+ *
+ * Every frame, button and field below is a pixel-art sprite stretched to a size it was not drawn
+ * at, so it is cut into nine pieces: the four corners are drawn as they are, the four edges repeat
+ * along one axis, and the middle fills. The cut is the -unity-slice-* block on each rule.
+ *
+ * The same numbers also exist on the sprites themselves, set in the Sprite Editor, and UI Toolkit
+ * does NOT read them. That was measured rather than assumed: an element given
+ * UI_Flat_Frame01a - whose own border is 5, 7, 5, 7 - resolves to a slice of 0 on every side.
+ * The Sprite Editor values are still worth having, because they are where these came from and
+ * because a SpriteRenderer would use them, but the stylesheet is what decides what is drawn.
+ *
+ * The sprites are imported at 100 pixels per unit, unlike the rest of the project's art, which is
+ * on a 32 grid. UI Toolkit scales the slice by the sprite's pixels-per-unit, and 100 is the value
+ * its own defaults are written against. A UI sprite has no size in world units to be consistent
+ * about.
  */
 
 :root {
@@ -31,10 +48,12 @@
 .panel {
     width: 420px;
     padding: 24px;
-    background-color: var(--panel);
-    border-width: 2px;
-    border-color: var(--panel-edge);
-    border-radius: var(--radius);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Frame01a.png");
+    -unity-slice-left: 5;
+    -unity-slice-top: 7;
+    -unity-slice-right: 5;
+    -unity-slice-bottom: 7;
+    -unity-slice-scale: 3px;
 }
 
 .title {
@@ -66,43 +85,63 @@
 }
 
 .field > .unity-base-text-field__input {
-    background-color: var(--bg);
-    border-color: var(--panel-edge);
-    border-width: 1px;
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
     color: var(--ink);
-    padding: 6px 8px;
+    padding: 8px 10px;
 }
 
 /* ── buttons ────────────────────────────────────────────────────────────────────── */
 
+/* The pack draws a button four times, one per state, and they are used in that order: at rest,
+   under the cursor, held down, and unavailable. Sliced identically, so the frame does not jump as
+   the mouse crosses it — which is why the border was copied from the first state onto the other
+   three rather than set four times by hand. */
 .button {
-    height: 38px;
+    height: 40px;
     margin: 4px 0 0 0;
     padding: 0 16px;
-    background-color: var(--panel-edge);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_1.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 7;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
     border-width: 0;
-    border-radius: 4px;
     color: var(--ink);
     font-size: 15px;
     -unity-font-style: bold;
 }
 
 .button:hover {
-    background-color: rgb(78, 72, 102);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_2.png");
 }
 
+.button:active {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_3.png");
+}
+
+/* The pack's fourth state, rather than the old trick of dimming the third. A greyed-out button that
+   is really the normal one at 40% opacity also fades its own text, and the label is the part that
+   still has to be readable. */
 .button:disabled {
-    opacity: 0.4;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_4.png");
+    opacity: 1;
+    color: var(--ink-dim);
 }
 
+/* The one button on each screen that is the thing you came to do. It keeps the pack's frame and
+   takes the accent on its label, because tinting the whole sprite would flatten the shading the
+   frame is drawn with. */
 .button--primary {
-    background-color: var(--accent);
-    color: var(--accent-ink);
-}
-
-.button--primary:hover {
-    background-color: rgb(248, 128, 112);
+    color: var(--accent);
 }
 
 /* ── status line ────────────────────────────────────────────────────────────────── */
@@ -133,8 +172,13 @@
     justify-content: space-between;
     padding: 8px 10px;
     margin-bottom: 4px;
-    background-color: var(--bg);
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 4;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 4;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .roster-row__name {
@@ -173,14 +217,20 @@
     width: 100%;
     padding: 8px 10px;
     margin: 0 0 4px 0;
-    background-color: var(--bg);
-    border-width: 1px;
-    border-color: var(--panel-edge);
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 4;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 4;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
+/* The pack draws the same slot three times, and the second is the one that reads as "under the
+   cursor". Swapping the sprite rather than recolouring a border, which this row no longer has. */
 .browse__row:hover {
-    border-color: var(--accent);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01b.png");
 }
 
 .browse__row--full {
@@ -305,10 +355,14 @@
    out flat grey against white neighbours, which reads as disabled - and both of these are live
    controls that the host is meant to use. */
 .settings__control > .unity-base-popup-field__input {
-    background-color: var(--bg);
-    border-color: var(--panel-edge);
-    border-width: 1px;
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Select01a_1.png");
+    -unity-slice-left: 10;
+    -unity-slice-top: 10;
+    -unity-slice-right: 10;
+    -unity-slice-bottom: 10;
+    -unity-slice-scale: 1px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
     color: var(--ink);
     padding: 6px 8px;
 }
@@ -371,9 +425,14 @@
 
 .progress-track {
     width: 380px;
-    height: 10px;
-    background-color: var(--panel);
-    border-radius: 5px;
+    height: 14px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Bar01a.png");
+    -unity-slice-left: 2;
+    -unity-slice-top: 2;
+    -unity-slice-right: 2;
+    -unity-slice-bottom: 3;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
     overflow: hidden;
 }
 
@@ -383,7 +442,6 @@
     height: 100%;
     width: 0;
     background-color: var(--accent);
-    border-radius: 5px;
     transition-property: width;
     transition-duration: 0.25s;
 }
@@ -544,10 +602,19 @@
     color: var(--accent);
 }
 
+/* The track is the pack's empty bar, sliced so it can be any width; the fill is a flat colour
+   inside it rather than the pack's own fill sprite. A sprite fill would have to be masked to a
+   fraction of its own width, and a coloured box already reads correctly and can go red on its own
+   when the life is low — which is the one thing this bar has to say. */
 .lifebar__track {
-    height: 12px;
-    background-color: var(--bg);
-    border-radius: 6px;
+    height: 14px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Bar01a.png");
+    -unity-slice-left: 2;
+    -unity-slice-top: 2;
+    -unity-slice-right: 2;
+    -unity-slice-bottom: 3;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
     overflow: hidden;
 }
 
