@@ -101,24 +101,28 @@
                     <ui:DropdownField name="preset-field" class="settings__control" />
                 </ui:VisualElement>
 
+                <!-- Steppers rather than text fields. A number you can only change by typing is a
+                     number a player on a gamepad cannot change at all, and the bounds are the ones
+                     MatchSettings.Clamped enforces, so the control cannot offer the server a value
+                     it will refuse. -->
                 <ui:VisualElement class="settings__row">
                     <ui:Label text="Starting life" class="settings__label" />
-                    <ui:FloatField name="starting-life-field" class="settings__control" />
+                    <Snackdown.UI.NumberStepper name="starting-life-field" class="settings__control" low-value="5" high-value="600" step="5" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
                     <ui:Label text="Life ceiling" class="settings__label" />
-                    <ui:FloatField name="max-life-field" class="settings__control" />
+                    <Snackdown.UI.NumberStepper name="max-life-field" class="settings__control" low-value="5" high-value="600" step="5" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
                     <ui:Label text="Drain per second" class="settings__label" />
-                    <ui:FloatField name="drain-field" class="settings__control" />
+                    <Snackdown.UI.NumberStepper name="drain-field" class="settings__control" low-value="0.1" high-value="10" step="0.1" format-string="0.0" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
                     <ui:Label text="Round seconds" class="settings__label" />
-                    <ui:FloatField name="round-seconds-field" class="settings__control" />
+                    <Snackdown.UI.NumberStepper name="round-seconds-field" class="settings__control" low-value="0" high-value="3600" step="10" />
                 </ui:VisualElement>
             </ui:VisualElement>
 

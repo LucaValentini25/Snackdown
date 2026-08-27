@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 81% — 57 done, 2 in progress, 0 blocked, 11 to do, 2 dropped, across 10 epics.
+**Overall:** 83% — 58 done, 3 in progress, 0 blocked, 9 to do, 2 dropped, across 10 epics.
 
 ## Epics
 
@@ -22,7 +22,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | Done | 4/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 6/7 |
 | [Loose ends](#loose-ends) | 5 | To do | 5/5 |
-| [Make it look like a game](#make-it-look-like-a-game) | 5 | To do | 4/16 |
+| [Make it look like a game](#make-it-look-like-a-game) | 5 | To do | 5/16 |
 
 ### Netcode core — predicted character
 
@@ -159,11 +159,11 @@ The netcode is finished and invisible. What a stranger sees is untextured boxes 
 | `[x]` | Starting a connection hides the buttons instead of greying them | — needs a real connection attempt to see, so it is on Luca's visual list: press Host and only Cancel and the status line should remain | Luca, on both the front screen and the join screen: while an attempt is in flight, display none on everything except Cancel. It contradicts the reasoning in SetBusy, which argued a button that vanishes mid-click reads as a crash - that argument was about a button vanishing under the cursor, and this is the whole row going at once, which reads as a state change. Worth recording that it was a deliberate reversal |
 | `[ ]` | The wardrobe says which skin is yours instead of implying it is broken | — | Luca: a selected skin currently looks disabled, as if another player had taken it. Taken stays grey; selected gets a border colour that stands out; and the swatch gets a background from the pack behind the character so it contrasts with the sprite instead of sitting on a flat panel |
 | `[ ]` | The lobby stops being cramped and lines up | — | Luca: the whole thing is compressed and can spread out; joining as a client leaves the rules box misaligned with the player list, so either the list gets a box of its own or the two are aligned; the disabled Start match button does not fit its own frame; the room code row can be smaller and Copy can be an icon |
-| `[ ]` | The rules panel reads correctly at a glance | — | Luca: the preset dropdown clips its own selection, and the number fields are too large with their text off-centre |
+| `[~]` | The rules panel reads correctly at a glance | — | Luca: the preset dropdown clips its own selection, and the number fields are too large with their text off-centre. The second half came free with vp-16 — the numbers are steppers now, sized to the column and centred. The clipped dropdown is still open |
 | `[ ]` | Joining gets a paste button and a refresh that is an icon | — | Luca: a paste button with an icon beside the code field, and the full-width Refresh replaced by a small circular-arrow button at the top right of the list |
 | `[ ]` | Picking an arena shows what you are picking | — | Luca, and the one item here that is not UI work: the arena moves out of the rules panel into an area of its own showing a preview image of the arena being chosen. ArenaCatalog has to carry that image, and the images have to come from somewhere - capturing each arena scene is the obvious source and is a decision to take before starting |
 | `[x]` | A leave leaves the session behind, and the browser offers it | manual and Luca's to run: host a game, leave it, and open the browser from another peer — the game should be gone rather than listed and unjoinable | It was the first of the two: LeaveAsync removes the caller from a session and does nothing else, so a host calling it published a lobby, walked out, and left the entry standing with its relay allocation gone. A host deletes now and a client leaves. The check is on ISession.IsHost rather than catching what AsHost throws — an exception used to ask a question is one that hides the answer to a different one |
-| `[ ]` | The rules can be changed with a gamepad | — | Found by Luca: the rules are text input fields, so a player on a pad cannot reach or change them. They are numbers, so the control wants to be one you can focus and then raise or lower with the stick. It is a custom control rather than a style, and it is the first thing in this project to treat the pad as a first-class way in |
+| `[x]` | The rules can be changed with a gamepad | — four steppers resolve in the lobby tree and draw as arrow-number-arrow. Whether a pad can actually focus and drive them is on Luca's visual list, because nothing here can hold a controller | A NumberStepper VisualElement, the project's first custom control, written by a parallel worker while the stylesheet was being edited here. It implements INotifyValueChanged so RegisterValueChangedCallback keeps working and the controller changed only its four field types. Bounds come from the constants MatchSettings.Clamped enforces, so the control cannot offer the server a number it will refuse. It also closes half of vp-12 on the way: the numbers are centred and the fields are no longer oversized. The focus state is the load-bearing style — on a pad the only way to know which rule you are about to change is that the control says so |
 | `[~]` | The UI stops looking like a default stylesheet | measured rather than eyeballed, because the mechanism is invisible until it is wrong: in play mode the panel resolves to a slice of 5/7/5/7 at scale 3 on Frame01a, the button to 3/7/3/6 at scale 2 on Button01a_1, and the loading bar to 2/2/2/3 on Bar01a. Whether it looks good is Luca's call and is not something this session can see | Crusenho's Complete UI Essential Pack, CC BY 4.0, chosen after Kenney's two were rejected on style. See D-023, which is really a decision about the repository rather than about art: the Unity Asset Store was ruled out because its EULA forbids redistribution and a public GitHub repository is redistribution. Blocked until Luca downloads the pack — itch.io's name-your-own-price flow is not something this session can go through |
 
 ## Decisions

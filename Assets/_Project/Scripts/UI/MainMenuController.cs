@@ -65,10 +65,10 @@ namespace Snackdown.UI
         DropdownField _arena;
         VisualElement _presetRow;
         DropdownField _preset;
-        FloatField _startingLife;
-        FloatField _maxLife;
-        FloatField _drain;
-        FloatField _roundSeconds;
+        NumberStepper _startingLife;
+        NumberStepper _maxLife;
+        NumberStepper _drain;
+        NumberStepper _roundSeconds;
 
         MatchDirector _director;
 
@@ -125,10 +125,10 @@ namespace Snackdown.UI
             _arena = root.Q<DropdownField>("arena-field");
             _presetRow = root.Q<VisualElement>("preset-row");
             _preset = root.Q<DropdownField>("preset-field");
-            _startingLife = root.Q<FloatField>("starting-life-field");
-            _maxLife = root.Q<FloatField>("max-life-field");
-            _drain = root.Q<FloatField>("drain-field");
-            _roundSeconds = root.Q<FloatField>("round-seconds-field");
+            _startingLife = root.Q<NumberStepper>("starting-life-field");
+            _maxLife = root.Q<NumberStepper>("max-life-field");
+            _drain = root.Q<NumberStepper>("drain-field");
+            _roundSeconds = root.Q<NumberStepper>("round-seconds-field");
 
             _nickname.value = NicknamePreference.Offered;
 
