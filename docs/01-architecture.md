@@ -108,7 +108,7 @@ Four scenes, two of which are arenas — which is the split paying for itself:
 | **Bootstrap** | `NetworkManager` and `SessionConnection`, the `NetworkSimulation` prefab instance — `MatchDirector`, `RoundReferee`, `SessionRoster` and the tick loop on one networked object — plus the loading screen, the round clock, the life bars and the end screen | The whole session |
 | **Lobby** | Menu and lobby UI | Between matches |
 | **Arena01**, **Arena02** | Geometry, spawn points, camera | During a match |
-| **Sandbox** | A copy of Bootstrap that hosts and starts a match on Play | Never in a build; opened by hand |
+| **Sandbox** | Bootstrap's objects again, hosting and starting a match on Play | Never in a build; opened by hand |
 
 **Arena02 is Arena01 with the red and blue channels of every colour swapped** — warm where the first
 is cool, and identical in every other respect. That is a deliberately small change and worth naming

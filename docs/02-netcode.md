@@ -250,6 +250,29 @@ motion that's smooth regardless of packet jitter or tick rate.
   development-only — see [Debug tooling is not part of the game](#debug-tooling-is-not-part-of-the-game).
 - **Multiplayer Play Mode** to run host + client in one editor while developing.
 
+## What an arena contains and what it merely holds
+
+Unloading an arena takes away everything that is *part* of it and nothing that is merely standing in
+it. Two things are standing in it, and they are handled in opposite ways.
+
+**The characters are despawned deliberately.** They are spawned objects, so they would outlive the
+unload and be left standing in no scene at all. `MatchDirector` takes them away on every route out of
+an arena — returning to the lobby, and a load that is refused mid-flight and puts the phase back.
+
+**The fruit was not, and that was the bug.** `FruitSpawner` instantiates fruit without a parent, so
+it lands in the *active* scene — Bootstrap — while the spawner itself lives in the arena. Unloading
+took the spawner and left its fruit floating over the lobby and into the next match. The spawner now
+clears itself when the director raises `ArenaUnloading`, which fires inside the unload while the
+arena's own systems can still be reached.
+
+It is an event rather than the director despawning the fruit itself. The dependency between these two
+runs one way — the arena's systems know about the match, not the reverse — and a director reaching
+into the fruit would have pointed it both ways for the sake of one call.
+
+**Nothing is broadcast while the session sits in the lobby.** That follows from the same lifecycle
+rather than from a check: with no characters spawned, nothing is registered with the tick loop, and
+`BroadcastSnapshot` returns before it builds a frame. Verified by watching the counter stay still.
+
 ## Debug tooling is not part of the game
 
 Three things exist only to make the netcode visible: the on-screen readout, the red ghost drawing

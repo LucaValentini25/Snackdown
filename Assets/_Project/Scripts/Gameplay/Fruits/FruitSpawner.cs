@@ -55,7 +55,37 @@ namespace Snackdown.Gameplay.Fruits
                 Debug.LogError($"[Snackdown] Fruit spawner disabled: {problem}", this);
                 enabled = false;
             }
+
+            // Fruit outlives the arena it was spawned in unless something clears it: it is
+            // instantiated without a parent, so it belongs to the active scene rather than to this
+            // one, and the unload that takes this component away leaves the fruit standing.
+            if (Director != null) Director.ArenaUnloading += ServerDespawnAll;
         }
+
+        public override void OnNetworkDespawn()
+        {
+            if (Director != null) Director.ArenaUnloading -= ServerDespawnAll;
+        }
+
+        /// <remarks>
+        /// Resolved once and held, rather than read from <see cref="MatchDirector.Current"/> at each
+        /// use like <c>Update</c> does. Subscribing and unsubscribing have to reach the same object,
+        /// and a static that another peer in the same process can move underneath is not that
+        /// object — the Play mode harness runs several peers at once.
+        /// </remarks>
+        MatchDirector Director
+        {
+            get
+            {
+                if (_director == null)
+                    foreach (MatchDirector candidate in FindObjectsByType<MatchDirector>(FindObjectsSortMode.None))
+                        if (candidate.NetworkManager == NetworkManager) _director = candidate;
+
+                return _director;
+            }
+        }
+
+        MatchDirector _director;
 
         string Describe()
         {
