@@ -55,7 +55,10 @@
 
     <!-- ── lobby ───────────────────────────────────────────────────────────────── -->
     <ui:VisualElement name="lobby-screen" class="screen hidden">
-        <ui:VisualElement class="panel">
+        <!-- Wider than the other two, and two-columned inside, because it is the only screen with
+             enough on it to run out of height: stacked, its content asks for about 660 units
+             against the 540 the panel has. -->
+        <ui:VisualElement class="panel panel--wide">
             <ui:Label text="Lobby" class="title" />
             <ui:Label name="lobby-subtitle" text="Waiting for players…" class="subtitle" />
 
@@ -64,6 +67,9 @@
                 <ui:Button name="copy-code-button" text="Copy" class="button button--compact" />
             </ui:VisualElement>
 
+            <ui:VisualElement class="lobby-columns">
+              <ui:VisualElement class="lobby-column">
+
             <!-- Rows are built in code: the roster is replicated and its length changes at runtime,
                  so laying out four fixed slots here would mean hiding and showing them instead. -->
             <ui:VisualElement name="roster-list" class="roster" />
@@ -71,6 +77,9 @@
             <!-- Built in code: one button per catalog entry, and the catalog is content whose
                  length is not known here. Which are taken changes while the lobby is open. -->
             <ui:VisualElement name="wardrobe-row" class="wardrobe" />
+
+              </ui:VisualElement>
+              <ui:VisualElement class="lobby-column">
 
             <!-- The rules panel. Every peer sees the numbers; only the host is given the controls
                  that move them, and only between matches. The rows are laid out here rather than
@@ -109,9 +118,16 @@
                 </ui:VisualElement>
             </ui:VisualElement>
 
-            <ui:Button name="ready-button" text="Ready" class="button button--primary" />
-            <ui:Button name="start-button" text="Start match" class="button hidden" />
-            <ui:Button name="leave-button" text="Leave" class="button" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Side by side rather than stacked. Three full-width buttons cost 150 units of a
+                 panel that has 540, and this screen is the one that runs out of them. -->
+            <ui:VisualElement class="button-row">
+                <ui:Button name="ready-button" text="Ready" class="button button--primary" />
+                <ui:Button name="start-button" text="Start match" class="button hidden" />
+                <ui:Button name="leave-button" text="Leave" class="button" />
+            </ui:VisualElement>
 
             <ui:Label name="lobby-status" class="status" />
         </ui:VisualElement>
