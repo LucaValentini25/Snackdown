@@ -213,6 +213,12 @@ namespace Snackdown.UI
                     _text.AppendLine($"   rtt (ours)   {player.LastMeasuredRttMs:F0} ms  measured on our own traffic");
                     _text.AppendLine($"   authority    {player.LastAuthoritativePosition:F2}");
 
+                    // The distance to the red ghost, which is the one thing on this screen you can
+                    // see without reading it. Naming it turns "the ghost is miles away" into a
+                    // number that can be compared against the round trip that produced it: at 7 u/s
+                    // a lead of one second is seven units, and the character is one unit wide.
+                    _text.AppendLine($"   authority gap {player.AuthorityGap:F2} u   (this is the round trip, drawn)");
+
                     if (player.IsRecording)
                         _text.AppendLine($"   recording    {player.RecordedDuration:F0}s, {player.RecordedCorrections} samples");
                 }

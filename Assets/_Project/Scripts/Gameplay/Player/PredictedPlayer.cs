@@ -169,6 +169,18 @@ namespace Snackdown.Gameplay.Player
         public float LastPredictionError { get; private set; }
         public uint LastReplayedTicks { get; private set; }
         public Vector2 LastAuthoritativePosition { get; private set; }
+
+        /// <summary>How far ahead of the server this character is being drawn, in world units.</summary>
+        /// <remarks>
+        /// <para>The distance to the red ghost, which is the most visible thing in the game and
+        /// until now the only one with no number attached. It is not an error: it is the round trip
+        /// expressed as distance, and at 7 units a second a second of lead is seven units against a
+        /// character one unit wide.</para>
+        /// <para>Exposed as a float rather than letting the overlay do the subtraction, so the UI
+        /// assembly does not have to reference the simulation to read one number off a debug view.
+        /// </para>
+        /// </remarks>
+        public float AuthorityGap => Vector2.Distance(_state.Position, LastAuthoritativePosition);
         public int ServerQueueDepth => _incomingInputs.Count;
         public int StarvedTicks { get; private set; }
         public PlayerState State => _state;
