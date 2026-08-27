@@ -132,7 +132,7 @@
    rules cost the taller of the two instead of both, which is what buys the room to set the type at
    a size somebody can read across a room. */
 .panel--wide {
-    width: 620px;
+    width: 700px;
 }
 
 /* One field and two buttons. At the lobby's width they float in the middle of an empty frame. */
@@ -347,7 +347,7 @@
 
 .roster {
     margin: 4px 0 var(--gap) 0;
-    min-height: 120px;
+    min-height: 92px;
 }
 
 .roster-row {
@@ -461,6 +461,7 @@
 .wardrobe {
     flex-direction: row;
     justify-content: center;
+    flex-wrap: wrap;
     margin-bottom: var(--gap);
 }
 
@@ -469,9 +470,9 @@
    they read as an image that failed to load. Gray at rgb(204,204,204) is the neutral of the seven
    and does not compete with any of the four characters, which are green, pink, blue and brown. */
 .wardrobe__skin {
-    width: 60px;
-    height: 60px;
-    margin: 0 4px;
+    width: 44px;
+    height: 44px;
+    margin: 0 2px;
     padding: 0;
     border-width: 2px;
     border-color: var(--panel-edge);
@@ -506,7 +507,7 @@
    ink sitting on it. */
 .settings {
     margin-bottom: var(--gap);
-    padding: 10px 12px;
+    padding: 8px 10px;
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png");
     -unity-slice-left: 3;
     -unity-slice-top: 4;
@@ -540,8 +541,8 @@
    rules moved into a column half the panel's width - at the old 150 the longest labels pushed their
    fields out through the side of the frame. */
 .settings__control {
-    width: 118px;
-    min-width: 118px;
+    width: 112px;
+    min-width: 112px;
     margin: 0;
 }
 
@@ -589,6 +590,39 @@
    that class should still be framed rather than falling through to the default theme's white box —
    which is what these did before it existed. */
 .settings__control > .unity-base-text-field__input {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    color: var(--ink);
+    padding: 6px 8px;
+}
+
+/* The arena's own box: the picture first, the picker under it. Sixteen by nine and full width, so
+   it is the thing you look at rather than a thumbnail beside a label — which is the whole reason it
+   left the rules panel. */
+.arena-preview {
+    height: 62px;
+    margin-bottom: 4px;
+    border-width: 1px;
+    border-color: var(--panel-edge);
+    background-color: var(--bg);
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.arena-picker {
+    margin: 0;
+}
+
+.arena-picker > .unity-base-field__label {
+    display: none;
+}
+
+.arena-picker > .unity-base-popup-field__input {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
