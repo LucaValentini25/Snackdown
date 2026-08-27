@@ -21,6 +21,23 @@
  * on a 32 grid. UI Toolkit scales the slice by the sprite's pixels-per-unit, and 100 is the value
  * its own defaults are written against. A UI sprite has no size in world units to be consistent
  * about.
+ *
+ * ── Every number here is half of what reaches the screen ──────────────────────────
+ *
+ * MenuPanelSettings has a reference resolution of 960x540, so at the 1080p this game is aimed at
+ * the whole panel is drawn at exactly 2x. A width of 420 below is 840 real pixels.
+ *
+ * The factor is 2 and not something that merely looks right, because everything in here is pixel
+ * art: at an integer scale one texel is two screen pixels and the edges stay hard, and at 1.5 they
+ * do not. It follows that sizes are tuned here, in reference units, and never by reaching for the
+ * reference resolution again - moving it rescales the UI and the sprites together.
+ *
+ * ── Do not open this file in the UI Builder ───────────────────────────────────────
+ *
+ * Saving from it rewrites the stylesheet in its own canonical form and DELETES EVERY COMMENT. It
+ * has happened once: 176 lines of the reasoning above, gone in one save, recovered from git. It
+ * also rewrites each url() into a form carrying a fileID and a guid, which works and is unreadable.
+ * Edit this file as text. The UI Builder is still the right tool for looking at a document.
  */
 
 /*
