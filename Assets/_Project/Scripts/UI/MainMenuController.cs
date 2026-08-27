@@ -888,10 +888,28 @@ namespace Snackdown.UI
                 CharacterCatalog.Entry entry = catalog.Get(skin);
                 button.tooltip = entry.DisplayName;
 
-                if (entry.Portrait != null) button.style.backgroundImage = new StyleBackground(entry.Portrait);
-                else button.text = entry.DisplayName;
+                // The portrait goes on a child, not on the button. The button's own background is
+                // the backdrop the character stands against - a flat panel colour behind a sprite
+                // drawn with its own outline reads as a missing image - and an element has one
+                // background image to give.
+                if (entry.Portrait != null)
+                {
+                    var portrait = new VisualElement();
+                    portrait.AddToClassList("wardrobe__portrait");
+                    portrait.style.backgroundImage = new StyleBackground(entry.Portrait);
+                    portrait.pickingMode = PickingMode.Ignore;
+                    button.Add(portrait);
+                }
+                else
+                {
+                    button.text = entry.DisplayName;
+                }
 
-                button.SetEnabled(changeable && !taken && !mine);
+                // Not disabled for being the one you are wearing. It was, and the cost was that
+                // your own character looked exactly like one somebody else had taken - the two
+                // states the row exists to tell apart. Clicking it asks for the skin you already
+                // have, which is a request the server answers by changing nothing.
+                button.SetEnabled(changeable && !taken);
 
                 _wardrobeRow.Add(button);
             }
