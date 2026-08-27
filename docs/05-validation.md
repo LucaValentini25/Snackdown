@@ -180,6 +180,33 @@ so the server tolerates eight queued inputs before draining an extra one per tic
 authoritative position is already that stale before a packet leaves. Whether the queue actually sits
 that deep has never been measured.
 
+### 2026-08-26 — the queue is not where the lead is
+
+Read live over Relay, two peers, client running at full speed.
+
+| | |
+|---|---|
+| `rtt (ours)` on the client | **400 ms** |
+| `authority gap` on the client | **3.0 u** |
+| `input queue` on the host, for the client | **2–3**, briefly 4–5, 1–2 after a restart |
+
+**`MaxQueueDepth` is exonerated.** It is 8, and the queue never approaches it — so the branch that
+drains an extra command has almost certainly never run, and lowering the cap to 3 would have changed
+nothing while costing jitter tolerance. A steady depth of two or three is what a well-tuned client
+lead looks like: the client sends just far enough ahead that the server always has a command waiting
+and never a pile of them.
+
+That accounts for about **83 ms** of the 400. The remaining **~317 ms** is real transit plus the lead
+NGO runs the client's clock at, and is not yet attributed.
+
+**The gap is exactly the round trip and nothing else.** 400 ms at 7 u/s predicts 2.8 units; 3.0 were
+measured. There is no unexplained separation on top — what is on screen is the latency, drawn.
+
+> **Still open: the LAN control.** Relay is a rendezvous, so every message is relayed rather than
+> sent: a client-to-server command travels client → relay → host, and the round trip pays that twice.
+> With the region chosen by QoS from Argentina that is plausibly most of the 317 ms, but plausibly is
+> not measured. The loopback run below is what settles it.
+
 ### The procedure
 
 Two peers, host and client, exactly as above. Nothing is exported: both readings are live.

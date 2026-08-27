@@ -321,9 +321,9 @@
 
   "risks": [
     {
-      "title": "Half the lead to the authoritative position may be a constant we chose",
-      "impact": "The ghost trails the character by about three units at the 432ms measured over Relay, and another player sees it worse by the interpolation delay — roughly 3.7 units against a character one unit wide. That is what the round trip costs and is the feature working. What is not known is how the 432ms divides: MaxQueueDepth is 8, so the server tolerates eight queued inputs before draining an extra one, and eight ticks is 267ms that enters the gap whole. Nobody has read the actual queue depth. Luca chose to measure before changing anything, which is right — lowering it trades jitter tolerance for freshness and invalidates docs/05. The procedure is written up there and is two live readings plus a LAN control.",
-      "severity": "medium",
+      "title": "Most of the lead to the authoritative position is still unattributed",
+      "impact": "Measured 2026-08-26 over Relay: 400ms of lead, a 3.0 unit gap to the ghost, and a server input queue sitting at 2-3. MaxQueueDepth is exonerated — it is 8 and the queue never approaches it, so lowering it would have cost jitter tolerance for nothing. The queue accounts for about 83ms; the remaining ~317ms is transit plus the lead NGO runs the client clock at, and is not attributed. The gap itself is exactly the round trip drawn, with no unexplained separation on top. What is left is the loopback control in docs/05, which separates the relay hop from the client lead.",
+      "severity": "low",
       "status": "open"
     },
     {
@@ -407,6 +407,10 @@
   ],
 
   "log": [
+    {
+      "date": "2026-08-26",
+      "entry": "Measured the input queue rather than guessing at it, and the guess was wrong in the useful direction. MaxQueueDepth is 8 and the queue sits at 2-3, so the branch that drains an extra command has almost certainly never run and lowering the cap would have bought nothing while costing jitter tolerance. A depth of two or three is what a well-tuned client lead looks like. It accounts for 83ms of a 400ms lead; the rest is transit and NGO's own lead and is still unattributed. Worth recording that the gap Luca was looking at is exactly the round trip and nothing more: 400ms at 7 u/s predicts 2.8 units and 3.0 were measured, so there is no unexplained separation to find. The loopback control is what is left."
+    },
     {
       "date": "2026-08-26",
       "entry": "Both of Luca's reports turned out to be the same kind of thing: a control that lied about its state. The arena picker was working the whole time — what was broken is that the field is 130px with an empty UI Toolkit label inside eating a third of it, so 'Arena 01' and 'Arena 02' both rendered as 'Arena 0'. The field had room for every character except the one that told them apart, and the screenshots show the tick in the open menu sitting on the right entry while the closed field read the same either way. The two dropdowns also came out flat grey against white number fields beside them, which reads as disabled on a control the host is meant to use. Both are USS: the internal label is hidden, the column went to 150px, the popup input is painted like the fields around it, long names ellipsize, and disabled is now visibly disabled. And the delay was F1. The exported run says it outright — zero corrections in 66.7 seconds, against 140 in 122 seconds the day before on the same 430ms Relay connection. Nothing was wrong with the netcode; prediction was off, which is exactly what that key is for demonstrating. The run header now records whether prediction was on, because a file with no corrections and nothing saying why reads as the netcode being broken."
