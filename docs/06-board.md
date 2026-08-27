@@ -154,7 +154,7 @@ The netcode is finished and invisible. What a stranger sees is untextured boxes 
 | `[ ]` | A background behind each arena | — | Static tiled, no parallax: the arena is 26x9 against a 24.9x14 view, so the camera barely moves and a parallax would buy nothing it could show. Cool palette for Arena01 and warm for Arena02, which is the difference they already have |
 | `[ ]` | Terrain is a tilemap, and the player does not catch on it | — | The risky one. The motor casts against live colliders, so the arena's colliders ARE the surface reconciliation replays against. Tilemap plus TilemapCollider2D plus CompositeCollider2D in Outlines, tried first because Luca has been caught by a composite trapping the player at edges before; if it does it again the fallback is an editor tool that emits rectangle colliders from the terrain's own shape. Platforms are their own prefab with their own colliders, not part of the tilemap |
 | `[ ]` | Pixel Perfect Camera, with the framing checked afterwards | — | It derives orthographicSize from a reference resolution, so the 24.9x14 view can move — ArenaBounds and the spectator camera clamp are both matched to it and have to be re-checked in the sandbox |
-| `[ ]` | The UI stops looking like a default stylesheet | — | A CC0 pixel-art pack for the UI Toolkit panels, 9-sliced. CC0 matters here beyond taste: this repository is shown to strangers, and a pack needing attribution is a line in the README nobody remembers to keep |
+| `[ ]` | The UI stops looking like a default stylesheet | — | Crusenho's Complete UI Essential Pack, CC BY 4.0, chosen after Kenney's two were rejected on style. See D-023, which is really a decision about the repository rather than about art: the Unity Asset Store was ruled out because its EULA forbids redistribution and a public GitHub repository is redistribution. Blocked until Luca downloads the pack — itch.io's name-your-own-price flow is not something this session can go through |
 
 ## Decisions
 
@@ -380,6 +380,16 @@ the part of the board worth reading a year from now.
 **Why:** The state animation needs already crosses the wire every tick for its own reason, so replicating a second description of it spends bandwidth on something derivable and creates a second source of truth that can disagree with the first. It is also the only correct answer under prediction: NetworkAnimator would drive the owner's own character from the server's timeline, so your legs would move a round trip after your body did. Deriving means the owner animates from its predicted state and a remote from its interpolated one, each matching what is drawn. It is the same argument docs/02 makes for the HUD — every number shown already crossed the network for its own reason.
 
 **Rejected:** NetworkAnimator, which is less code and what Unity documents; and sending a facing bit in the snapshot, which was offered and declined — facing is derived from the sign of the velocity with the last non-zero value held.
+
+### D-023 — Art in this repository is CC0 or CC BY, and never from the Unity Asset Store
+
+*2026-08-26* · epic **visuals**
+
+**Chosen:** Crusenho's Complete UI Essential Pack under CC BY 4.0, credited in the README. The Unity Asset Store was excluded before style was even considered.
+
+**Why:** The Asset Store EULA forbids redistributing an asset, and committing one to a public GitHub repository is redistribution. The usual workaround — gitignore the art and link to where it can be bought — hands anyone who clones this a project that does not open, which is the opposite of what a repository shown as a portfolio is for. So the licence is a constraint on the repository, not a preference about art, and it applies to every asset chosen from here on. Pixel Adventure already satisfies it at CC0. CC BY costs one credits section in the README, which is a normal thing for a project to have and cheap next to a pack that actually fits.
+
+**Rejected:** Kenney's Pixel UI and UI Pack - Pixel Adventure, both CC0 and both turned down on style. Sprout Lands, whose free tier is non-commercial only. Anything from the Unity Asset Store, on the licence.
 
 ## Known problems
 
