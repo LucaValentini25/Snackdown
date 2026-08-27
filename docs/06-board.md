@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 98% — 51 done, 1 in progress, 0 blocked, 0 to do, 2 dropped, across 9 epics.
+**Overall:** 98% — 52 done, 1 in progress, 0 blocked, 0 to do, 2 dropped, across 9 epics.
 
 ## Epics
 
@@ -21,7 +21,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Wardrobe — unique, changeable skins](#wardrobe-unique-changeable-skins) | 4 | Done | 7/7 |
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | Done | 4/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 6/7 |
-| [Loose ends — three things the board has been carrying](#loose-ends-three-things-the-board-has-been-carrying) | 5 | To do | 3/3 |
+| [Loose ends](#loose-ends) | 5 | To do | 4/4 |
 
 ### Netcode core — predicted character
 
@@ -130,14 +130,15 @@ Make the finished work visible to someone who was not here while it was built.
 | `[~]` | A runnable build, main brought up to date, a tag | the build itself: Windows x64, release configuration, 102 MB, 0 errors and 0 warnings, four scenes in it and seven Snackdown assemblies. Running it and playing a match across two machines is Luca's step | The build half is done and is the half that was never true before — docs/04 recorded that no player build had ever been produced, which is why it refused to cut a 1.0.0. Being a release build is also what makes pl-5 real: DEVELOPMENT_BUILD is undefined, so DebugTools.Enabled is false and the overlay, the ghost and the recorder are not in it. Builds/ stays gitignored; a 102 MB directory belongs on a GitHub Release, not in a repository. What is left needs Luca: merging into main and cutting the tag |
 | `[x]` | Asking for a code is a step of joining, not of the front screen | manual — the front screen offers a name, Host and Join and no code field; Join opens a screen with the list, the code field and Back. EditMode: JoinTargetTests fixes the part that could break silently, which is a typed code and a clicked listing being told apart | Reported by Luca: the field sits on the menu next to Host, where it means nothing — a host never types a code. Choosing Join should be what asks for it, on a screen of its own with the field and a Join button. Luca asked for it to travel with pl-4, and it should: a browser and a typed code are two ways through the same step, and building that step twice is how they end up disagreeing |
 
-### Loose ends — three things the board has been carrying
+### Loose ends
 
-Clear the small open risks that have been sitting on the board since the epics that created them, before anything larger is started on top of them.
+Clear the small open risks that have been sitting on the board since the epics that created them, before anything larger is started on top of them. Grew one task Luca asked for while it was open.
 
 | | Task | Verified by | Notes |
 |:---:|---|---|---|
 | `[x]` | Fruit does not outlive the arena it was spawned in | manual in the sandbox, both routes out of an arena: with six fruit standing, returning to the lobby leaves zero, and a start refused mid-flight from Ended leaves zero. The root cause was confirmed the same way rather than assumed — a live fruit reports its scene as Sandbox, the active one, while the arena is Arena01, so the unload was never going to take it | Wired through a new MatchDirector.ArenaUnloading event rather than the director despawning fruit itself. Today Fruits depends on Match and not the reverse, and a director reaching into the fruit would have pointed that both ways for one call. Raised inside UnloadCurrentScene because both routes out of an arena pass through it, so hanging it off either caller would have left the other leaking. The spawner resolves its director once and holds it, instead of reading MatchDirector.Current the way its Update does: subscribing and unsubscribing have to reach the same object, and a process-wide static is not that under the harness |
 | `[x]` | Check whether snapshots still go out while the session sits in the lobby | manual in the sandbox: SnapshotsSent froze at 705 with zero characters registered while the phase sat in Lobby, and rose again the moment a match started. The risk was retired on that reading, not on the code review that predicted it | Mostly a risk to retire rather than work to do — ps-4 made the round hand out a fresh body, so no character exists in the lobby, nothing is registered with the tick loop and BroadcastSnapshot returns before building a frame. But looking for it found a real one next door: a match start refused mid-flight puts the phase back to Lobby without despawning the bodies, so the session sat in the lobby with characters spawned into no scene and snapshots still going out for them. The despawn came out into ServerDespawnBodies and both routes call it now |
+| `[x]` | A scene showing every sprite at the size its import settings produce | — it is an authoring aid and nothing runs in it. Checked that all 113 sprites resolved: 120 renderers, none with an empty sprite | Asked for by Luca to fix sprites that are set up wrong. Built as plain SpriteRenderers at scale 1 rather than anything clever, because the whole value is that what is drawn is exactly what the importer produces. A row per source folder, and a strip of 1x1 unit squares with the character beside them so size can be judged against something. It immediately paid for itself: the pack ships three different pixels-per-unit and the terrain is at 100, so a 16x16 tile is 0.16 units against a one-unit character — a sixth of the size the art was drawn at. Listed in Build Settings with its checkbox off, like Sandbox, so Unity stops adding it back |
 | `[x]` | Sandbox holds an instance of the NetworkSimulation prefab, not a copy of it | the sandbox still starts a match on Play with a clean console, and the instance now carries exactly one override — the rules asset. Checked first that nothing else in the scene held a serialized reference into the object being replaced | The drift the risk predicted had already happened and was found by diffing the copy against the prefab before touching anything: two differences, and only one of them was meant. _rules pointing at SandboxMatchConfig is the deliberate override and was kept; _difficulties being null was ps-7 landing on Bootstrap for free and being forgotten here, and it fixed itself by coming from the prefab. That is the argument for D-013 arriving on time rather than as a prediction |
 
 ## Decisions
