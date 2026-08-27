@@ -221,12 +221,26 @@
     -unity-font-style: bold;
 }
 
+/* Every state repeats the transparent background and the missing border, and it is not redundant.
+   The default theme styles .unity-button:hover, a pseudo-class selector that outranks our plain
+   .button, so its own hover colour and border paint straight through ours - which is the white
+   frame that appeared around a button under the cursor. Beating it needs a rule of at least equal
+   rank, so the values live on each state rather than being inherited from one. */
 .button:hover {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_2.png");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
 .button:active {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_3.png");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.button:focus {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
 /* The pack's fourth state, rather than the old trick of dimming the third. A greyed-out button that
@@ -234,6 +248,8 @@
    still has to be readable. */
 .button:disabled {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_4.png");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
     opacity: 1;
     color: var(--ink-dim);
 }
@@ -255,14 +271,20 @@
 
 .button--primary:hover {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_2.png");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
 .button--primary:active {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_3.png");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
 .button--primary:disabled {
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_4.png");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
 /* ── status line ────────────────────────────────────────────────────────────────── */

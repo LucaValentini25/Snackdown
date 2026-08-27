@@ -228,6 +228,21 @@ namespace Snackdown.Connection
             }
         }
 
+        /// <summary>
+        /// Ends this peer's part in the session — which is a different thing for the host.
+        /// </summary>
+        /// <remarks>
+        /// <para><b>A host deletes, a client leaves.</b> <c>LeaveAsync</c> removes the caller from
+        /// the session and nothing else, so a host calling it published a lobby, walked out, and
+        /// left the entry standing: it kept appearing in the browser, and joining it failed because
+        /// the relay allocation behind it was gone. A game you can see and cannot enter is worse
+        /// than one you cannot see.</para>
+        /// <para><c>AsHost</c> throws for anybody who is not the host, so the check is on
+        /// <see cref="ISession.IsHost"/> rather than on a try/catch — an exception used to ask a
+        /// question is an exception that hides the answer to a different one.</para>
+        /// <para>Both are best-effort. The session times out on its own, and refusing to return here
+        /// would strand the player on a lobby screen they have already left.</para>
+        /// </remarks>
         public async Task LeaveAsync()
         {
             _approval?.Disable();
@@ -236,12 +251,11 @@ namespace Snackdown.Connection
             {
                 try
                 {
-                    await _session.LeaveAsync();
+                    if (_session.IsHost) await _session.AsHost().DeleteAsync();
+                    else await _session.LeaveAsync();
                 }
                 catch (Exception e)
                 {
-                    // Leaving is best-effort. The session times out on its own, and refusing to
-                    // return here would strand the player on a lobby screen they already left.
                     Debug.LogWarning($"[Snackdown] Leaving the session failed: {e.Message}");
                 }
 
