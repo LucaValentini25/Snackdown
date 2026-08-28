@@ -79,12 +79,12 @@ self-evident members (`GetX` → "Gets X"), commented-out code, and TODOs withou
 
 If a comment is needed to explain *what* the code does, the code needs renaming, not a comment.
 
-### Never open `Snackdown.uss` in the UI Builder
+### Never open `Snackdown.uss` or `MainMenu.uxml` in the UI Builder
 
-Saving from it rewrites the stylesheet in its own canonical form and **deletes every comment in the
-file.** It has happened twice: 176 lines of reasoning the first time, 145 the second, both recovered
-from git. It also rewrites each `url()` into a `fileID`-and-`guid` form that works and cannot be
-read.
+Saving from it rewrites the file in its own canonical form and **deletes every comment in it.** It
+has happened three times: 176 lines of reasoning in the stylesheet, then 145, then all 18 comments
+in the document. Every one was recovered from git. It also rewrites each `url()` into a
+`fileID`-and-`guid` form that works and cannot be read.
 
 This rule lives here rather than in a comment at the top of the stylesheet, where it was first
 written — the warning could not survive the thing it was warning about.
