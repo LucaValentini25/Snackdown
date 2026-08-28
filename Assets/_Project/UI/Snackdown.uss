@@ -128,13 +128,13 @@
 }
 
 .title--hero {
-    font-size: 200px;
+    font-size: 112px;
     color: var(--ink);
     margin-bottom: 0;
 }
 
 .subtitle--hero {
-    font-size: 48px;
+    font-size: 32px;
     color: var(--ink-dim);
     margin-bottom: 22px;
 }
