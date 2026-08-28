@@ -139,7 +139,14 @@ sprites are bundled. *Changes made:* re-imported for this project — point filt
 full-rect meshes — and the nine-slice borders are declared in
 [`Snackdown.uss`](Assets/_Project/UI/Snackdown.uss) rather than baked into the sprites.
 
-**Both packs are redistributable, and that is why they are here rather than linked.** The Unity Asset
+Interface font: **[BoldPixels](https://yukipixels.itch.io/boldpixels)** by **Yūki
+([@YukiPixels](https://linktr.ee/yukipixels))**, released under
+**[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)**. *Changes made:* the `.otf` is
+unmodified; `BoldPixels SDF.asset` is generated from it by TextMesh Pro and is therefore an
+adaptation, so **that file carries CC BY-SA 4.0 and not the MIT grant below**. Using a font to draw
+text does not make the thing drawing it a derivative, so nothing else here is affected.
+
+**Every pack here is redistributable, and that is why they are bundled rather than linked.** The Unity Asset
 Store was excluded from this project before any pack was looked at: its EULA forbids redistributing
 an asset, and committing one to a public repository is redistribution. The usual answer — gitignore
 the art and tell people where to buy it — hands anyone who clones this a project that does not open.
