@@ -95,11 +95,18 @@
     --radius: 6px;
 }
 
+/* The pack's own tile behind the panels rather than a flat colour, tiled rather than stretched —
+   at 128 the 64-pixel source draws at exactly 2x, the same integer scale everything else here uses.
+   The colour underneath still matters: it is what shows for the frame between the image loading and
+   the first paint. */
 .screen {
     flex-grow: 1;
     align-items: center;
     justify-content: center;
     background-color: var(--bg);
+    background-image: url("project://database/Assets/Pixel Adventure 1/Assets/Background/Brown.png");
+    background-repeat: repeat repeat;
+    background-size: 128px 128px;
 }
 
 /* Nothing inside a panel may be squeezed to make it fit.
@@ -132,7 +139,7 @@
    rules cost the taller of the two instead of both, which is what buys the room to set the type at
    a size somebody can read across a room. */
 .panel--wide {
-    width: 700px;
+    width: 760px;
 }
 
 /* One field and two buttons. At the lobby's width they float in the middle of an empty frame. */
@@ -162,6 +169,13 @@
     flex-grow: 1;
     flex-basis: 0;
     margin: 0 5px;
+}
+
+/* The players' column carries two things - the list and the wardrobe - so it gets more of the
+   width than the two that carry one. Four swatches big enough to tell a frog from a cat is what
+   sets the number. */
+.lobby-column--players {
+    flex-grow: 1.35;
 }
 
 /* Narrower than the panel and centred. Two actions on the front screen do not need the full width
@@ -200,17 +214,18 @@
 }
 
 /* Declared after .title and .subtitle on purpose. Both are a single class, so neither outranks the
-   other and the file's order is the whole tie-break — put these first and the plain rules win, and
-   the name of the game is painted dark ink on a dark backdrop. */
+   other and the file's order is the whole tie-break — put these first and the plain rules win.
+   These took the HUD's light ink while the backdrop was dark; the backdrop is the pack's brown tile
+   now, at rgb(213,177,149), and light text on it is the same mistake in the other direction. */
 .title--hero {
     font-size: 60px;
-    color: var(--hud-ink);
+    color: var(--ink);
     margin-bottom: 0;
 }
 
 .subtitle--hero {
     font-size: 17px;
-    color: var(--hud-ink-dim);
+    color: var(--ink-dim);
     margin-bottom: 22px;
 }
 
@@ -245,6 +260,22 @@
    under the cursor, held down, and unavailable. Sliced identically, so the frame does not jump as
    the mouse crosses it — which is why the border was copied from the first state onto the other
    three rather than set four times by hand. */
+/* This is the third attempt at the white frame under the cursor and the first aimed at the cause.
+   The runtime theme styles .unity-button:hover with its own colour and border, and a pseudo-class
+   selector outranks a plain class, so it paints through anything set on .button. Fixing
+   .button:hover fixed the buttons carrying that class and left every other button in the game still
+   wearing it: the kick, the wardrobe swatches, the rows in the browser, the icons.
+
+   Every button here draws itself, with a sprite or with nothing, so the theme's states are turned
+   off once on its own class and each rule below opts back in to what it actually wants. */
+.unity-button:hover,
+.unity-button:active,
+.unity-button:focus,
+.unity-button:disabled {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+}
+
 .button {
     height: 46px;
     margin: 5px 0 0 0;
@@ -345,12 +376,18 @@
 
 /* ── roster ─────────────────────────────────────────────────────────────────────── */
 
+/* Fixed, not minimum. A box that grows with the number of players moves everything under it every
+   time somebody joins, and the lobby is the screen where people are joining. Four rows is the most
+   it can ever hold, so it is always four rows tall. */
 .roster {
     margin: 4px 0 var(--gap) 0;
-    min-height: 92px;
+    height: 152px;
+    overflow: hidden;
 }
 
 .roster-row {
+    flex-shrink: 0;
+    overflow: hidden;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -366,6 +403,8 @@
 }
 
 .roster-row__name {
+    flex-shrink: 1;
+    overflow: hidden;
     font-size: 16px;
     color: var(--ink);
 }
@@ -442,9 +481,13 @@
     white-space: normal;
 }
 
+/* Shrink-proof, and the name yields to it instead. Left to flex, the row grew to fit its content
+   and walked out through the side of the box: a clipped nickname is readable, a Kick drawn outside
+   its own panel is not. */
 .roster-row__kick {
-    margin-left: 10px;
-    padding: 2px 10px;
+    flex-shrink: 0;
+    margin-left: 6px;
+    padding: 2px 7px;
     font-size: 12px;
     color: var(--ink-dim);
     background-color: transparent;
@@ -470,9 +513,9 @@
    they read as an image that failed to load. Gray at rgb(204,204,204) is the neutral of the seven
    and does not compete with any of the four characters, which are green, pink, blue and brown. */
 .wardrobe__skin {
-    width: 44px;
-    height: 44px;
-    margin: 0 2px;
+    width: 58px;
+    height: 58px;
+    margin: 0 3px;
     padding: 0;
     border-width: 2px;
     border-color: var(--panel-edge);

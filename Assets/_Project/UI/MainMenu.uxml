@@ -81,7 +81,7 @@
             </ui:VisualElement>
 
             <ui:VisualElement class="lobby-columns">
-              <ui:VisualElement class="lobby-column">
+              <ui:VisualElement class="lobby-column lobby-column--players">
 
                 <!-- Boxed, like the rules beside it. Left bare, the players sat on the panel while
                      the rules sat in a frame, and the two columns read as one thing and one absence
