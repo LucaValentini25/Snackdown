@@ -39,9 +39,23 @@ namespace Snackdown.Gameplay.Match
         /// <summary>Width and height of one cell of the terrain art, in world units.</summary>
         public const float Cell = 0.5f;
 
-        void Awake() => Rebuild();
+        void Start() => Rebuild();
 
-        void OnValidate() => Rebuild();
+        /// <remarks>
+        /// Deferred out of <c>OnValidate</c> rather than done in it. Unity forbids touching another
+        /// component from inside it, and setting a renderer's size there logs "SendMessage cannot be
+        /// called during Awake, CheckConsistency, or OnValidate" once per renderer, every time the
+        /// Inspector redraws. The delayed call lands a moment later, when it is allowed.
+        /// </remarks>
+        void OnValidate()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.delayCall += () =>
+            {
+                if (this != null) Rebuild();
+            };
+#endif
+        }
 
         /// <summary>Lays the three renderers out to cover exactly what the collider covers.</summary>
         /// <remarks>
@@ -65,13 +79,20 @@ namespace Snackdown.Gameplay.Match
             if (middleWidth > 0f) Apply(_middle, _fill, center, new Vector2(middleWidth, height));
         }
 
+        /// <remarks>
+        /// Each value is compared before it is written. Assigning a renderer the size it already has
+        /// still counts as a change to the scene, so a component that runs in edit mode would leave
+        /// every arena permanently unsaved just by being looked at.
+        /// </remarks>
         static void Apply(SpriteRenderer renderer, Sprite sprite, Vector2 position, Vector2 size)
         {
-            renderer.sprite = sprite;
-            renderer.drawMode = SpriteDrawMode.Tiled;
-            renderer.tileMode = SpriteTileMode.Continuous;
-            renderer.size = size;
-            renderer.transform.localPosition = new Vector3(position.x, position.y, 0f);
+            if (renderer.sprite != sprite) renderer.sprite = sprite;
+            if (renderer.drawMode != SpriteDrawMode.Tiled) renderer.drawMode = SpriteDrawMode.Tiled;
+            if (renderer.tileMode != SpriteTileMode.Continuous) renderer.tileMode = SpriteTileMode.Continuous;
+            if (renderer.size != size) renderer.size = size;
+
+            var local = new Vector3(position.x, position.y, 0f);
+            if (renderer.transform.localPosition != local) renderer.transform.localPosition = local;
         }
     }
 }
