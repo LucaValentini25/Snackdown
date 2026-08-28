@@ -31,6 +31,15 @@ namespace Snackdown.Netcode
 
         Vector3 _offset;
 
+        /// <summary>Where the sprite is authored to sit, which is not necessarily the origin.</summary>
+        /// <remarks>
+        /// The character's art has its feet on the bottom edge of a square frame and empty space
+        /// above its head, so the sprite has to hang a little above the transform for the drawing
+        /// and the collider to have the same top and bottom. Smoothing around that rest position
+        /// rather than around zero is what lets the prefab say so.
+        /// </remarks>
+        Vector3 _rest;
+
         /// <summary>How far the sprite currently sits from the truth. Read by the debug overlay.</summary>
         public float CurrentError => _offset.magnitude;
 
@@ -48,19 +57,21 @@ namespace Snackdown.Netcode
         /// <summary>Drops any pending error immediately (spawn, teleport, respawn).</summary>
         public void Snap() => _offset = Vector3.zero;
 
+        void Awake() => _rest = transform.localPosition;
+
         void LateUpdate()
         {
             if (!SmoothingEnabled)
             {
                 _offset = Vector3.zero;
-                transform.localPosition = Vector3.zero;
+                transform.localPosition = _rest;
                 return;
             }
 
             _offset *= Mathf.Exp(-_decayRate * Time.deltaTime);
             if (_offset.sqrMagnitude < 0.000001f) _offset = Vector3.zero;
 
-            transform.localPosition = _offset;
+            transform.localPosition = _rest + _offset;
         }
     }
 }
