@@ -1,70 +1,19 @@
-/*
- * Shared styling for every screen: menu, lobby, loading, in-match HUD and end screen.
- *
- * Deliberately built from a handful of variables rather than per-element values: the palette and
- * spacing are the two things that change when placeholder art is replaced with real art, and having
- * them in one block is the difference between editing five lines and hunting through the file.
- *
- * ── The nine-slice numbers live here, and that is not an accident ──────────────────
- *
- * Every frame, button and field below is a pixel-art sprite stretched to a size it was not drawn
- * at, so it is cut into nine pieces: the four corners are drawn as they are, the four edges repeat
- * along one axis, and the middle fills. The cut is the -unity-slice-* block on each rule.
- *
- * The same numbers also exist on the sprites themselves, set in the Sprite Editor, and UI Toolkit
- * does NOT read them. That was measured rather than assumed: an element given
- * UI_Flat_Frame01a - whose own border is 5, 7, 5, 7 - resolves to a slice of 0 on every side.
- * The Sprite Editor values are still worth having, because they are where these came from and
- * because a SpriteRenderer would use them, but the stylesheet is what decides what is drawn.
- *
- * The sprites are imported at 100 pixels per unit, unlike the rest of the project's art, which is
- * on a 32 grid. UI Toolkit scales the slice by the sprite's pixels-per-unit, and 100 is the value
- * its own defaults are written against. A UI sprite has no size in world units to be consistent
- * about.
- *
- * ── Every number here is half of what reaches the screen ──────────────────────────
- *
- * MenuPanelSettings has a reference resolution of 960x540, so at the 1080p this game is aimed at
- * the whole panel is drawn at exactly 2x. A width of 420 below is 840 real pixels.
- *
- * The factor is 2 and not something that merely looks right, because everything in here is pixel
- * art: at an integer scale one texel is two screen pixels and the edges stay hard, and at 1.5 they
- * do not. It follows that sizes are tuned here, in reference units, and never by reaching for the
- * reference resolution again - moving it rescales the UI and the sprites together.
- *
- * ── Do not open this file in the UI Builder ───────────────────────────────────────
- *
- * Saving from it rewrites the stylesheet in its own canonical form and DELETES EVERY COMMENT. It
- * has happened once: 176 lines of the reasoning above, gone in one save, recovered from git. It
- * also rewrites each url() into a form carrying a fileID and a guid, which works and is unreadable.
- * Edit this file as text. The UI Builder is still the right tool for looking at a document.
- */
-
-/*
- * ── The palette is chosen against the pack, and against numbers ───────────────────
- *
- * These used to be a dark UI: near-white ink on a panel of rgb(38, 35, 50). The pack's Flat theme
- * is the opposite - its frame is rgb(173, 183, 196) and its buttons are rgb(255, 253, 245) - so
- * every one of those values had to be inverted. The old ink on the new button face measures a
- * contrast ratio of 1.21, which is not "low", it is invisible.
- *
- * The replacements were measured rather than picked, sampling the sprites and computing WCAG
- * contrast. Against the button face and the panel face respectively:
- *
- *     --ink        15.84   7.95     body text anywhere
- *     --ink-dim     7.17   3.60     secondary text on a button or field; large text on a panel
- *     --accent      5.53   2.77     body on a button, large only on a panel
- *     --ok          5.22   2.62
- *     --bad         6.36   3.19
- *
- * The one rule that falls out of it: the panel face is the weaker surface, so text sitting directly
- * on a panel takes --ink and not --ink-dim. 3.60 is fine for a label beside a control and not for a
- * sentence somebody has to read.
- *
- * --bg stays dark on purpose. It is the screen behind the panels, and the light frames need
- * something to sit against.
- */
 :root {
+    /*
+     * The pixel font, set once and inherited by everything each document draws.
+     *
+     * -unity-font with the legacy Font rather than -unity-font-definition with a font asset. A
+     * raster font asset bakes one atlas at one size and cannot be scaled, so at any size that is
+     * not an exact multiple of the face it collides its own glyphs; the dynamic renderer rasterises
+     * per size and hints, which is what keeps the edges hard. The importer is set to HintedRaster
+     * for the same reason - Smooth antialiases away the thing that makes it pixel art.
+     *
+     * Every font-size below is a multiple of 8. The face is a 16-pixel em, the panel draws at 2x,
+     * so 8 reference units is exactly one em on screen and every step up is a whole one. Sizes
+     * between them are what blur a pixel font.
+     */
+    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf");
+
     --bg: rgb(24, 22, 32);
     --panel: rgb(173, 183, 196);
     --panel-edge: rgb(120, 132, 148);
@@ -74,48 +23,25 @@
     --accent-ink: rgb(255, 253, 245);
     --ok: rgb(46, 122, 52);
     --bad: rgb(176, 44, 44);
-
-    /*
-     * The HUD is the other half of the palette and it could not share the first.
-     *
-     * A menu is a light frame from the pack on a dark backdrop; the in-match HUD is the opposite -
-     * dark translucent strips laid over a lit arena, because anything opaque there covers the game
-     * it is reporting on. So the ink that reads on a panel is the ink that disappears on a life
-     * bar, and vice versa. Two pairs rather than one, named for where they are allowed.
-     *
-     * Against the strips' rgba(12, 11, 16, 0.72), --hud-ink measures 15.3 and --hud-accent 6.4.
-     */
     --hud-ink: rgb(238, 236, 246);
     --hud-ink-dim: rgb(158, 154, 176);
     --hud-accent: rgb(240, 122, 106);
     --hud-ok: rgb(126, 200, 130);
     --hud-bad: rgb(232, 112, 112);
-
     --gap: 12px;
     --radius: 6px;
 }
 
-/* The pack's own tile behind the panels rather than a flat colour, tiled rather than stretched —
-   at 128 the 64-pixel source draws at exactly 2x, the same integer scale everything else here uses.
-   The colour underneath still matters: it is what shows for the frame between the image loading and
-   the first paint. */
 .screen {
     flex-grow: 1;
     align-items: center;
     justify-content: center;
     background-color: var(--bg);
-    background-image: url("project://database/Assets/Pixel Adventure 1/Assets/Background/Brown.png");
+    background-image: url("project://database/Assets/Pixel%20Adventure%201/Assets/Background/Brown.png?fileID=21300000&guid=ca6a66f8e2ae9c24c8c6b39c49206a0d&type=3#Brown");
     background-repeat: repeat repeat;
     background-size: 128px 128px;
 }
 
-/* Nothing inside a panel may be squeezed to make it fit.
- *
- * Flex shrinks its children by default, and a lobby whose content is taller than the screen does
- * not report that: it silently compresses every row until the rules panel is five labels drawn on
- * top of each other and the fields are stripes. Refusing to shrink turns a layout that lies into
- * one that overflows, which is a problem you can see and therefore fix.
- */
 .panel > * {
     flex-shrink: 0;
 }
@@ -127,7 +53,7 @@
 .panel {
     width: 420px;
     padding: 16px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Frame01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Frame01a.png?fileID=21300000&guid=31b3125525179334e8427d31167f3a5e&type=3#UI_Flat_Frame01a");
     -unity-slice-left: 5;
     -unity-slice-top: 7;
     -unity-slice-right: 5;
@@ -135,24 +61,17 @@
     -unity-slice-scale: 3px;
 }
 
-/* The lobby is the only screen dense enough to run out of height. Side by side, the roster and the
-   rules cost the taller of the two instead of both, which is what buys the room to set the type at
-   a size somebody can read across a room. */
 .panel--wide {
     width: 760px;
 }
 
-/* One field and two buttons. At the lobby's width they float in the middle of an empty frame. */
 .panel--narrow {
     width: 300px;
 }
 
-
-/* A field you type your name into should look like one from across the room. The default height
-   reads as a label with a line under it. */
 .field--tall > .unity-base-text-field__input {
     height: 40px;
-    font-size: 18px;
+    font-size: 16px;
     padding: 0 10px;
 }
 
@@ -171,22 +90,15 @@
     margin: 0 5px;
 }
 
-/* The players' column carries two things - the list and the wardrobe - so it gets more of the
-   width than the two that carry one. Four swatches big enough to tell a frog from a cat is what
-   sets the number. */
 .lobby-column--players {
     flex-grow: 1.35;
 }
 
-/* Narrower than the panel and centred. Two actions on the front screen do not need the full width
-   of anything; at it they read as a list rather than as a choice. */
 .panel--narrow > .button {
     width: 220px;
     align-self: center;
 }
 
-/* Buttons share a row and the width between them. Stacked they cost this panel 150 units of the
-   540 it has, and it is the one screen with no room to spare. */
 .button-row {
     flex-direction: row;
 }
@@ -206,30 +118,24 @@
 }
 
 .subtitle {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink);
     -unity-text-align: middle-center;
     margin-bottom: 12px;
     white-space: normal;
 }
 
-/* Declared after .title and .subtitle on purpose. Both are a single class, so neither outranks the
-   other and the file's order is the whole tie-break — put these first and the plain rules win.
-   These took the HUD's light ink while the backdrop was dark; the backdrop is the pack's brown tile
-   now, at rgb(213,177,149), and light text on it is the same mistake in the other direction. */
 .title--hero {
-    font-size: 60px;
+    font-size: 64px;
     color: var(--ink);
     margin-bottom: 0;
 }
 
 .subtitle--hero {
-    font-size: 17px;
+    font-size: 16px;
     color: var(--ink-dim);
     margin-bottom: 22px;
 }
-
-/* ── fields ─────────────────────────────────────────────────────────────────────── */
 
 .field {
     margin-bottom: var(--gap);
@@ -238,11 +144,11 @@
 .field > .unity-base-field__label {
     min-width: 84px;
     color: var(--ink);
-    font-size: 15px;
+    font-size: 16px;
 }
 
 .field > .unity-base-text-field__input {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
     -unity-slice-right: 3;
@@ -254,20 +160,14 @@
     padding: 8px 10px;
 }
 
-/* ── buttons ────────────────────────────────────────────────────────────────────── */
+/* The default theme sets -unity-font-definition on the text elements themselves, and a definition
+   outranks -unity-font whatever the cascade says. Setting the font on the root alone left every
+   label still drawing in NotInter: an inherited value loses to a rule that matches the element
+   directly. So it is set again here, on the class every label and every button's text carries. */
+.unity-text-element {
+    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf");
+}
 
-/* The pack draws a button four times, one per state, and they are used in that order: at rest,
-   under the cursor, held down, and unavailable. Sliced identically, so the frame does not jump as
-   the mouse crosses it — which is why the border was copied from the first state onto the other
-   three rather than set four times by hand. */
-/* This is the third attempt at the white frame under the cursor and the first aimed at the cause.
-   The runtime theme styles .unity-button:hover with its own colour and border, and a pseudo-class
-   selector outranks a plain class, so it paints through anything set on .button. Fixing
-   .button:hover fixed the buttons carrying that class and left every other button in the game still
-   wearing it: the kick, the wardrobe swatches, the rows in the browser, the icons.
-
-   Every button here draws itself, with a sprite or with nothing, so the theme's states are turned
-   off once on its own class and each rule below opts back in to what it actually wants. */
 .unity-button:hover,
 .unity-button:active,
 .unity-button:focus,
@@ -280,7 +180,7 @@
     height: 46px;
     margin: 5px 0 0 0;
     padding: 0 16px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_1.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_1.png?fileID=21300000&guid=79a4c9355a147504f97b2c0be2399cd5&type=3#UI_Flat_Button01a_1");
     -unity-slice-left: 3;
     -unity-slice-top: 7;
     -unity-slice-right: 3;
@@ -289,23 +189,18 @@
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     color: var(--ink);
-    font-size: 17px;
+    font-size: 16px;
     -unity-font-style: bold;
 }
 
-/* Every state repeats the transparent background and the missing border, and it is not redundant.
-   The default theme styles .unity-button:hover, a pseudo-class selector that outranks our plain
-   .button, so its own hover colour and border paint straight through ours - which is the white
-   frame that appeared around a button under the cursor. Beating it needs a rule of at least equal
-   rank, so the values live on each state rather than being inherited from one. */
 .button:hover {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_2.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_2.png?fileID=21300000&guid=33335e8707689f146b9c60a04d5ba37a&type=3#UI_Flat_Button01a_2");
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
 
 .button:active {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_3.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_3.png?fileID=21300000&guid=7694e75eb189a6c4fabadff67eca6ed8&type=3#UI_Flat_Button01a_3");
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
@@ -315,26 +210,16 @@
     border-width: 0;
 }
 
-/* The pack's fourth state, rather than the old trick of dimming the third. A greyed-out button that
-   is really the normal one at 40% opacity also fades its own text, and the label is the part that
-   still has to be readable. */
 .button:disabled {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_4.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_4.png?fileID=21300000&guid=25e4fc7e87408e54eba7a369032dd273&type=3#UI_Flat_Button01a_4");
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     opacity: 1;
     color: var(--ink-dim);
 }
 
-/* The one button on each screen that is the thing you came to do. It keeps the pack's frame and
-   takes the accent on its label, because tinting the whole sprite would flatten the shading the
-   frame is drawn with. */
-/* Its own cut, because it is its own art. Button02a has a taller lip than Button01a - 10 pixels of
-   top against 7 - and inheriting the first button's slice made UI Toolkit log the mismatch on every
-   frame it drew. The numbers are the ones set on the sprite in the Sprite Editor, which is where
-   they were measured off the art. */
 .button--primary {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_1.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_1.png?fileID=21300000&guid=af1f0bd5190137a4fa231bebbd40a37e&type=3#UI_Flat_Button02a_1");
     -unity-slice-left: 5;
     -unity-slice-top: 10;
     -unity-slice-right: 5;
@@ -342,29 +227,27 @@
 }
 
 .button--primary:hover {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_2.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_2.png?fileID=21300000&guid=59980e2bb2767cd4ea94466b240c0933&type=3#UI_Flat_Button02a_2");
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
 
 .button--primary:active {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_3.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_3.png?fileID=21300000&guid=a4ffb9f82b6eb3b45a4c0f0618927522&type=3#UI_Flat_Button02a_3");
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
 
 .button--primary:disabled {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_4.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_4.png?fileID=21300000&guid=0b09542d5cc96da4ea6a268917ecc12d&type=3#UI_Flat_Button02a_4");
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
 
-/* ── status line ────────────────────────────────────────────────────────────────── */
-
 .status {
     min-height: 20px;
     margin-top: var(--gap);
-    font-size: 13px;
+    font-size: 16px;
     color: var(--ink-dim);
     -unity-text-align: middle-center;
     white-space: normal;
@@ -374,11 +257,6 @@
     color: var(--bad);
 }
 
-/* ── roster ─────────────────────────────────────────────────────────────────────── */
-
-/* Fixed, not minimum. A box that grows with the number of players moves everything under it every
-   time somebody joins, and the lobby is the screen where people are joining. Four rows is the most
-   it can ever hold, so it is always four rows tall. */
 .roster {
     margin: 4px 0 var(--gap) 0;
     height: 152px;
@@ -393,7 +271,7 @@
     justify-content: space-between;
     padding: 8px 10px;
     margin-bottom: 4px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png?fileID=21300000&guid=e6dc5b8e84426544cb82d05b4a75aa27&type=3#UI_Flat_FrameSlot01a");
     -unity-slice-left: 3;
     -unity-slice-top: 4;
     -unity-slice-right: 3;
@@ -414,7 +292,7 @@
 }
 
 .roster-row__state {
-    font-size: 12px;
+    font-size: 16px;
     color: var(--ink-dim);
 }
 
@@ -422,10 +300,6 @@
     color: var(--ok);
 }
 
-/* ── the game browser ─────────────────────────────────────────────────────── */
-
-/* Fixed height rather than growing with the list: a panel that changes size every time somebody
-   starts or ends a game moves the buttons under the player's cursor. */
 .browse {
     margin: 4px 0;
     min-height: 132px;
@@ -440,7 +314,7 @@
     width: 100%;
     padding: 8px 10px;
     margin: 0 0 4px 0;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png?fileID=21300000&guid=e6dc5b8e84426544cb82d05b4a75aa27&type=3#UI_Flat_FrameSlot01a");
     -unity-slice-left: 3;
     -unity-slice-top: 4;
     -unity-slice-right: 3;
@@ -450,10 +324,8 @@
     border-width: 0;
 }
 
-/* The pack draws the same slot three times, and the second is the one that reads as "under the
-   cursor". Swapping the sprite rather than recolouring a border, which this row no longer has. */
 .browse__row:hover {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01b.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01b.png?fileID=21300000&guid=b85868e5c107d4740a2544281d921551&type=3#UI_Flat_FrameSlot01b");
 }
 
 .browse__row--full {
@@ -461,34 +333,29 @@
 }
 
 .browse__name {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink);
     -unity-text-align: middle-left;
 }
 
 .browse__slots {
-    font-size: 12px;
+    font-size: 16px;
     color: var(--ink-dim);
 }
 
-/* Nobody hosting is the ordinary state of a game nobody is playing yet, so it reads as a sentence
-   rather than as the error the same empty box would otherwise imply. */
 .browse__empty {
-    font-size: 13px;
+    font-size: 16px;
     color: var(--ink-dim);
     -unity-text-align: middle-center;
     padding: 24px 0;
     white-space: normal;
 }
 
-/* Shrink-proof, and the name yields to it instead. Left to flex, the row grew to fit its content
-   and walked out through the side of the box: a clipped nickname is readable, a Kick drawn outside
-   its own panel is not. */
 .roster-row__kick {
     flex-shrink: 0;
     margin-left: 6px;
     padding: 2px 7px;
-    font-size: 12px;
+    font-size: 16px;
     color: var(--ink-dim);
     background-color: transparent;
     border-width: 1px;
@@ -508,10 +375,6 @@
     margin-bottom: var(--gap);
 }
 
-/* The pack's own background tile behind the character rather than a flat panel colour. These
-   sprites are drawn with a dark outline meant to sit against something; on the panel's own grey
-   they read as an image that failed to load. Gray at rgb(204,204,204) is the neutral of the seven
-   and does not compete with any of the four characters, which are green, pink, blue and brown. */
 .wardrobe__skin {
     width: 58px;
     height: 58px;
@@ -520,7 +383,7 @@
     border-width: 2px;
     border-color: var(--panel-edge);
     border-radius: 0;
-    background-image: url("project://database/Assets/Pixel Adventure 1/Assets/Background/Gray.png");
+    background-image: url("project://database/Assets/Pixel%20Adventure%201/Assets/Background/Gray.png?fileID=21300000&guid=ffc80c129c9aca14c9fb4dbeba0e10d2&type=3#Gray");
     -unity-background-scale-mode: scale-and-crop;
 }
 
@@ -530,28 +393,20 @@
     -unity-background-scale-mode: scale-to-fit;
 }
 
-/* The one you are wearing. A thicker border in the warm tile plus a colour, because on a light
-   panel a dark red edge two pixels wide is a detail and this has to be the thing you see first. */
 .wardrobe__skin--yours {
     border-width: 3px;
     border-color: var(--accent);
-    background-image: url("project://database/Assets/Pixel Adventure 1/Assets/Background/Yellow.png");
+    background-image: url("project://database/Assets/Pixel%20Adventure%201/Assets/Background/Yellow.png?fileID=21300000&guid=4d8c75a4d7dd2a0489270e1058d82128&type=3#Yellow");
 }
 
-/* Taken by somebody else. Grey and dimmed, which is what unavailable looks like everywhere else in
-   this stylesheet - and it is now the only thing in the row that looks like that, which is the
-   whole point of the change. */
 .wardrobe__skin--taken {
     opacity: 0.35;
 }
 
-/* Inset rather than dark. It used to be a dark box on a dark panel; on a light one the same idea
-   is the pack's own slot frame, which reads as recessed without needing a colour that fights the
-   ink sitting on it. */
 .settings {
     margin-bottom: var(--gap);
     padding: 8px 10px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png?fileID=21300000&guid=e6dc5b8e84426544cb82d05b4a75aa27&type=3#UI_Flat_FrameSlot01a");
     -unity-slice-left: 3;
     -unity-slice-top: 4;
     -unity-slice-right: 3;
@@ -561,7 +416,7 @@
 }
 
 .settings__title {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--ink);
     margin-bottom: 4px;
     -unity-font-style: bold;
@@ -575,48 +430,32 @@
 }
 
 .settings__label {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink);
 }
 
-/* Fixed rather than growing: four rows whose fields all start at the same x read as a table,
-   and a column that jogs left and right with the length of each label does not. Narrower since the
-   rules moved into a column half the panel's width - at the old 150 the longest labels pushed their
-   fields out through the side of the frame. */
 .settings__control {
     width: 112px;
     min-width: 112px;
     margin: 0;
 }
 
-/* The label yields, not the control. A clipped "Drain per second" is still readable; a clipped
-   number field is a box with no number in it. */
 .settings__label {
     flex-shrink: 1;
     overflow: hidden;
 }
 
-/* Every control here is labelled by a Label of its own in the row, so the one UI Toolkit builds
-   inside the field is empty - and an empty label is not free. Unity's runtime theme gives it a
-   min-width, which ate a third of the 130px this column used to be. That is what made "Arena 01"
-   and "Arena 02" both render as "Arena 0": the field had room for every character except the one
-   that told them apart, so the picker looked broken while working perfectly. */
 .settings__control > .unity-base-field__label {
     display: none;
 }
 
-/* And if a name is ever genuinely too long for the column, it says so rather than quietly
-   reading as a different entry. */
 .settings__control .unity-base-popup-field__text {
     text-overflow: ellipsis;
     overflow: hidden;
 }
 
-/* Dropdowns are painted like the number fields beside them. Left to the default theme they come
-   out flat grey against white neighbours, which reads as disabled - and both of these are live
-   controls that the host is meant to use. */
 .settings__control > .unity-base-popup-field__input {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
     -unity-slice-right: 3;
@@ -628,12 +467,8 @@
     padding: 6px 8px;
 }
 
-/* Was written for the rules' number fields, which are steppers now and no longer text fields at
-   all. It stays because .settings__control is a shape, not a place, and the next text field given
-   that class should still be framed rather than falling through to the default theme's white box —
-   which is what these did before it existed. */
 .settings__control > .unity-base-text-field__input {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
     -unity-slice-right: 3;
@@ -645,9 +480,6 @@
     padding: 6px 8px;
 }
 
-/* The arena's own box: the picture first, the picker under it. Sixteen by nine and full width, so
-   it is the thing you look at rather than a thumbnail beside a label — which is the whole reason it
-   left the rules panel. */
 .arena-preview {
     height: 62px;
     margin-bottom: 4px;
@@ -666,7 +498,7 @@
 }
 
 .arena-picker > .unity-base-popup-field__input {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
     -unity-slice-right: 3;
@@ -678,16 +510,6 @@
     padding: 6px 8px;
 }
 
-/* ── icon buttons ────────────────────────────────────────────────── */
-
-/* Square, wordless, and sized to the icon. Copy, Paste and Refresh were full-width buttons with a
-   word on them, which is the right shape for an action you came to the screen to perform and the
-   wrong one for a convenience that sits beside a field.
-
-   The three icons are drawn for this project rather than taken from the pack. Crusenho's set has
-   arrows, a check, a cross, a play and a plus, and none of them means copy, paste or refresh — an
-   icon that says something else is worse than a word. They are 16x16 in the pack's own three
-   colours, so they sit in the same set even though they are not from it. */
 .icon-button {
     width: 30px;
     height: 30px;
@@ -709,18 +531,17 @@
 }
 
 .icon-button--copy {
-    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Copy.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Copy.png?fileID=21300000&guid=b5343f59f7f3dd747b51fbb4e7e70f32&type=3#Icon_Copy");
 }
 
 .icon-button--paste {
-    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Paste.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Paste.png?fileID=21300000&guid=cd68e5764f92f7f4cace17b8a1dfe8d8&type=3#Icon_Paste");
 }
 
 .icon-button--refresh {
-    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Refresh.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Refresh.png?fileID=21300000&guid=9be277fc8f87878418f5f261f42607b2&type=3#Icon_Refresh");
 }
 
-/* The list's own header: a title on the left, the refresh on the right. */
 .browse-header {
     flex-direction: row;
     align-items: center;
@@ -738,18 +559,13 @@
     margin-bottom: 0;
 }
 
-/* ── the number stepper ───────────────────────────────────────────── */
-
-/* A row of arrow, number, arrow. It wears the field frame so it reads as the same kind of control as
-   the dropdowns above it, and the number is centred because it is the whole content — a value
-   pushed against the left edge of a box with an arrow on either side looks like a mistake. */
 .number-stepper {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     height: 26px;
     padding: 0 4px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
     -unity-slice-right: 3;
@@ -759,14 +575,14 @@
 
 .number-stepper__readout {
     flex-grow: 1;
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink);
     -unity-text-align: middle-center;
 }
 
 .number-stepper__arrow {
     width: 14px;
-    font-size: 14px;
+    font-size: 16px;
     color: var(--ink-dim);
     -unity-text-align: middle-center;
     -unity-font-style: bold;
@@ -776,24 +592,18 @@
     color: var(--accent);
 }
 
-/* The line that makes this usable without a mouse. On a pad the only way to know which rule you are
-   about to change is that the control says so, and nothing else on this panel has a focus state. */
 .number-stepper:focus {
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField02a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField02a.png?fileID=21300000&guid=03f5b965037a4b74a924f6690a27593c&type=3#UI_Flat_InputField02a");
 }
 
 .number-stepper:focus > .number-stepper__arrow {
     color: var(--accent);
 }
 
-/* Disabled has to look different from enabled, now that enabled no longer looks disabled. It is
-   the state a client sees for the whole panel: the rules are visible and not theirs to move. */
 .settings__control:disabled {
     opacity: 0.5;
 }
 
-/* Half the width and pushed right. It is a value you read once and hand to somebody; at full width
-   it was the largest thing on a screen whose subject is the players in the room. */
 .join-code-row {
     flex-direction: row;
     align-items: center;
@@ -804,31 +614,28 @@
 .join-code {
     width: 190px;
     padding: 7px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
     -unity-slice-left: 3;
     -unity-slice-top: 3;
     -unity-slice-right: 3;
     -unity-slice-bottom: 6;
     -unity-slice-scale: 2px;
     background-color: rgba(0, 0, 0, 0);
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink);
     -unity-text-align: middle-center;
 }
 
-/* Sits next to the code rather than below it, so the pair reads as one control. */
 .button--compact {
     height: 30px;
     margin: 0 0 0 8px;
     padding: 0 14px;
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .hidden {
     display: none;
 }
-
-/* ── loading screen ─────────────────────────────────────────────────────────────── */
 
 .loading-root {
     flex-grow: 1;
@@ -838,14 +645,14 @@
 }
 
 .loading-title {
-    font-size: 28px;
+    font-size: 32px;
     -unity-font-style: bold;
     color: var(--hud-ink);
     margin-bottom: 6px;
 }
 
 .loading-detail {
-    font-size: 13px;
+    font-size: 16px;
     color: var(--hud-ink-dim);
     margin-bottom: 18px;
 }
@@ -853,7 +660,7 @@
 .progress-track {
     width: 380px;
     height: 14px;
-    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Bar01a.png");
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Bar01a.png?fileID=21300000&guid=78b64d89be52dbe4f9c75f5dc8219b65&type=3#UI_Flat_Bar01a");
     -unity-slice-left: 2;
     -unity-slice-top: 2;
     -unity-slice-right: 2;
@@ -863,8 +670,6 @@
     overflow: hidden;
 }
 
-/* Width is set from code as a percentage; the transition is what keeps it from snapping
-   between the coarse steps a per-player count produces. */
 .progress-fill {
     height: 100%;
     width: 0;
@@ -875,14 +680,11 @@
 
 .countdown {
     margin-top: 20px;
-    font-size: 44px;
+    font-size: 48px;
     -unity-font-style: bold;
     color: var(--hud-accent);
 }
 
-/* ── end screen ──────────────────────────────────────────────────────── */
-
-/* Translucent, and it does not fill the screen: the arena behind it is still being watched. */
 .end-root {
     flex-grow: 1;
     align-items: center;
@@ -903,8 +705,6 @@
     -unity-text-align: middle-center;
 }
 
-/* ── round clock ────────────────────────────────────────────────────── */
-
 .clock-root {
     position: absolute;
     top: 10px;
@@ -914,7 +714,7 @@
 }
 
 .round-clock {
-    font-size: 22px;
+    font-size: 24px;
     -unity-font-style: bold;
     color: var(--hud-ink);
     padding: 2px 12px;
@@ -922,19 +722,10 @@
     border-radius: 4px;
 }
 
-/* Red under the threshold, so running out is felt before it is read. */
 .round-clock--urgent {
     color: var(--hud-bad);
 }
 
-/* ── option A: nameplate over the character (world space) ────────────────────── */
-
-/*
- * Sizes here are in the panel's authored pixels, and the panel is 160 of them wide standing for
- * 1.6 world units -- so 100 authored pixels to the metre, and a character is 70 wide. What makes
- * the text legible is that ratio, not these numbers on their own: author the same layout at four
- * times the resolution and every glyph gets squeezed into a quarter of the space on screen.
- */
 .nameplate {
     flex-grow: 1;
     align-items: center;
@@ -942,7 +733,7 @@
 }
 
 .nameplate__name {
-    font-size: 30px;
+    font-size: 32px;
     -unity-font-style: bold;
     color: var(--hud-ink);
     -unity-text-outline-width: 2px;
@@ -951,12 +742,6 @@
     flex-shrink: 1;
 }
 
-/*
- * flex-shrink: 0 is the load-bearing line. The name and the bar together can ask for more height
- * than the plate has, and flexbox resolves that by shrinking whatever it is allowed to -- which
- * squeezed the bar to four pixels and its fill to zero, leaving a black sliver that looked like a
- * bar that never moved. The name may compress; the bar may not, because the bar is the readout.
- */
 .nameplate__track {
     width: 100%;
     height: 16px;
@@ -977,8 +762,6 @@
 .nameplate__fill--low {
     background-color: var(--hud-bad);
 }
-
-/* ── option B: life bars along the bottom ───────────────────────────────── */
 
 .lifebars-root {
     position: absolute;
@@ -1005,7 +788,6 @@
     border-color: var(--panel-edge);
 }
 
-/* Cropped to the head: the pack's frames are full-body, and a full body shrunk to 40px is a smudge. */
 .lifebar__portrait {
     width: 40px;
     height: 40px;
@@ -1020,7 +802,7 @@
 }
 
 .lifebar__name {
-    font-size: 12px;
+    font-size: 16px;
     color: var(--hud-ink);
     margin-bottom: 3px;
 }
@@ -1029,10 +811,6 @@
     color: var(--hud-accent);
 }
 
-/* The track is the pack's empty bar, sliced so it can be any width; the fill is a flat colour
-   inside it rather than the pack's own fill sprite. A sprite fill would have to be masked to a
-   fraction of its own width, and a coloured box already reads correctly and can go red on its own
-   when the life is low — which is the one thing this bar has to say. */
 .lifebar__track {
     height: 14px;
     background-image: none;
@@ -1056,7 +834,7 @@
 }
 
 .lifebar__seconds {
-    font-size: 14px;
+    font-size: 16px;
     -unity-font-style: bold;
     color: var(--hud-ink);
     margin-left: 10px;
@@ -1064,15 +842,13 @@
     -unity-text-align: middle-right;
 }
 
-/* Out, not gone: the entry stays so nobody else shifts position. */
 .lifebar--out {
     opacity: 0.45;
 }
 
-/* Who the spectator camera is following. Arena01 is barely larger than the view, so the camera
-   moving is not by itself an answer to "did that do anything?" — this is. */
 .lifebar--watched {
     border-color: var(--hud-accent);
     background-color: rgba(238, 108, 92, 0.18);
 }
+
 

@@ -120,7 +120,7 @@
                      MatchSettings.Clamped enforces, so the control cannot offer the server a value
                      it will refuse. -->
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Start life" class="settings__label" />
+                    <ui:Label text="Start" class="settings__label" />
                     <Snackdown.UI.NumberStepper name="starting-life-field" class="settings__control" low-value="5" high-value="600" step="5" />
                 </ui:VisualElement>
 
