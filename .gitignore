@@ -83,3 +83,7 @@ crashlytics-build.properties
 /ProfilerCaptures/
 *.data
 *.raw
+
+# Python bytecode from the tools
+__pycache__/
+*.pyc
