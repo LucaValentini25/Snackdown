@@ -1,7 +1,7 @@
 {
   "project": "Snackdown",
   "updated": "2026-08-25",
-  "currentEpic": "visuals",
+  "currentEpic": "quit-and-pause",
 
   "epics": [
     {
@@ -145,7 +145,7 @@
       "id": "visuals",
       "title": "Make it look like a game",
       "phase": "5",
-      "status": "todo",
+      "status": "done",
       "goal": "The netcode is finished and invisible. What a stranger sees is untextured boxes and characters that do not move their legs. This epic is the layer that makes the rest of it worth looking at, and it is held to the same rule as everything else: nothing new on the wire that can be derived from what is already there.",
       "tasks": [
         { "id": "vp-1", "title": "Characters animate, and agree across peers without sending anything", "status": "done", "test": "the sandbox, reading the sprite the renderer is holding while the state is driven through the real API: idle frames advance on their own, ServerApplyStun puts it on Hit (32x32)_0 and it comes off when the timer drains. Nineteen EditMode tests cover the clip choice, the frame arithmetic and the facing", "notes": "D-022 as designed: nothing about animation crosses the wire. Every peer already agrees about PlayerState — predicted for the owner, authoritative on the server, interpolated for a spectator — so every peer reaches the same clip from the same numbers. A NetworkAnimator would have sent that conclusion a second time, and a second copy can disagree with the first: a character sliding while its run animation says it stopped. The decision is a class with no Unity in it and the component is a renderer and a clock. Five of the pack's seven sheets are used — double jump and wall jump have no equivalent in the motor, and a clip that plays for a state the simulation cannot be in is a promise the game does not keep. The frames live on the CharacterCatalog entry the wardrobe already indexes, so a skin change swaps the whole animation and there is no AnimatorController to keep in step with it" },
@@ -179,7 +179,30 @@
             },
         { "id": "vp-6", "title": "The UI stops looking like a default stylesheet", "status": "done", "test": "measured rather than eyeballed, because the mechanism is invisible until it is wrong: in play mode the panel resolves to a slice of 5/7/5/7 at scale 3 on Frame01a, the button to 3/7/3/6 at scale 2 on Button01a_1, and the loading bar to 2/2/2/3 on Bar01a. Whether it looks good is Luca's call and is not something this session can see", "notes": "Crusenho's Complete UI Essential Pack, CC BY 4.0, chosen after Kenney's two were rejected on style. See D-023, which is really a decision about the repository rather than about art: the Unity Asset Store was ruled out because its EULA forbids redistribution and a public GitHub repository is redistribution. Blocked until Luca downloads the pack — itch.io's name-your-own-price flow is not something this session can go through" }
       ]
-    }
+    },
+      {
+        "id": "quit-and-pause",
+        "title": "A way out, from the menu and from a match",
+        "phase": "5",
+        "status": "done",
+        "goal": "A build has no way to close itself and a match has no way to leave except dying. Both are things every player looks for first and neither exists, which is the kind of gap that is invisible in the editor - Escape stops play mode there, and Application.Quit does nothing at all.",
+        "tasks": [
+          {
+            "id": "qp-1",
+            "title": "The main menu can close the game",
+            "status": "done",
+            "test": "the button renders in the front panel with the rest of the column and calls the one exit path. Whether it actually closes a build is not checkable from the editor, which is the reason the editor branch exists at all",
+            "notes": "GameExit is one static in one place because Application.Quit does nothing in the editor and the branch that fixes that is exactly what gets copied once and updated once. Written where both callers already live rather than in Core, which the UI assembly does not reference and should not start to for one method Hidden while a connection attempt is running, alongside the buttons that were already hidden there: quitting mid-connect would leave a half-open session behind on the service, and the only button worth reaching during an attempt is the one that cancels it. Measured in play by driving the busy state and reading the resolved display of each button."
+          },
+          {
+            "id": "qp-2",
+            "title": "Escape opens a menu over a running match",
+            "status": "done",
+            "test": "eight EditMode tests on when it may be on screen, including the two that matter: a match starting under an open menu, and a host walking out from under one. Then rendered in play mode with every button resolving and the layout measured - the panel at 420x324 with its three buttons where the stylesheet puts them",
+            "notes": "Nothing is paused, because in a networked match nothing can be: the other players go on regardless, so the character stays under its owner's control and this is a layer rather than a modal. That decision is also why the backdrop dims to 35% and not the end screen's 72% - a player who keeps control but cannot see what is happening to them is no better off. Leaving reuses the lobby's own Leave call, so a host deletes the session and a client departs without a second copy of that difference; what it adds is unloading the arena by hand, because the director that loaded it is despawned with the session and nothing else would. The rule for when the menu may open is asked every frame, not only on the keypress, which is what closes it when the phase changes underneath somebody reading it"
+          }
+        ]
+      }
   ],
 
   "decisions": [

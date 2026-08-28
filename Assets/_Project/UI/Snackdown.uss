@@ -715,6 +715,33 @@
     -unity-text-align: middle-center;
 }
 
+/* A far lighter dim than the end screen's. That one covers a match that is over; this one covers a
+   match that is still being played, and the player is still in it - they keep control while this is
+   open, so hiding what is happening to them at 72% would take with one hand what the design gives
+   with the other. Enough to say a menu is open, not enough to blind anybody. */
+.escape-root {
+    background-color: rgba(12, 11, 16, 0.35);
+}
+
+/* The escape menu borrows the end screen's dimmed backdrop and centred panel, because it is the
+   same shape of thing: a panel over a match that is still running behind it. What it does not
+   borrow is the width - this one is a column of buttons and nothing else, so a 380px minimum
+   would leave it mostly empty. */
+.escape-panel {
+    min-width: 260px;
+    align-items: center;
+}
+
+.escape-panel .title,
+.escape-panel .subtitle {
+    -unity-text-align: middle-center;
+}
+
+.escape-panel > .button {
+    width: 220px;
+    align-self: center;
+}
+
 .clock-root {
     position: absolute;
     top: 10px;

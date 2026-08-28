@@ -41,6 +41,7 @@ namespace Snackdown.UI
         Button _host;
         Button _join;
         Button _cancel;
+        Button _quit;
         VisualElement _browseSection;
         VisualElement _browseList;
         Button _refresh;
@@ -103,6 +104,7 @@ namespace Snackdown.UI
             _host = root.Q<Button>("host-button");
             _join = root.Q<Button>("join-button");
             _cancel = root.Q<Button>("cancel-button");
+            _quit = root.Q<Button>("quit-button");
             _browseSection = root.Q<VisualElement>("browse-section");
             _browseList = root.Q<VisualElement>("browse-list");
             _refresh = root.Q<Button>("refresh-button");
@@ -145,6 +147,7 @@ namespace Snackdown.UI
             _host.clicked += OnHostClicked;
             _join.clicked += OnJoinClicked;
             _cancel.clicked += OnCancelClicked;
+            _quit.clicked += GameExit.Quit;
             _refresh.clicked += OnRefreshClicked;
             _joinConfirm.clicked += OnJoinConfirmClicked;
             _joinCancel.clicked += OnCancelClicked;
@@ -194,6 +197,7 @@ namespace Snackdown.UI
             _host.clicked -= OnHostClicked;
             _join.clicked -= OnJoinClicked;
             _cancel.clicked -= OnCancelClicked;
+            _quit.clicked -= GameExit.Quit;
             _refresh.clicked -= OnRefreshClicked;
             _joinConfirm.clicked -= OnJoinConfirmClicked;
             _joinCancel.clicked -= OnCancelClicked;
@@ -388,6 +392,11 @@ namespace Snackdown.UI
             _browseList.EnableInClassList("hidden", busy);
             _target.EnableInClassList("hidden", busy);
             _nickname.EnableInClassList("hidden", busy);
+
+            // Quitting mid-connect would leave a half-open session behind on the service, and the
+            // one button that should be reachable while an attempt is running is the one that
+            // cancels it.
+            _quit.EnableInClassList("hidden", busy);
 
             _cancel.EnableInClassList("hidden", !busy);
             _joinCancel.EnableInClassList("hidden", !busy);
