@@ -87,4 +87,9 @@ if __name__ == "__main__":
         with io.open(os.path.join(out, "arena01_spawns.txt"), "w", encoding="utf-8", newline="\n") as f:
             for i, (x, y) in enumerate(players, 1): f.write("P %d %.4f %.4f\n" % (i, x, y))
             for i, (x, y, n) in enumerate(fruits, 1): f.write("F %d %.4f %.4f\n" % (i, x, y))
-        print("\nescritos cells y spawns en", out)
+        # Written here rather than by hand: a verification file one layout behind
+        # reports faults in a scene that is correct. It did, once.
+        with io.open(os.path.join(out, "arena01_pieces.txt"), "w", encoding="utf-8", newline="\n") as f:
+            for p in PIECES:
+                f.write("%s %.4f %.4f %.4f\n" % (p.name, p.x0 * 0.5, (p.x1 + 1) * 0.5, surface_y(p.row)))
+        print("escritos cells, spawns y piezas en", out)
