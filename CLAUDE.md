@@ -79,6 +79,21 @@ self-evident members (`GetX` → "Gets X"), commented-out code, and TODOs withou
 
 If a comment is needed to explain *what* the code does, the code needs renaming, not a comment.
 
+### Never open `Snackdown.uss` in the UI Builder
+
+Saving from it rewrites the stylesheet in its own canonical form and **deletes every comment in the
+file.** It has happened twice: 176 lines of reasoning the first time, 145 the second, both recovered
+from git. It also rewrites each `url()` into a `fileID`-and-`guid` form that works and cannot be
+read.
+
+This rule lives here rather than in a comment at the top of the stylesheet, where it was first
+written — the warning could not survive the thing it was warning about.
+
+Edit the stylesheet as text. The UI Builder is still the right tool for *looking* at a document, and
+for reading the resolved styles of an element; it is the save that does the damage. If it has
+already happened, `git checkout` the file and re-apply the handful of real changes: they are always
+a handful, and the diff makes them easy to find among the deletions.
+
 ## Documentation
 
 - `docs/*.md` is the **single source of truth**, tracked in git.
