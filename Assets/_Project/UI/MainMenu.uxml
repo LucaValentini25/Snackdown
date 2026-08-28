@@ -26,6 +26,10 @@
             <ui:Button name="join-button" text="Join a game" class="button" />
             <ui:Button name="cancel-button" text="Cancel" class="button hidden" />
 
+            <!-- A build has no other way out. In the editor it stops play mode instead, so the
+                 button is not silently dead on the machine it was written on. -->
+            <ui:Button name="quit-button" text="Quit game" class="button" />
+
             <ui:Label name="menu-status" class="status" />
         </ui:VisualElement>
     </ui:VisualElement>

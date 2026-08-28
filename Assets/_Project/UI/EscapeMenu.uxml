@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Opened with Escape, over whatever is happening. It does not pause anything, because in a
+    networked match there is nothing that could be paused: the other players keep moving whether
+    this one is reading a menu or not. So the character stays under its owner's control and this
+    panel is a layer above, not a modal in front.
+
+    Which is why it is translucent and small. A full cover would hide the match the player is still
+    playing, and a player who cannot see what is happening to them is worse off than one who never
+    opened the menu.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="escape-root" class="end-root escape-root hidden">
+        <ui:VisualElement class="panel escape-panel">
+            <ui:Label text="Paused" class="title" />
+            <ui:Label name="escape-detail" text="The match keeps running." class="subtitle" />
+
+            <ui:Button name="resume-button" text="Resume" class="button button--primary" />
+            <ui:Button name="leave-match-button" text="Leave match" class="button" />
+            <ui:Button name="quit-button" text="Quit game" class="button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
