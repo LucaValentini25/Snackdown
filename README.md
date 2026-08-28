@@ -56,6 +56,10 @@ See **[docs/02-netcode.md](docs/02-netcode.md)** for the model in depth.
    with `Space`. Collect fruit, stomp heads, outlive the others. When you go out the camera follows
    a survivor — tap left or right to watch somebody else; the strip along the bottom outlines who
    you are on.
+5. `Escape` — or `Start` on a pad — opens the pause menu, which is where you leave a match or close
+   the game. It does not pause anything: there is nothing to pause when the other players keep
+   moving, so your character stays under your control while it is open. The front screen has its own
+   **Quit game**, which is the only way out of a build.
 
 **To play over a LAN instead of Relay:** in `Bootstrap.unity`, uncheck **Use Relay** on the
 `SessionConnection`. The field on the join screen relabels itself from *Code* to *Address*, the
