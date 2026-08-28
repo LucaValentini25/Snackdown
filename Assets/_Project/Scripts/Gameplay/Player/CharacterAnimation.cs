@@ -20,9 +20,6 @@ namespace Snackdown.Gameplay.Player
     /// </remarks>
     public class CharacterAnimation
     {
-        /// <summary>Frames per second the sprite pack is drawn at.</summary>
-        public const float FramesPerSecond = 20f;
-
         /// <summary>
         /// Horizontal speed below which a character counts as standing still, in units per second.
         /// </summary>
@@ -81,12 +78,7 @@ namespace Snackdown.Gameplay.Player
                 _elapsed += Mathf.Max(0f, deltaTime);
             }
 
-            if (frameCount <= 0) return 0;
-
-            // Floor rather than round: frame zero has to be the one shown at time zero, or every
-            // clip starts half a frame in and a two-frame clip starts on its second frame.
-            int frame = Mathf.FloorToInt(_elapsed * FramesPerSecond);
-            return ((frame % frameCount) + frameCount) % frameCount;
+            return PixelAnimation.FrameAt(_elapsed, frameCount);
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Snackdown.Gameplay;
 using Snackdown.Gameplay.Player;
 using Snackdown.Simulation;
 using UnityEngine;
@@ -16,7 +17,7 @@ namespace Snackdown.Tests
     /// </remarks>
     public class CharacterAnimationTests
     {
-        const float Frame = 1f / CharacterAnimation.FramesPerSecond;
+        const float Frame = 1f / PixelAnimation.FramesPerSecond;
 
         static PlayerState Standing() => new PlayerState { Grounded = true };
 
