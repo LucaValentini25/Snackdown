@@ -393,6 +393,11 @@ namespace Snackdown.UI
             _target.EnableInClassList("hidden", busy);
             _nickname.EnableInClassList("hidden", busy);
 
+            // Quitting mid-connect would leave a half-open session behind on the service, and the
+            // one button that should be reachable while an attempt is running is the one that
+            // cancels it.
+            _quit.EnableInClassList("hidden", busy);
+
             _cancel.EnableInClassList("hidden", !busy);
             _joinCancel.EnableInClassList("hidden", !busy);
         }

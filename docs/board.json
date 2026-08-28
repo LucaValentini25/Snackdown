@@ -192,7 +192,7 @@
             "title": "The main menu can close the game",
             "status": "done",
             "test": "the button renders in the front panel with the rest of the column and calls the one exit path. Whether it actually closes a build is not checkable from the editor, which is the reason the editor branch exists at all",
-            "notes": "GameExit is one static in one place because Application.Quit does nothing in the editor and the branch that fixes that is exactly what gets copied once and updated once. Written where both callers already live rather than in Core, which the UI assembly does not reference and should not start to for one method"
+            "notes": "GameExit is one static in one place because Application.Quit does nothing in the editor and the branch that fixes that is exactly what gets copied once and updated once. Written where both callers already live rather than in Core, which the UI assembly does not reference and should not start to for one method Hidden while a connection attempt is running, alongside the buttons that were already hidden there: quitting mid-connect would leave a half-open session behind on the service, and the only button worth reaching during an attempt is the one that cancels it. Measured in play by driving the busy state and reading the resolved display of each button."
           },
           {
             "id": "qp-2",
