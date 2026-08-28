@@ -21,7 +21,7 @@ MonoBehaviour:
   JumpReleaseSpeed: 5
   CoyoteTime: 0.1
   JumpBufferTime: 0.12
-  ColliderSize: {x: 0.7, y: 0.9}
+  ColliderSize: {x: 0.7, y: 0.8125}
   SkinWidth: 0.02
   GroundMask:
     serializedVersion: 2
