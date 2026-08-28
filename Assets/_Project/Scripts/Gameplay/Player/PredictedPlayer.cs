@@ -345,7 +345,10 @@ namespace Snackdown.Gameplay.Player
             _previous2 = _previous1;
             _previous1 = input;
 
-            if (PredictionEnabled) ApplyLogicalPosition(_state.Position, smooth: true);
+            // Not smoothed: ordinary tick movement is not an error to be absorbed, it is the
+            // character moving. The smoother carries it forward between ticks instead.
+            if (PredictionEnabled) ApplyLogicalPosition(_state.Position, smooth: false);
+            if (PredictionEnabled && _smoother != null) _smoother.OnTick(_state.Velocity, _tickDelta);
         }
 
         /// <summary>
@@ -465,7 +468,8 @@ namespace Snackdown.Gameplay.Player
             _lastConsumedInput = input;
             CaptureWorld(serverTick);
             _state = PlayerMotor.Simulate(_state, input, _config, WorldAt(serverTick), _tickDelta);
-            ApplyLogicalPosition(_state.Position, smooth: true);
+            ApplyLogicalPosition(_state.Position, smooth: false);
+            if (_smoother != null) _smoother.OnTick(_state.Velocity, _tickDelta);
         }
 
         public PlayerSnapshot BuildSnapshot()

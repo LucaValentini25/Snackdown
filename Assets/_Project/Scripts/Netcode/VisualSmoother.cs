@@ -30,6 +30,9 @@ namespace Snackdown.Netcode
         public static bool SmoothingEnabled = true;
 
         Vector3 _offset;
+        Vector2 _velocity;
+        float _sinceTick;
+        float _tickDelta = 1f / 30f;
 
         /// <summary>Where the sprite is authored to sit, which is not necessarily the origin.</summary>
         /// <remarks>
@@ -59,8 +62,31 @@ namespace Snackdown.Netcode
 
         void Awake() => _rest = transform.localPosition;
 
+        /// <summary>
+        /// Reports that a tick has just landed, and how fast the character is now moving.
+        /// </summary>
+        /// <remarks>
+        /// <para>What the sprite is drawn from between ticks. The simulation moves at 30Hz and the
+        /// screen does not, so between two ticks the character's real position is somewhere the
+        /// simulation has not computed yet; carrying the velocity forward puts the sprite there
+        /// instead of leaving it at the last tick.</para>
+        /// <para>The alternative this replaced was to absorb every tick's movement as if it were an
+        /// error and decay it. That holds the sprite still for a tick and then drags it after the
+        /// character, so the faster you move the further behind the drawing gets: at terminal
+        /// falling speed it sat between 0.62 and 1.28 units above the truth, against a character
+        /// 0.81 units tall. You could land, and jump again, while still drawn in the air.</para>
+        /// </remarks>
+        public void OnTick(Vector2 velocity, float tickDelta)
+        {
+            _velocity = velocity;
+            _tickDelta = tickDelta;
+            _sinceTick = 0f;
+        }
+
         void LateUpdate()
         {
+            _sinceTick += Time.deltaTime;
+
             if (!SmoothingEnabled)
             {
                 _offset = Vector3.zero;
@@ -71,7 +97,11 @@ namespace Snackdown.Netcode
             _offset *= Mathf.Exp(-_decayRate * Time.deltaTime);
             if (_offset.sqrMagnitude < 0.000001f) _offset = Vector3.zero;
 
-            transform.localPosition = _rest + _offset;
+            // Never past the next tick: a tick that does not arrive should leave the sprite
+            // waiting where it was, not carry it across the level on a stale velocity.
+            Vector2 lead = _velocity * Mathf.Min(_sinceTick, _tickDelta);
+
+            transform.localPosition = _rest + (Vector3)lead + _offset;
         }
     }
 }
