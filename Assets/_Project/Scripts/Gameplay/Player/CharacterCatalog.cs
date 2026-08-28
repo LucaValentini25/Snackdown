@@ -22,8 +22,36 @@ namespace Snackdown.Gameplay.Player
             [Tooltip("Shown in the lobby and character select.")]
             public string DisplayName;
 
-            [Tooltip("Idle frame used until animation arrives in a later phase.")]
+            [Tooltip("Single frame for the lobby, the wardrobe and anywhere a character is not moving.")]
             public Sprite Portrait;
+
+            [Tooltip("Frames of each clip, in order, at the rate CharacterAnimation states.")]
+            public Sprite[] Idle;
+
+            public Sprite[] Run;
+            public Sprite[] Jump;
+            public Sprite[] Fall;
+            public Sprite[] Hit;
+
+            /// <summary>
+            /// The frames of one clip, or an empty array where a skin has none.
+            /// </summary>
+            /// <remarks>
+            /// A switch rather than an array indexed by the enum, because an array would have to be
+            /// kept the same length as <see cref="CharacterClip"/> by hand and the Inspector would
+            /// show five unlabelled rows. Adding a clip breaks this compile, which is the point.
+            /// </remarks>
+            public Sprite[] Frames(CharacterClip clip)
+            {
+                switch (clip)
+                {
+                    case CharacterClip.Run: return Run;
+                    case CharacterClip.Jump: return Jump;
+                    case CharacterClip.Fall: return Fall;
+                    case CharacterClip.Hit: return Hit;
+                    default: return Idle;
+                }
+            }
         }
 
         [SerializeField] Entry[] _entries = new Entry[0];
