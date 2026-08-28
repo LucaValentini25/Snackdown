@@ -12,7 +12,7 @@
      * so 8 reference units is exactly one em on screen and every step up is a whole one. Sizes
      * between them are what blur a pixel font.
      */
-    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf");
+    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf?fileID=12800000&guid=3f99f5136898c6846845a2eb4018c6db&type=3#BoldPixels");
 
     --bg: rgb(24, 22, 32);
     --panel: rgb(173, 183, 196);
@@ -66,7 +66,9 @@
 }
 
 .panel--narrow {
-    width: 300px;
+    width: 400px;
+    height: 300px;
+    justify-content: space-evenly;
 }
 
 .field--tall > .unity-base-text-field__input {
@@ -126,13 +128,13 @@
 }
 
 .title--hero {
-    font-size: 64px;
+    font-size: 200px;
     color: var(--ink);
     margin-bottom: 0;
 }
 
 .subtitle--hero {
-    font-size: 16px;
+    font-size: 48px;
     color: var(--ink-dim);
     margin-bottom: 22px;
 }
@@ -144,7 +146,7 @@
 .field > .unity-base-field__label {
     min-width: 84px;
     color: var(--ink);
-    font-size: 16px;
+    font-size: 24px;
 }
 
 .field > .unity-base-text-field__input {
@@ -158,6 +160,7 @@
     border-width: 0;
     color: var(--ink);
     padding: 8px 10px;
+    font-size: 24px;
 }
 
 /* The default theme sets -unity-font-definition on the text elements themselves, and a definition
@@ -165,19 +168,26 @@
    label still drawing in NotInter: an inherited value loses to a rule that matches the element
    directly. So it is set again here, on the class every label and every button's text carries. */
 .unity-text-element {
-    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf");
+    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf?fileID=12800000&guid=3f99f5136898c6846845a2eb4018c6db&type=3#BoldPixels");
 }
 
-.unity-button:hover,
-.unity-button:active,
-.unity-button:focus,
+/* Unity's own theme paints a grey over a hovered button, and it reaches it through one pseudo-class
+   more than this rule used to carry: .unity-button:hover:enabled outranks .unity-button:hover, so
+   three passes at overriding the colour still resolved to a flat 0.82 grey. Reading the resolved
+   style of a button with its hover state forced is what finally said so. Matching that specificity
+   is the entire fix - USS has no !important to fall back on, and the nine-slice sprite already
+   carries every state these buttons have, so the colour underneath is never the one wanted. */
+.unity-button:hover:enabled,
+.unity-button:active:enabled,
+.unity-button:hover:active:enabled,
+.unity-button:focus:enabled,
 .unity-button:disabled {
     background-color: rgba(0, 0, 0, 0);
     border-color: rgba(0, 0, 0, 0);
 }
 
 .button {
-    height: 46px;
+    height: 60px;
     margin: 5px 0 0 0;
     padding: 0 16px;
     background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_1.png?fileID=21300000&guid=79a4c9355a147504f97b2c0be2399cd5&type=3#UI_Flat_Button01a_1");
@@ -189,7 +199,7 @@
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     color: var(--ink);
-    font-size: 16px;
+    font-size: 24px;
     -unity-font-style: bold;
 }
 
