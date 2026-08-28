@@ -22,6 +22,9 @@ namespace Snackdown.Gameplay.Fruits
         [SerializeField] FruitTable _table;
         [SerializeField] SpriteRenderer _renderer;
 
+        [Tooltip("Spinner on that same renderer. Left empty on a fruit that does not animate.")]
+        [SerializeField] FruitAnimator _animator;
+
         [Tooltip("How close a player must be to collect this. Generous on purpose — missing a fruit you walked through feels broken.")]
         [SerializeField] float _pickupRadius = 0.5f;
 
@@ -72,8 +75,40 @@ namespace Snackdown.Gameplay.Fruits
         void Dress()
         {
             if (_table == null || _renderer == null || _table.Count == 0) return;
-            _renderer.sprite = _table.Get(_kind.Value).Sprite;
+
+            FruitTable.Entry entry = _table.Get(_kind.Value);
+            _renderer.sprite = entry.Sprite;
+
+            // The still sprite goes on first regardless, so a kind with no frames configured is a
+            // fruit that does not spin rather than a fruit that is not there.
+            if (_animator != null) _animator.Play(entry.Frames);
         }
+
+        /// <summary>
+        /// Plays the burst where this fruit was, on this peer.
+        /// </summary>
+        /// <remarks>
+        /// The effect outlives the object it came from, so it cannot be a child of it — a moment
+        /// later there is no fruit to be a child of.
+        /// </remarks>
+        void Pop()
+        {
+            if (_table == null) return;
+            OneShotSprite.Play(_table.Collected, transform.position, _renderer);
+        }
+
+        /// <summary>Tells the peers that are not the server to play the burst.</summary>
+        /// <remarks>
+        /// <para>Sent, rather than inferred from the despawn every peer already sees, because a
+        /// despawn does not say why. Fruit is also despawned wholesale when an arena unloads, and
+        /// popping there would set off every uncollected fruit in the arena at once as the ground
+        /// disappears from under them.</para>
+        /// <para>Not to the server, which pops on the spot instead: an RPC addressed to the host
+        /// runs when the queue reaches it, and by then this object has been despawned and there is
+        /// nothing left to read a position off.</para>
+        /// </remarks>
+        [Rpc(SendTo.NotServer)]
+        void PoppedRpc() => Pop();
 
         /// <remarks>
         /// <para>Collection is an explicit overlap query rather than <c>OnTriggerEnter2D</c>, for
@@ -99,6 +134,9 @@ namespace Snackdown.Gameplay.Fruits
                 if (!player.ServerCollectFruit(_table.Get(_kind.Value).LifeSeconds)) continue;
 
                 _collected = true;
+
+                PoppedRpc();
+                Pop();
 
                 // Despawned rather than disabled: a collected fruit has no further use, and leaving
                 // it around means every peer keeps an object nobody can interact with.

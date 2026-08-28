@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 5490125420951444601}
   - component: {fileID: 7437398018571230997}
   - component: {fileID: 928945648266921492}
+  - component: {fileID: 8573495654676734622}
   m_Layer: 0
   m_Name: Fruit
   m_TagString: Untagged
@@ -170,4 +171,17 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   _table: {fileID: 11400000, guid: 8c0435ceb63eef14c9451ddc7d2987b0, type: 2}
   _renderer: {fileID: 7760151731140894691}
+  _animator: {fileID: 8573495654676734622}
   _pickupRadius: 0.5
+--- !u!114 &8573495654676734622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 806840995587741719}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 876ec9a86541c1d42934d1e84d0e7f1f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Snackdown.Gameplay::Snackdown.Gameplay.Fruits.FruitAnimator

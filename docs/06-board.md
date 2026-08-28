@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 93% — 65 done, 1 in progress, 0 blocked, 4 to do, 2 dropped, across 10 epics.
+**Overall:** 94% — 66 done, 1 in progress, 0 blocked, 3 to do, 2 dropped, across 10 epics.
 
 ## Epics
 
@@ -22,7 +22,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Verification — make the netcode claims checkable](#verification-make-the-netcode-claims-checkable) | 5 | Done | 4/4 |
 | [Polish and release](#polish-and-release) | 5 | To do | 6/7 |
 | [Loose ends](#loose-ends) | 5 | To do | 5/5 |
-| [Make it look like a game](#make-it-look-like-a-game) | 5 | To do | 12/16 |
+| [Make it look like a game](#make-it-look-like-a-game) | 5 | To do | 13/16 |
 
 ### Netcode core — predicted character
 
@@ -150,7 +150,7 @@ The netcode is finished and invisible. What a stranger sees is untextured boxes 
 | | Task | Verified by | Notes |
 |:---:|---|---|---|
 | `[x]` | Characters animate, and agree across peers without sending anything | the sandbox, reading the sprite the renderer is holding while the state is driven through the real API: idle frames advance on their own, ServerApplyStun puts it on Hit (32x32)_0 and it comes off when the timer drains. Nineteen EditMode tests cover the clip choice, the frame arithmetic and the facing | D-022 as designed: nothing about animation crosses the wire. Every peer already agrees about PlayerState — predicted for the owner, authoritative on the server, interpolated for a spectator — so every peer reaches the same clip from the same numbers. A NetworkAnimator would have sent that conclusion a second time, and a second copy can disagree with the first: a character sliding while its run animation says it stopped. The decision is a class with no Unity in it and the component is a renderer and a clock. Five of the pack's seven sheets are used — double jump and wall jump have no equivalent in the motor, and a clip that plays for a state the simulation cannot be in is a promise the game does not keep. The frames live on the CharacterCatalog entry the wardrobe already indexes, so a skin change swaps the whole animation and there is no AnimatorController to keep in step with it |
-| `[ ]` | Fruit spins where it stands, and pops when it is collected | — | Purely local. The kind is already replicated and the animation changes no outcome, so it is a view like the HUD is. The pack ships a Collected sheet for the pickup |
+| `[x]` | Fruit spins where it stands, and pops when it is collected | the spin was read off a live renderer in play mode, advancing from frame 0 to Apple_7 on its own, and the burst was played as a standalone object and confirmed to remove itself when its 0.3s is up. NOT yet seen on a real pickup: the sandbox could not start a host, a leftover 'Player 2 (Client And Server)' process was still holding UDP 7777. Eight EditMode tests cover the shared frame arithmetic | Purely local, as planned. Which fruit it is still comes from the server; the spin is a clock every peer runs for itself and nobody can be wrong about. The pickup burst is the one thing that is sent, and deliberately: a despawn does not say why it happened, and fruit is also despawned wholesale when an arena unloads — inferring the burst from the despawn would set off every uncollected fruit in the arena as the ground vanished. The server pops on the spot and the message goes to everybody else, because an RPC addressed to the host runs when the queue reaches it and by then the object has been despawned. The effect is built in code rather than from a prefab so it copies the sorting layer and order off the renderer it replaces instead of keeping a second copy of them. The 20fps rate moved to a shared PixelAnimation, since a fruit spinning at a different rate than a character runs would be a bug living in two constants that used to agree |
 | `[ ]` | A background behind each arena | — | Static tiled, no parallax: the arena is 26x9 against a 24.9x14 view, so the camera barely moves and a parallax would buy nothing it could show. Cool palette for Arena01 and warm for Arena02, which is the difference they already have |
 | `[ ]` | Terrain is a tilemap, and the player does not catch on it | — | The risky one. The motor casts against live colliders, so the arena's colliders ARE the surface reconciliation replays against. Tilemap plus TilemapCollider2D plus CompositeCollider2D in Outlines, tried first because Luca has been caught by a composite trapping the player at edges before; if it does it again the fallback is an editor tool that emits rectangle colliders from the terrain's own shape. Platforms are their own prefab with their own colliders, not part of the tilemap |
 | `[ ]` | Pixel Perfect Camera, with the framing checked afterwards | — | It derives orthographicSize from a reference resolution, so the 24.9x14 view can move — ArenaBounds and the spectator camera clamp are both matched to it and have to be re-checked in the sandbox |
