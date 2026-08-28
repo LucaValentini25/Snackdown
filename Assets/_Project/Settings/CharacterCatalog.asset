@@ -15,9 +15,157 @@ MonoBehaviour:
   _entries:
   - DisplayName: Ninja Frog
     Portrait: {fileID: -6367560908665664636, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    Idle:
+    - {fileID: -6367560908665664636, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: -6056987297122131021, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: 8416797952724722639, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: 4883129791460916795, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: 4278371960119211202, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: 8644832591467991550, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: -7152759390613953277, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: 6456874251884481089, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: -2526832996998184344, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: 4392827059107796345, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    - {fileID: -1363835404106015672, guid: cd947491a13509945aa1b644f9db3ef2, type: 3}
+    Run:
+    - {fileID: 7166236263522030466, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: 2470319409956435798, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: -4540918584354326388, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: -4455822056875728695, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: -5364790588639958657, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: -1512656188830553638, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: -2754230144694611447, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: -2419971920513260168, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: 1843850012483549754, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: 241620830004830169, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: -362971539341918764, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    - {fileID: 2178398316516280758, guid: e362bc6a7c79fce4db16d145d43a5550, type: 3}
+    Jump:
+    - {fileID: 21300000, guid: 4872bd1108769a946a6acb68dc156fcf, type: 3}
+    Fall:
+    - {fileID: 21300000, guid: b6d14bcb8d9dbb349beb9d3619096732, type: 3}
+    Hit:
+    - {fileID: 6868122594974341346, guid: 18a451ae5d817e04bbf3101eaed9466e, type: 3}
+    - {fileID: 7167584040609486739, guid: 18a451ae5d817e04bbf3101eaed9466e, type: 3}
+    - {fileID: -1675461080110260169, guid: 18a451ae5d817e04bbf3101eaed9466e, type: 3}
+    - {fileID: 8480664182131228983, guid: 18a451ae5d817e04bbf3101eaed9466e, type: 3}
+    - {fileID: -953560442851353963, guid: 18a451ae5d817e04bbf3101eaed9466e, type: 3}
+    - {fileID: -3450976776972242761, guid: 18a451ae5d817e04bbf3101eaed9466e, type: 3}
+    - {fileID: 7062579536633761780, guid: 18a451ae5d817e04bbf3101eaed9466e, type: 3}
   - DisplayName: Mask Dude
     Portrait: {fileID: -6367560908665664636, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    Idle:
+    - {fileID: -6367560908665664636, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: -6056987297122131021, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: 8416797952724722639, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: 4883129791460916795, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: 4278371960119211202, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: 8644832591467991550, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: -7152759390613953277, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: 6456874251884481089, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: -2526832996998184344, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: 4392827059107796345, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    - {fileID: -1363835404106015672, guid: 3750f45c844123341b9a777a96cb1eca, type: 3}
+    Run:
+    - {fileID: 7166236263522030466, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: 2470319409956435798, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: -4540918584354326388, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: -4455822056875728695, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: -5364790588639958657, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: -1512656188830553638, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: -2754230144694611447, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: -2419971920513260168, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: 1843850012483549754, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: 241620830004830169, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: -362971539341918764, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    - {fileID: 2178398316516280758, guid: 97d5ce53f3ac76e4888319c6a53c7ff3, type: 3}
+    Jump:
+    - {fileID: 21300000, guid: 2d728ff08787c6640bbe4984c7ff018b, type: 3}
+    Fall:
+    - {fileID: 21300000, guid: 88794fc5febd16e40a94cacbf542b65b, type: 3}
+    Hit:
+    - {fileID: 6868122594974341346, guid: b234dd527243d1042a19b2cf7ef17cd7, type: 3}
+    - {fileID: 7167584040609486739, guid: b234dd527243d1042a19b2cf7ef17cd7, type: 3}
+    - {fileID: -1675461080110260169, guid: b234dd527243d1042a19b2cf7ef17cd7, type: 3}
+    - {fileID: 8480664182131228983, guid: b234dd527243d1042a19b2cf7ef17cd7, type: 3}
+    - {fileID: -953560442851353963, guid: b234dd527243d1042a19b2cf7ef17cd7, type: 3}
+    - {fileID: -3450976776972242761, guid: b234dd527243d1042a19b2cf7ef17cd7, type: 3}
+    - {fileID: 7062579536633761780, guid: b234dd527243d1042a19b2cf7ef17cd7, type: 3}
   - DisplayName: Pink Man
     Portrait: {fileID: -6367560908665664636, guid: d348dff3819df794186a80cb95777629, type: 3}
+    Idle:
+    - {fileID: -6367560908665664636, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: -6056987297122131021, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: 8416797952724722639, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: 4883129791460916795, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: 4278371960119211202, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: 8644832591467991550, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: -7152759390613953277, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: 6456874251884481089, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: -2526832996998184344, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: 4392827059107796345, guid: d348dff3819df794186a80cb95777629, type: 3}
+    - {fileID: -1363835404106015672, guid: d348dff3819df794186a80cb95777629, type: 3}
+    Run:
+    - {fileID: 7166236263522030466, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: 2470319409956435798, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: -4540918584354326388, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: -4455822056875728695, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: -5364790588639958657, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: -1512656188830553638, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: -2754230144694611447, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: -2419971920513260168, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: 1843850012483549754, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: 241620830004830169, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: -362971539341918764, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    - {fileID: 2178398316516280758, guid: cdb0cc8ca9aac2a4d84c6aa3c1cbf52b, type: 3}
+    Jump:
+    - {fileID: 21300000, guid: edbf2f282f3feb940b6238d4d339ada4, type: 3}
+    Fall:
+    - {fileID: 21300000, guid: 1a6feec238b9a99499082bb755fa32df, type: 3}
+    Hit:
+    - {fileID: 6868122594974341346, guid: 9b0499fd3a0892046926ed19c78cfea3, type: 3}
+    - {fileID: 7167584040609486739, guid: 9b0499fd3a0892046926ed19c78cfea3, type: 3}
+    - {fileID: -1675461080110260169, guid: 9b0499fd3a0892046926ed19c78cfea3, type: 3}
+    - {fileID: 8480664182131228983, guid: 9b0499fd3a0892046926ed19c78cfea3, type: 3}
+    - {fileID: -953560442851353963, guid: 9b0499fd3a0892046926ed19c78cfea3, type: 3}
+    - {fileID: -3450976776972242761, guid: 9b0499fd3a0892046926ed19c78cfea3, type: 3}
+    - {fileID: 7062579536633761780, guid: 9b0499fd3a0892046926ed19c78cfea3, type: 3}
   - DisplayName: Virtual Guy
     Portrait: {fileID: -6367560908665664636, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    Idle:
+    - {fileID: -6367560908665664636, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: -6056987297122131021, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: 8416797952724722639, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: 4883129791460916795, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: 4278371960119211202, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: 8644832591467991550, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: -7152759390613953277, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: 6456874251884481089, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: -2526832996998184344, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: 4392827059107796345, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    - {fileID: -1363835404106015672, guid: 40de9a8703e2e5a47882b0b86451c741, type: 3}
+    Run:
+    - {fileID: 7166236263522030466, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: 2470319409956435798, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: -4540918584354326388, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: -4455822056875728695, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: -5364790588639958657, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: -1512656188830553638, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: -2754230144694611447, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: -2419971920513260168, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: 1843850012483549754, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: 241620830004830169, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: -362971539341918764, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    - {fileID: 2178398316516280758, guid: 552146dbb8bac6f449493bca4b69540f, type: 3}
+    Jump:
+    - {fileID: 21300000, guid: 320f4eb52e227b446830a1f6fd691fca, type: 3}
+    Fall:
+    - {fileID: 21300000, guid: 5c8b2ada1a819a54e8c051165c738f18, type: 3}
+    Hit:
+    - {fileID: 6868122594974341346, guid: 0b4768f2ab470f44ca33fa59836a0774, type: 3}
+    - {fileID: 7167584040609486739, guid: 0b4768f2ab470f44ca33fa59836a0774, type: 3}
+    - {fileID: -1675461080110260169, guid: 0b4768f2ab470f44ca33fa59836a0774, type: 3}
+    - {fileID: 8480664182131228983, guid: 0b4768f2ab470f44ca33fa59836a0774, type: 3}
+    - {fileID: -953560442851353963, guid: 0b4768f2ab470f44ca33fa59836a0774, type: 3}
+    - {fileID: -3450976776972242761, guid: 0b4768f2ab470f44ca33fa59836a0774, type: 3}
+    - {fileID: 7062579536633761780, guid: 0b4768f2ab470f44ca33fa59836a0774, type: 3}
