@@ -15,5 +15,7 @@ MonoBehaviour:
   _arenas:
   - DisplayName: Arena 01
     SceneName: Arena01
+    Preview: {fileID: 21300000, guid: 5cce66603bb32c945ada9a6591d795ea, type: 3}
   - DisplayName: Arena 02
     SceneName: Arena02
+    Preview: {fileID: 21300000, guid: 10d4b0a899847f74ea51daf815d8008b, type: 3}

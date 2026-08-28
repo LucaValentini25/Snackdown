@@ -14,6 +14,12 @@ namespace Snackdown.Gameplay.Match
     /// the editor. A name that is not in Build Settings fails at runtime with a message nobody can
     /// act on, so <see cref="Validate"/> is what turns that into a problem you find while authoring.
     /// </para>
+    /// <para>The preview sits beside the name and the scene because it is content, the same as they
+    /// are. Deriving it from the scene name instead — a sprite loaded by convention from a known
+    /// folder — would look tidier and would break the first time an arena was renamed, silently:
+    /// the lookup would simply find nothing, which is indistinguishable from an arena that was
+    /// never given a preview. A field is asked for in the Inspector and is visibly empty when it
+    /// has not been filled in.</para>
     /// </remarks>
     [CreateAssetMenu(fileName = "ArenaCatalog", menuName = "Snackdown/Arena Catalog")]
     public class ArenaCatalog : ScriptableObject
@@ -26,6 +32,9 @@ namespace Snackdown.Gameplay.Match
 
             [Tooltip("Scene name, exactly as it appears in Build Settings.")]
             public string SceneName;
+
+            [Tooltip("Shown in the lobby while the arena is being picked.")]
+            public Sprite Preview;
         }
 
         [SerializeField] Arena[] _arenas = new Arena[0];

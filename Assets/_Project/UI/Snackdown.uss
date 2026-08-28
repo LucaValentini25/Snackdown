@@ -1,22 +1,33 @@
-/*
- * Shared styling for every screen: menu, lobby, loading, in-match HUD and end screen.
- *
- * Deliberately built from a handful of variables rather than per-element values: the palette and
- * spacing are the two things that change when placeholder art is replaced with real art, and having
- * them in one block is the difference between editing five lines and hunting through the file.
- */
-
 :root {
-    --bg: rgb(24, 22, 32);
-    --panel: rgb(38, 35, 50);
-    --panel-edge: rgb(62, 57, 82);
-    --ink: rgb(232, 230, 240);
-    --ink-dim: rgb(150, 146, 168);
-    --accent: rgb(238, 108, 92);
-    --accent-ink: rgb(28, 24, 30);
-    --ok: rgb(126, 200, 130);
-    --bad: rgb(232, 112, 112);
+    /*
+     * The pixel font, set once and inherited by everything each document draws.
+     *
+     * -unity-font with the legacy Font rather than -unity-font-definition with a font asset. A
+     * raster font asset bakes one atlas at one size and cannot be scaled, so at any size that is
+     * not an exact multiple of the face it collides its own glyphs; the dynamic renderer rasterises
+     * per size and hints, which is what keeps the edges hard. The importer is set to HintedRaster
+     * for the same reason - Smooth antialiases away the thing that makes it pixel art.
+     *
+     * Every font-size below is a multiple of 8. The face is a 16-pixel em, the panel draws at 2x,
+     * so 8 reference units is exactly one em on screen and every step up is a whole one. Sizes
+     * between them are what blur a pixel font.
+     */
+    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf?fileID=12800000&guid=3f99f5136898c6846845a2eb4018c6db&type=3#BoldPixels");
 
+    --bg: rgb(24, 22, 32);
+    --panel: rgb(173, 183, 196);
+    --panel-edge: rgb(120, 132, 148);
+    --ink: rgb(34, 31, 45);
+    --ink-dim: rgb(88, 83, 110);
+    --accent: rgb(186, 58, 44);
+    --accent-ink: rgb(255, 253, 245);
+    --ok: rgb(46, 122, 52);
+    --bad: rgb(176, 44, 44);
+    --hud-ink: rgb(238, 236, 246);
+    --hud-ink-dim: rgb(158, 154, 176);
+    --hud-accent: rgb(240, 122, 106);
+    --hud-ok: rgb(126, 200, 130);
+    --hud-bad: rgb(232, 112, 112);
     --gap: 12px;
     --radius: 6px;
 }
@@ -26,19 +37,82 @@
     align-items: center;
     justify-content: center;
     background-color: var(--bg);
+    background-image: url("project://database/Assets/Pixel%20Adventure%201/Assets/Background/Brown.png?fileID=21300000&guid=ca6a66f8e2ae9c24c8c6b39c49206a0d&type=3#Brown");
+    background-repeat: repeat repeat;
+    background-size: 128px 128px;
+}
+
+.panel > * {
+    flex-shrink: 0;
+}
+
+.settings__row {
+    flex-shrink: 0;
 }
 
 .panel {
     width: 420px;
-    padding: 24px;
-    background-color: var(--panel);
-    border-width: 2px;
-    border-color: var(--panel-edge);
-    border-radius: var(--radius);
+    padding: 16px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Frame01a.png?fileID=21300000&guid=31b3125525179334e8427d31167f3a5e&type=3#UI_Flat_Frame01a");
+    -unity-slice-left: 5;
+    -unity-slice-top: 7;
+    -unity-slice-right: 5;
+    -unity-slice-bottom: 7;
+    -unity-slice-scale: 3px;
+}
+
+.panel--wide {
+    width: 760px;
+}
+
+.panel--narrow {
+    width: 400px;
+    height: 300px;
+    justify-content: space-evenly;
+}
+
+.field--tall > .unity-base-text-field__input {
+    height: 40px;
+    font-size: 16px;
+    padding: 0 10px;
+}
+
+.field--tall > .unity-base-field__label {
+    font-size: 16px;
+    -unity-text-align: middle-left;
+}
+
+.lobby-columns {
+    flex-direction: row;
+}
+
+.lobby-column {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 5px;
+}
+
+.lobby-column--players {
+    flex-grow: 1.35;
+}
+
+.panel--narrow > .button {
+    width: 220px;
+    align-self: center;
+}
+
+.button-row {
+    flex-direction: row;
+}
+
+.button-row > .button {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 5px 3px 0 3px;
 }
 
 .title {
-    font-size: 34px;
+    font-size: 40px;
     -unity-font-style: bold;
     color: var(--ink);
     -unity-text-align: middle-center;
@@ -46,71 +120,144 @@
 }
 
 .subtitle {
-    font-size: 13px;
-    color: var(--ink-dim);
+    font-size: 16px;
+    color: var(--ink);
     -unity-text-align: middle-center;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     white-space: normal;
 }
 
-/* ── fields ─────────────────────────────────────────────────────────────────────── */
+.title--hero {
+    font-size: 112px;
+    color: var(--ink);
+    margin-bottom: 0;
+}
+
+.subtitle--hero {
+    font-size: 32px;
+    color: var(--ink-dim);
+    margin-bottom: 22px;
+}
 
 .field {
     margin-bottom: var(--gap);
 }
 
 .field > .unity-base-field__label {
-    min-width: 78px;
-    color: var(--ink-dim);
-    font-size: 13px;
+    min-width: 84px;
+    color: var(--ink);
+    font-size: 24px;
 }
 
 .field > .unity-base-text-field__input {
-    background-color: var(--bg);
-    border-color: var(--panel-edge);
-    border-width: 1px;
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
     color: var(--ink);
-    padding: 6px 8px;
+    padding: 8px 10px;
+    font-size: 24px;
 }
 
-/* ── buttons ────────────────────────────────────────────────────────────────────── */
+/* The default theme sets -unity-font-definition on the text elements themselves, and a definition
+   outranks -unity-font whatever the cascade says. Setting the font on the root alone left every
+   label still drawing in NotInter: an inherited value loses to a rule that matches the element
+   directly. So it is set again here, on the class every label and every button's text carries. */
+.unity-text-element {
+    -unity-font-definition: url("project://database/Assets/_Project/Art/UI/BoldPixels/BoldPixels.otf?fileID=12800000&guid=3f99f5136898c6846845a2eb4018c6db&type=3#BoldPixels");
+}
+
+/* Unity's own theme paints a grey over a hovered button, and it reaches it through one pseudo-class
+   more than this rule used to carry: .unity-button:hover:enabled outranks .unity-button:hover, so
+   three passes at overriding the colour still resolved to a flat 0.82 grey. Reading the resolved
+   style of a button with its hover state forced is what finally said so. Matching that specificity
+   is the entire fix - USS has no !important to fall back on, and the nine-slice sprite already
+   carries every state these buttons have, so the colour underneath is never the one wanted. */
+.unity-button:hover:enabled,
+.unity-button:active:enabled,
+.unity-button:hover:active:enabled,
+.unity-button:focus:enabled,
+.unity-button:disabled {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+}
 
 .button {
-    height: 38px;
-    margin: 4px 0 0 0;
+    height: 60px;
+    margin: 5px 0 0 0;
     padding: 0 16px;
-    background-color: var(--panel-edge);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_1.png?fileID=21300000&guid=79a4c9355a147504f97b2c0be2399cd5&type=3#UI_Flat_Button01a_1");
+    -unity-slice-left: 3;
+    -unity-slice-top: 7;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
     border-width: 0;
-    border-radius: 4px;
     color: var(--ink);
-    font-size: 15px;
+    font-size: 24px;
     -unity-font-style: bold;
 }
 
 .button:hover {
-    background-color: rgb(78, 72, 102);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_2.png?fileID=21300000&guid=33335e8707689f146b9c60a04d5ba37a&type=3#UI_Flat_Button01a_2");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.button:active {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_3.png?fileID=21300000&guid=7694e75eb189a6c4fabadff67eca6ed8&type=3#UI_Flat_Button01a_3");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.button:focus {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
 .button:disabled {
-    opacity: 0.4;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button01a_4.png?fileID=21300000&guid=25e4fc7e87408e54eba7a369032dd273&type=3#UI_Flat_Button01a_4");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    opacity: 1;
+    color: var(--ink-dim);
 }
 
 .button--primary {
-    background-color: var(--accent);
-    color: var(--accent-ink);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_1.png?fileID=21300000&guid=af1f0bd5190137a4fa231bebbd40a37e&type=3#UI_Flat_Button02a_1");
+    -unity-slice-left: 5;
+    -unity-slice-top: 10;
+    -unity-slice-right: 5;
+    -unity-slice-bottom: 6;
 }
 
 .button--primary:hover {
-    background-color: rgb(248, 128, 112);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_2.png?fileID=21300000&guid=59980e2bb2767cd4ea94466b240c0933&type=3#UI_Flat_Button02a_2");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
-/* ── status line ────────────────────────────────────────────────────────────────── */
+.button--primary:active {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_3.png?fileID=21300000&guid=a4ffb9f82b6eb3b45a4c0f0618927522&type=3#UI_Flat_Button02a_3");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.button--primary:disabled {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Button02a_4.png?fileID=21300000&guid=0b09542d5cc96da4ea6a268917ecc12d&type=3#UI_Flat_Button02a_4");
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
 
 .status {
     min-height: 20px;
     margin-top: var(--gap);
-    font-size: 13px;
+    font-size: 16px;
     color: var(--ink-dim);
     -unity-text-align: middle-center;
     white-space: normal;
@@ -120,25 +267,33 @@
     color: var(--bad);
 }
 
-/* ── roster ─────────────────────────────────────────────────────────────────────── */
-
 .roster {
     margin: 4px 0 var(--gap) 0;
-    min-height: 140px;
+    height: 152px;
+    overflow: hidden;
 }
 
 .roster-row {
+    flex-shrink: 0;
+    overflow: hidden;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     padding: 8px 10px;
     margin-bottom: 4px;
-    background-color: var(--bg);
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png?fileID=21300000&guid=e6dc5b8e84426544cb82d05b4a75aa27&type=3#UI_Flat_FrameSlot01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 4;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 4;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .roster-row__name {
-    font-size: 15px;
+    flex-shrink: 1;
+    overflow: hidden;
+    font-size: 16px;
     color: var(--ink);
 }
 
@@ -147,7 +302,7 @@
 }
 
 .roster-row__state {
-    font-size: 12px;
+    font-size: 16px;
     color: var(--ink-dim);
 }
 
@@ -155,10 +310,6 @@
     color: var(--ok);
 }
 
-/* ── the game browser ─────────────────────────────────────────────────────── */
-
-/* Fixed height rather than growing with the list: a panel that changes size every time somebody
-   starts or ends a game moves the buttons under the player's cursor. */
 .browse {
     margin: 4px 0;
     min-height: 132px;
@@ -173,14 +324,18 @@
     width: 100%;
     padding: 8px 10px;
     margin: 0 0 4px 0;
-    background-color: var(--bg);
-    border-width: 1px;
-    border-color: var(--panel-edge);
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png?fileID=21300000&guid=e6dc5b8e84426544cb82d05b4a75aa27&type=3#UI_Flat_FrameSlot01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 4;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 4;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
 }
 
 .browse__row:hover {
-    border-color: var(--accent);
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01b.png?fileID=21300000&guid=b85868e5c107d4740a2544281d921551&type=3#UI_Flat_FrameSlot01b");
 }
 
 .browse__row--full {
@@ -188,20 +343,18 @@
 }
 
 .browse__name {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--ink);
     -unity-text-align: middle-left;
 }
 
 .browse__slots {
-    font-size: 12px;
+    font-size: 16px;
     color: var(--ink-dim);
 }
 
-/* Nobody hosting is the ordinary state of a game nobody is playing yet, so it reads as a sentence
-   rather than as the error the same empty box would otherwise imply. */
 .browse__empty {
-    font-size: 13px;
+    font-size: 16px;
     color: var(--ink-dim);
     -unity-text-align: middle-center;
     padding: 24px 0;
@@ -209,9 +362,10 @@
 }
 
 .roster-row__kick {
-    margin-left: 10px;
-    padding: 2px 10px;
-    font-size: 12px;
+    flex-shrink: 0;
+    margin-left: 6px;
+    padding: 2px 7px;
+    font-size: 16px;
     color: var(--ink-dim);
     background-color: transparent;
     border-width: 1px;
@@ -227,25 +381,32 @@
 .wardrobe {
     flex-direction: row;
     justify-content: center;
+    flex-wrap: wrap;
     margin-bottom: var(--gap);
 }
 
 .wardrobe__skin {
-    width: 56px;
-    height: 56px;
-    margin: 0 4px;
+    width: 58px;
+    height: 58px;
+    margin: 0 3px;
     padding: 0;
     border-width: 2px;
-    border-color: var(--bg);
-    border-radius: 4px;
-    background-color: var(--bg);
+    border-color: var(--panel-edge);
+    border-radius: 0;
+    background-image: url("project://database/Assets/Pixel%20Adventure%201/Assets/Background/Gray.png?fileID=21300000&guid=ffc80c129c9aca14c9fb4dbeba0e10d2&type=3#Gray");
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.wardrobe__portrait {
+    flex-grow: 1;
+    margin: 4px;
     -unity-background-scale-mode: scale-to-fit;
 }
 
-/* The one you are wearing, and the ones nobody can have. Border rather than a badge: at 56px a
-   badge is bigger than the thing it labels. */
 .wardrobe__skin--yours {
+    border-width: 3px;
     border-color: var(--accent);
+    background-image: url("project://database/Assets/Pixel%20Adventure%201/Assets/Background/Yellow.png?fileID=21300000&guid=4d8c75a4d7dd2a0489270e1058d82128&type=3#Yellow");
 }
 
 .wardrobe__skin--taken {
@@ -255,14 +416,19 @@
 .settings {
     margin-bottom: var(--gap);
     padding: 8px 10px;
-    background-color: var(--bg);
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_FrameSlot01a.png?fileID=21300000&guid=e6dc5b8e84426544cb82d05b4a75aa27&type=3#UI_Flat_FrameSlot01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 4;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 4;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .settings__title {
-    font-size: 12px;
-    color: var(--ink-dim);
-    margin-bottom: 6px;
+    font-size: 16px;
+    color: var(--ink);
+    margin-bottom: 4px;
     -unity-font-style: bold;
 }
 
@@ -270,51 +436,180 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
 }
 
 .settings__label {
-    font-size: 13px;
+    font-size: 16px;
     color: var(--ink);
 }
 
-/* Fixed rather than growing: four rows whose fields all start at the same x read as a table,
-   and a column that jogs left and right with the length of each label does not. */
 .settings__control {
-    width: 150px;
+    width: 112px;
+    min-width: 112px;
     margin: 0;
 }
 
-/* Every control here is labelled by a Label of its own in the row, so the one UI Toolkit builds
-   inside the field is empty - and an empty label is not free. Unity's runtime theme gives it a
-   min-width, which ate a third of the 130px this column used to be. That is what made "Arena 01"
-   and "Arena 02" both render as "Arena 0": the field had room for every character except the one
-   that told them apart, so the picker looked broken while working perfectly. */
+.settings__label {
+    flex-shrink: 1;
+    overflow: hidden;
+}
+
 .settings__control > .unity-base-field__label {
     display: none;
 }
 
-/* And if a name is ever genuinely too long for the column, it says so rather than quietly
-   reading as a different entry. */
 .settings__control .unity-base-popup-field__text {
     text-overflow: ellipsis;
     overflow: hidden;
 }
 
-/* Dropdowns are painted like the number fields beside them. Left to the default theme they come
-   out flat grey against white neighbours, which reads as disabled - and both of these are live
-   controls that the host is meant to use. */
 .settings__control > .unity-base-popup-field__input {
-    background-color: var(--bg);
-    border-color: var(--panel-edge);
-    border-width: 1px;
-    border-radius: 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
     color: var(--ink);
     padding: 6px 8px;
 }
 
-/* Disabled has to look different from enabled, now that enabled no longer looks disabled. It is
-   the state a client sees for the whole panel: the rules are visible and not theirs to move. */
+.settings__control > .unity-base-text-field__input {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    color: var(--ink);
+    padding: 6px 8px;
+}
+
+.arena-preview {
+    height: 62px;
+    margin-bottom: 4px;
+    border-width: 1px;
+    border-color: var(--panel-edge);
+    background-color: var(--bg);
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.arena-picker {
+    margin: 0;
+}
+
+.arena-picker > .unity-base-field__label {
+    display: none;
+}
+
+.arena-picker > .unity-base-popup-field__input {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    color: var(--ink);
+    padding: 6px 8px;
+}
+
+.icon-button {
+    width: 30px;
+    height: 30px;
+    margin: 0 0 0 6px;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.icon-button:hover {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    opacity: 0.7;
+}
+
+.icon-button:disabled {
+    opacity: 0.35;
+}
+
+.icon-button--copy {
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Copy.png?fileID=21300000&guid=b5343f59f7f3dd747b51fbb4e7e70f32&type=3#Icon_Copy");
+}
+
+.icon-button--paste {
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Paste.png?fileID=21300000&guid=cd68e5764f92f7f4cace17b8a1dfe8d8&type=3#Icon_Paste");
+}
+
+.icon-button--refresh {
+    background-image: url("project://database/Assets/_Project/Art/UI/Icon_Refresh.png?fileID=21300000&guid=9be277fc8f87878418f5f261f42607b2&type=3#Icon_Refresh");
+}
+
+.browse-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.code-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.code-row__field {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+
+.number-stepper {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 26px;
+    padding: 0 4px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+}
+
+.number-stepper__readout {
+    flex-grow: 1;
+    font-size: 16px;
+    color: var(--ink);
+    -unity-text-align: middle-center;
+}
+
+.number-stepper__arrow {
+    width: 14px;
+    font-size: 16px;
+    color: var(--ink-dim);
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+}
+
+.number-stepper__arrow:hover {
+    color: var(--accent);
+}
+
+.number-stepper:focus {
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField02a.png?fileID=21300000&guid=03f5b965037a4b74a924f6690a27593c&type=3#UI_Flat_InputField02a");
+}
+
+.number-stepper:focus > .number-stepper__arrow {
+    color: var(--accent);
+}
+
 .settings__control:disabled {
     opacity: 0.5;
 }
@@ -322,32 +617,35 @@
 .join-code-row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: var(--gap);
+    justify-content: flex-end;
+    margin-bottom: 8px;
 }
 
 .join-code {
-    flex-grow: 1;
-    padding: 10px;
-    background-color: var(--bg);
-    border-radius: 4px;
-    font-size: 15px;
+    width: 190px;
+    padding: 7px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_InputField01a.png?fileID=21300000&guid=d946c65cdc82e524e814868755865e28&type=3#UI_Flat_InputField01a");
+    -unity-slice-left: 3;
+    -unity-slice-top: 3;
+    -unity-slice-right: 3;
+    -unity-slice-bottom: 6;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 16px;
     color: var(--ink);
     -unity-text-align: middle-center;
 }
 
-/* Sits next to the code rather than below it, so the pair reads as one control. */
 .button--compact {
-    height: 34px;
+    height: 30px;
     margin: 0 0 0 8px;
     padding: 0 14px;
-    font-size: 13px;
+    font-size: 16px;
 }
 
 .hidden {
     display: none;
 }
-
-/* ── loading screen ─────────────────────────────────────────────────────────────── */
 
 .loading-root {
     flex-grow: 1;
@@ -357,47 +655,46 @@
 }
 
 .loading-title {
-    font-size: 28px;
+    font-size: 32px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     margin-bottom: 6px;
 }
 
 .loading-detail {
-    font-size: 13px;
-    color: var(--ink-dim);
+    font-size: 16px;
+    color: var(--hud-ink-dim);
     margin-bottom: 18px;
 }
 
 .progress-track {
     width: 380px;
-    height: 10px;
-    background-color: var(--panel);
-    border-radius: 5px;
+    height: 14px;
+    background-image: url("project://database/Assets/_Project/Art/UI/Crusenho/UI_Flat_Bar01a.png?fileID=21300000&guid=78b64d89be52dbe4f9c75f5dc8219b65&type=3#UI_Flat_Bar01a");
+    -unity-slice-left: 2;
+    -unity-slice-top: 2;
+    -unity-slice-right: 2;
+    -unity-slice-bottom: 3;
+    -unity-slice-scale: 2px;
+    background-color: rgba(0, 0, 0, 0);
     overflow: hidden;
 }
 
-/* Width is set from code as a percentage; the transition is what keeps it from snapping
-   between the coarse steps a per-player count produces. */
 .progress-fill {
     height: 100%;
     width: 0;
-    background-color: var(--accent);
-    border-radius: 5px;
+    background-color: var(--hud-accent);
     transition-property: width;
     transition-duration: 0.25s;
 }
 
 .countdown {
     margin-top: 20px;
-    font-size: 44px;
+    font-size: 48px;
     -unity-font-style: bold;
-    color: var(--accent);
+    color: var(--hud-accent);
 }
 
-/* ── end screen ──────────────────────────────────────────────────────── */
-
-/* Translucent, and it does not fill the screen: the arena behind it is still being watched. */
 .end-root {
     flex-grow: 1;
     align-items: center;
@@ -418,8 +715,6 @@
     -unity-text-align: middle-center;
 }
 
-/* ── round clock ────────────────────────────────────────────────────── */
-
 .clock-root {
     position: absolute;
     top: 10px;
@@ -429,27 +724,18 @@
 }
 
 .round-clock {
-    font-size: 22px;
+    font-size: 24px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     padding: 2px 12px;
     background-color: rgba(12, 11, 16, 0.55);
     border-radius: 4px;
 }
 
-/* Red under the threshold, so running out is felt before it is read. */
 .round-clock--urgent {
-    color: var(--bad);
+    color: var(--hud-bad);
 }
 
-/* ── option A: nameplate over the character (world space) ────────────────────── */
-
-/*
- * Sizes here are in the panel's authored pixels, and the panel is 160 of them wide standing for
- * 1.6 world units -- so 100 authored pixels to the metre, and a character is 70 wide. What makes
- * the text legible is that ratio, not these numbers on their own: author the same layout at four
- * times the resolution and every glyph gets squeezed into a quarter of the space on screen.
- */
 .nameplate {
     flex-grow: 1;
     align-items: center;
@@ -457,21 +743,15 @@
 }
 
 .nameplate__name {
-    font-size: 30px;
+    font-size: 32px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     -unity-text-outline-width: 2px;
     -unity-text-outline-color: rgb(12, 11, 16);
     margin-bottom: 4px;
     flex-shrink: 1;
 }
 
-/*
- * flex-shrink: 0 is the load-bearing line. The name and the bar together can ask for more height
- * than the plate has, and flexbox resolves that by shrinking whatever it is allowed to -- which
- * squeezed the bar to four pixels and its fill to zero, leaving a black sliver that looked like a
- * bar that never moved. The name may compress; the bar may not, because the bar is the readout.
- */
 .nameplate__track {
     width: 100%;
     height: 16px;
@@ -486,14 +766,12 @@
 .nameplate__fill {
     height: 100%;
     width: 100%;
-    background-color: var(--ok);
+    background-color: var(--hud-ok);
 }
 
 .nameplate__fill--low {
-    background-color: var(--bad);
+    background-color: var(--hud-bad);
 }
-
-/* ── option B: life bars along the bottom ───────────────────────────────── */
 
 .lifebars-root {
     position: absolute;
@@ -520,7 +798,6 @@
     border-color: var(--panel-edge);
 }
 
-/* Cropped to the head: the pack's frames are full-body, and a full body shrunk to 40px is a smudge. */
 .lifebar__portrait {
     width: 40px;
     height: 40px;
@@ -535,50 +812,53 @@
 }
 
 .lifebar__name {
-    font-size: 12px;
-    color: var(--ink);
+    font-size: 16px;
+    color: var(--hud-ink);
     margin-bottom: 3px;
 }
 
 .lifebar__name--you {
-    color: var(--accent);
+    color: var(--hud-accent);
 }
 
 .lifebar__track {
-    height: 12px;
-    background-color: var(--bg);
-    border-radius: 6px;
+    height: 14px;
+    background-image: none;
+    -unity-slice-left: 2;
+    -unity-slice-top: 2;
+    -unity-slice-right: 2;
+    -unity-slice-bottom: 3;
+    -unity-slice-scale: 2px;
+    background-color: rgba(12, 11, 16, 0.85);
     overflow: hidden;
 }
 
 .lifebar__fill {
     height: 100%;
     width: 100%;
-    background-color: var(--ok);
+    background-color: var(--hud-ok);
 }
 
 .lifebar__fill--low {
-    background-color: var(--bad);
+    background-color: var(--hud-bad);
 }
 
 .lifebar__seconds {
-    font-size: 14px;
+    font-size: 16px;
     -unity-font-style: bold;
-    color: var(--ink);
+    color: var(--hud-ink);
     margin-left: 10px;
     min-width: 46px;
     -unity-text-align: middle-right;
 }
 
-/* Out, not gone: the entry stays so nobody else shifts position. */
 .lifebar--out {
     opacity: 0.45;
 }
 
-/* Who the spectator camera is following. Arena01 is barely larger than the view, so the camera
-   moving is not by itself an answer to "did that do anything?" — this is. */
 .lifebar--watched {
-    border-color: var(--accent);
+    border-color: var(--hud-accent);
     background-color: rgba(238, 108, 92, 0.18);
 }
+
 

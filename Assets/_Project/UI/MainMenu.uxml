@@ -12,11 +12,15 @@
 
     <!-- ── menu ────────────────────────────────────────────────────────────────── -->
     <ui:VisualElement name="menu-screen" class="screen">
-        <ui:VisualElement class="panel">
-            <ui:Label text="Snackdown" class="title" />
-            <ui:Label name="menu-subtitle" text="Last one standing wins." class="subtitle" />
+        <!-- The name of the game is not a heading inside a form. It sits above the panel, on the
+             backdrop, at a size that says what you are looking at from across a room. -->
+        <ui:Label text="Snackdown" class="title title--hero" />
+        <ui:Label name="menu-subtitle" text="Last one standing wins." class="subtitle subtitle--hero" />
 
-            <ui:TextField name="nickname-field" label="Name" max-length="16" class="field" />
+        <!-- Narrow, because it holds one field and two buttons. A panel as wide as the lobby's
+             makes both of them look like they are missing something. -->
+        <ui:VisualElement class="panel panel--narrow">
+            <ui:TextField name="nickname-field" label="Name" max-length="16" class="field field--tall" />
 
             <ui:Button name="host-button" text="Host a game" class="button button--primary" />
             <ui:Button name="join-button" text="Join a game" class="button" />
@@ -38,12 +42,21 @@
 
             <!-- Hidden whole for a provider with nothing to browse, which is the LAN one. -->
             <ui:VisualElement name="browse-section">
+                <!-- The refresh sits on the list's own header rather than under it as a full-width
+                     button. It acts on the list, so it belongs to the list. -->
+                <ui:VisualElement class="browse-header">
+                    <ui:Label text="Open games" class="settings__title" />
+                    <ui:Button name="refresh-button" tooltip="Refresh" class="icon-button icon-button--refresh" />
+                </ui:VisualElement>
+
                 <!-- Rows are built in code: what is open changes between one refresh and the next. -->
                 <ui:VisualElement name="browse-list" class="browse" />
-                <ui:Button name="refresh-button" text="Refresh" class="button button--compact" />
             </ui:VisualElement>
 
-            <ui:TextField name="target-field" label="Code" class="field" />
+            <ui:VisualElement class="code-row">
+                <ui:TextField name="target-field" label="Code" class="field field--tall code-row__field" />
+                <ui:Button name="paste-button" tooltip="Paste" class="icon-button icon-button--paste" />
+            </ui:VisualElement>
 
             <ui:Button name="join-confirm-button" text="Join" class="button button--primary" />
             <ui:Button name="join-cancel-button" text="Cancel" class="button hidden" />
@@ -55,22 +68,41 @@
 
     <!-- ── lobby ───────────────────────────────────────────────────────────────── -->
     <ui:VisualElement name="lobby-screen" class="screen hidden">
-        <ui:VisualElement class="panel">
+        <!-- Wider than the other two, and two-columned inside, because it is the only screen with
+             enough on it to run out of height: stacked, its content asks for about 660 units
+             against the 540 the panel has. -->
+        <ui:VisualElement class="panel panel--wide">
             <ui:Label text="Lobby" class="title" />
             <ui:Label name="lobby-subtitle" text="Waiting for players…" class="subtitle" />
 
             <ui:VisualElement name="join-code-row" class="join-code-row">
                 <ui:Label name="join-code" class="join-code" />
-                <ui:Button name="copy-code-button" text="Copy" class="button button--compact" />
+                <ui:Button name="copy-code-button" tooltip="Copy" class="icon-button icon-button--copy" />
             </ui:VisualElement>
 
-            <!-- Rows are built in code: the roster is replicated and its length changes at runtime,
-                 so laying out four fixed slots here would mean hiding and showing them instead. -->
-            <ui:VisualElement name="roster-list" class="roster" />
+            <ui:VisualElement class="lobby-columns">
+              <ui:VisualElement class="lobby-column lobby-column--players">
 
-            <!-- Built in code: one button per catalog entry, and the catalog is content whose
-                 length is not known here. Which are taken changes while the lobby is open. -->
-            <ui:VisualElement name="wardrobe-row" class="wardrobe" />
+                <!-- Boxed, like the rules beside it. Left bare, the players sat on the panel while
+                     the rules sat in a frame, and the two columns read as one thing and one absence
+                     rather than as two lists. -->
+                <ui:VisualElement class="settings">
+                    <ui:Label text="Players" class="settings__title" />
+
+                    <!-- Rows are built in code: the roster is replicated and its length changes at
+                         runtime, so laying out four fixed slots here would mean hiding and showing
+                         them instead. -->
+                    <ui:VisualElement name="roster-list" class="roster" />
+
+                    <!-- Built in code: one button per catalog entry, and the catalog is content
+                         whose length is not known here. Which are taken changes while the lobby is
+                         open. -->
+                    <ui:VisualElement name="wardrobe-row" class="wardrobe" />
+                </ui:VisualElement>
+
+
+              </ui:VisualElement>
+              <ui:VisualElement class="lobby-column">
 
             <!-- The rules panel. Every peer sees the numbers; only the host is given the controls
                  that move them, and only between matches. The rows are laid out here rather than
@@ -78,40 +110,59 @@
             <ui:VisualElement name="settings-panel" class="settings">
                 <ui:Label text="Rules" class="settings__title" />
 
-                <ui:VisualElement name="arena-row" class="settings__row">
-                    <ui:Label text="Arena" class="settings__label" />
-                    <ui:DropdownField name="arena-field" class="settings__control" />
-                </ui:VisualElement>
-
                 <ui:VisualElement name="preset-row" class="settings__row">
                     <ui:Label text="Preset" class="settings__label" />
                     <ui:DropdownField name="preset-field" class="settings__control" />
                 </ui:VisualElement>
 
+                <!-- Steppers rather than text fields. A number you can only change by typing is a
+                     number a player on a gamepad cannot change at all, and the bounds are the ones
+                     MatchSettings.Clamped enforces, so the control cannot offer the server a value
+                     it will refuse. -->
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Starting life" class="settings__label" />
-                    <ui:FloatField name="starting-life-field" class="settings__control" />
+                    <ui:Label text="Start" class="settings__label" />
+                    <Snackdown.UI.NumberStepper name="starting-life-field" class="settings__control" low-value="5" high-value="600" step="5" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Life ceiling" class="settings__label" />
-                    <ui:FloatField name="max-life-field" class="settings__control" />
+                    <ui:Label text="Ceiling" class="settings__label" />
+                    <Snackdown.UI.NumberStepper name="max-life-field" class="settings__control" low-value="5" high-value="600" step="5" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Drain per second" class="settings__label" />
-                    <ui:FloatField name="drain-field" class="settings__control" />
+                    <ui:Label text="Drain /s" class="settings__label" />
+                    <Snackdown.UI.NumberStepper name="drain-field" class="settings__control" low-value="0.1" high-value="10" step="0.1" format-string="0.0" />
                 </ui:VisualElement>
 
                 <ui:VisualElement class="settings__row">
-                    <ui:Label text="Round seconds" class="settings__label" />
-                    <ui:FloatField name="round-seconds-field" class="settings__control" />
+                    <ui:Label text="Round" class="settings__label" />
+                    <Snackdown.UI.NumberStepper name="round-seconds-field" class="settings__control" low-value="0" high-value="3600" step="10" />
                 </ui:VisualElement>
             </ui:VisualElement>
 
-            <ui:Button name="ready-button" text="Ready" class="button button--primary" />
-            <ui:Button name="start-button" text="Start match" class="button hidden" />
-            <ui:Button name="leave-button" text="Leave" class="button" />
+              </ui:VisualElement>
+              <ui:VisualElement class="lobby-column">
+
+                <!-- The arena is a place, not a number, so it is shown rather than named. It left
+                     the rules panel because a picture beside four figures makes the figures look
+                     like a caption, and it has a column of its own because stacked under the rules
+                     it made that column half as tall again as the panel could hold. -->
+                <ui:VisualElement name="arena-row" class="settings">
+                    <ui:Label text="Arena" class="settings__title" />
+                    <ui:VisualElement name="arena-preview" class="arena-preview" />
+                    <ui:DropdownField name="arena-field" class="arena-picker" />
+                </ui:VisualElement>
+
+              </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Side by side rather than stacked. Three full-width buttons cost 150 units of a
+                 panel that has 540, and this screen is the one that runs out of them. -->
+            <ui:VisualElement class="button-row">
+                <ui:Button name="ready-button" text="Ready" class="button button--primary" />
+                <ui:Button name="start-button" text="Start match" class="button hidden" />
+                <ui:Button name="leave-button" text="Leave" class="button" />
+            </ui:VisualElement>
 
             <ui:Label name="lobby-status" class="status" />
         </ui:VisualElement>

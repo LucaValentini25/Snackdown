@@ -26,10 +26,27 @@ namespace Snackdown.Gameplay.Fruits
             [Tooltip("Seconds of life this fruit restores.")]
             [Min(0f)] public float LifeSeconds;
 
+            [Tooltip("Single frame, for anywhere a fruit is shown standing still.")]
             public Sprite Sprite;
+
+            [Tooltip("Frames of the idle spin, in order, at the rate PixelAnimation states.")]
+            public Sprite[] Frames;
         }
 
         [SerializeField] Entry[] _entries = new Entry[0];
+
+        [Tooltip("Frames of the burst played where a fruit was picked up. Shared by every kind.")]
+        [SerializeField] Sprite[] _collected = new Sprite[0];
+
+        /// <summary>
+        /// The burst played where a fruit was collected, the same for every kind.
+        /// </summary>
+        /// <remarks>
+        /// On the table rather than on each entry because the pack draws it once and it reads as
+        /// the act of collecting, not as a property of the apple. Per-entry it would be eight
+        /// references to one sheet and eight chances to leave one of them empty.
+        /// </remarks>
+        public Sprite[] Collected => _collected;
 
         public int Count => _entries.Length;
         public Entry Get(int index) => _entries[Mathf.Clamp(index, 0, _entries.Length - 1)];

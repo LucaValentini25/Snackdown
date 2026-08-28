@@ -16,12 +16,12 @@ MonoBehaviour:
   GroundAcceleration: 90
   AirAcceleration: 45
   Gravity: 55
-  MaxFallSpeed: 25
-  JumpVelocity: 16
+  MaxFallSpeed: 20
+  JumpVelocity: 17
   JumpReleaseSpeed: 5
   CoyoteTime: 0.1
   JumpBufferTime: 0.12
-  ColliderSize: {x: 0.7, y: 0.9}
+  ColliderSize: {x: 0.7, y: 0.8125}
   SkinWidth: 0.02
   GroundMask:
     serializedVersion: 2

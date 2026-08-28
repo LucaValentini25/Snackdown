@@ -56,19 +56,21 @@ namespace Snackdown.UI
         Label _lobbySubtitle;
         Label _joinCode;
         Button _copyCode;
+        Button _paste;
         VisualElement _rosterList;
 
         VisualElement _wardrobeRow;
 
         VisualElement _settingsPanel;
         VisualElement _arenaRow;
+        VisualElement _arenaPreview;
         DropdownField _arena;
         VisualElement _presetRow;
         DropdownField _preset;
-        FloatField _startingLife;
-        FloatField _maxLife;
-        FloatField _drain;
-        FloatField _roundSeconds;
+        NumberStepper _startingLife;
+        NumberStepper _maxLife;
+        NumberStepper _drain;
+        NumberStepper _roundSeconds;
 
         MatchDirector _director;
 
@@ -116,19 +118,21 @@ namespace Snackdown.UI
             _lobbySubtitle = root.Q<Label>("lobby-subtitle");
             _joinCode = root.Q<Label>("join-code");
             _copyCode = root.Q<Button>("copy-code-button");
+            _paste = root.Q<Button>("paste-button");
             _rosterList = root.Q<VisualElement>("roster-list");
 
             _wardrobeRow = root.Q<VisualElement>("wardrobe-row");
 
             _settingsPanel = root.Q<VisualElement>("settings-panel");
             _arenaRow = root.Q<VisualElement>("arena-row");
+            _arenaPreview = root.Q<VisualElement>("arena-preview");
             _arena = root.Q<DropdownField>("arena-field");
             _presetRow = root.Q<VisualElement>("preset-row");
             _preset = root.Q<DropdownField>("preset-field");
-            _startingLife = root.Q<FloatField>("starting-life-field");
-            _maxLife = root.Q<FloatField>("max-life-field");
-            _drain = root.Q<FloatField>("drain-field");
-            _roundSeconds = root.Q<FloatField>("round-seconds-field");
+            _startingLife = root.Q<NumberStepper>("starting-life-field");
+            _maxLife = root.Q<NumberStepper>("max-life-field");
+            _drain = root.Q<NumberStepper>("drain-field");
+            _roundSeconds = root.Q<NumberStepper>("round-seconds-field");
 
             _nickname.value = NicknamePreference.Offered;
 
@@ -149,6 +153,7 @@ namespace Snackdown.UI
             _start.clicked += OnStartClicked;
             _leave.clicked += OnLeaveClicked;
             _copyCode.clicked += OnCopyCodeClicked;
+            _paste.clicked += OnPasteClicked;
 
             _arena.RegisterValueChangedCallback(OnArenaPicked);
             _preset.RegisterValueChangedCallback(OnPresetPicked);
@@ -197,6 +202,7 @@ namespace Snackdown.UI
             _start.clicked -= OnStartClicked;
             _leave.clicked -= OnLeaveClicked;
             _copyCode.clicked -= OnCopyCodeClicked;
+            _paste.clicked -= OnPasteClicked;
 
             _arena.UnregisterValueChangedCallback(OnArenaPicked);
             _preset.UnregisterValueChangedCallback(OnPresetPicked);
@@ -359,16 +365,29 @@ namespace Snackdown.UI
         /// wrong — a Cancel that does not appear during an attempt — is worse than the cost of
         /// showing a button nobody can see.
         /// </remarks>
+        /// <summary>
+        /// While an attempt is in flight, the only thing on screen is Cancel.
+        /// </summary>
+        /// <remarks>
+        /// <para><b>Hidden, not disabled — and that reverses what this method used to argue.</b> It
+        /// greyed everything out, on the grounds that a button vanishing mid-click reads as a crash.
+        /// That is true of <i>one</i> button going out from under a cursor. It is not true of the
+        /// whole row going at once, which reads as the screen having changed state, and it leaves a
+        /// panel of dead controls around the single live one.</para>
+        /// <para>The second half of that old argument still holds and is still handled: a second
+        /// attempt cannot be started over a half-open one, because there is nothing left to click.
+        /// </para>
+        /// </remarks>
         void SetBusy(bool busy)
         {
-            // Disabled rather than hidden: a button that vanishes mid-click reads as a crash, and
-            // starting a second attempt over a half-open one fails in ways nobody can explain.
-            _host.SetEnabled(!busy);
-            _join.SetEnabled(!busy);
-            _joinConfirm.SetEnabled(!busy);
-            _refresh.SetEnabled(!busy);
-            _back.SetEnabled(!busy);
-            _browseList.SetEnabled(!busy);
+            _host.EnableInClassList("hidden", busy);
+            _join.EnableInClassList("hidden", busy);
+            _joinConfirm.EnableInClassList("hidden", busy);
+            _refresh.EnableInClassList("hidden", busy);
+            _back.EnableInClassList("hidden", busy);
+            _browseList.EnableInClassList("hidden", busy);
+            _target.EnableInClassList("hidden", busy);
+            _nickname.EnableInClassList("hidden", busy);
 
             _cancel.EnableInClassList("hidden", !busy);
             _joinCancel.EnableInClassList("hidden", !busy);
@@ -623,6 +642,22 @@ namespace Snackdown.UI
         /// comparison in the middle of that for no reason — two arenas named the same would both
         /// resolve to the first one, and the failure would be a pick that silently does nothing.
         /// </remarks>
+        /// <summary>Puts the chosen arena's picture in the box above its dropdown.</summary>
+        /// <remarks>
+        /// A missing preview leaves the box empty rather than logging: the catalog treats the image
+        /// as optional — unlike the scene name, which <c>Validate</c> refuses to be without — so an
+        /// arena added without one still works, it just does not sell itself.
+        /// </remarks>
+        void ShowArenaPreview(int index)
+        {
+            if (_arenaPreview == null || _director == null) return;
+
+            Sprite preview = _director.ArenaPreview(index);
+            _arenaPreview.style.backgroundImage = preview != null
+                ? new StyleBackground(preview)
+                : new StyleBackground();
+        }
+
         void OnArenaPicked(ChangeEvent<string> change)
         {
             if (_fillingFields || _director == null) return;
@@ -692,6 +727,8 @@ namespace Snackdown.UI
             // player is agreeing to when they ready up.
             if (_director.ArenaIndex >= 0 && _director.ArenaIndex < _arena.choices.Count)
                 _arena.index = _director.ArenaIndex;
+
+            ShowArenaPreview(_director.ArenaIndex);
 
             _startingLife.value = settings.StartingLife;
             _maxLife.value = settings.MaxLife;
@@ -875,10 +912,28 @@ namespace Snackdown.UI
                 CharacterCatalog.Entry entry = catalog.Get(skin);
                 button.tooltip = entry.DisplayName;
 
-                if (entry.Portrait != null) button.style.backgroundImage = new StyleBackground(entry.Portrait);
-                else button.text = entry.DisplayName;
+                // The portrait goes on a child, not on the button. The button's own background is
+                // the backdrop the character stands against - a flat panel colour behind a sprite
+                // drawn with its own outline reads as a missing image - and an element has one
+                // background image to give.
+                if (entry.Portrait != null)
+                {
+                    var portrait = new VisualElement();
+                    portrait.AddToClassList("wardrobe__portrait");
+                    portrait.style.backgroundImage = new StyleBackground(entry.Portrait);
+                    portrait.pickingMode = PickingMode.Ignore;
+                    button.Add(portrait);
+                }
+                else
+                {
+                    button.text = entry.DisplayName;
+                }
 
-                button.SetEnabled(changeable && !taken && !mine);
+                // Not disabled for being the one you are wearing. It was, and the cost was that
+                // your own character looked exactly like one somebody else had taken - the two
+                // states the row exists to tell apart. Clicking it asks for the skin you already
+                // have, which is a request the server answers by changing nothing.
+                button.SetEnabled(changeable && !taken);
 
                 _wardrobeRow.Add(button);
             }
@@ -923,6 +978,21 @@ namespace Snackdown.UI
 
             GUIUtility.systemCopyBuffer = _rawJoinTarget;
             SetStatus(_lobbyStatus, $"Copied  {_rawJoinTarget}", isError: false);
+        }
+
+        /// <summary>Fills the code field from the clipboard.</summary>
+        /// <remarks>
+        /// The other half of Copy, and the half that matters more: a code arrives in a chat window
+        /// and typing six characters read off another screen is where they get mistyped. Trimmed
+        /// because a code copied out of a message usually brings a space with it, and the provider
+        /// would report that as a game that does not exist.
+        /// </remarks>
+        void OnPasteClicked()
+        {
+            string clipboard = GUIUtility.systemCopyBuffer;
+            if (string.IsNullOrWhiteSpace(clipboard)) return;
+
+            _target.value = clipboard.Trim();
         }
 
         /// <remarks>

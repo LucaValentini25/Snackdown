@@ -23,6 +23,9 @@ namespace Snackdown.Gameplay.Player
         [Tooltip("Renderer to dress. Usually the Visual child that the smoother drives.")]
         [SerializeField] SpriteRenderer _renderer;
 
+        [Tooltip("Animator on that same renderer. Left empty on a character that does not animate.")]
+        [SerializeField] CharacterAnimator _animator;
+
         SessionRoster _roster;
 
         public override void OnNetworkSpawn()
@@ -50,7 +53,12 @@ namespace Snackdown.Gameplay.Player
             if (_renderer == null || _catalog == null) return;
 
             CharacterCatalog.Entry entry = _catalog.Get(IndexForOwner());
-            if (entry.Portrait != null) _renderer.sprite = entry.Portrait;
+
+            // The animator owns the sprite from here on, so handing it the entry is the whole of
+            // dressing a character. Setting the portrait as well would be a frame of the wrong
+            // skin on the way past, and on a skin change it would be a visible flicker.
+            if (_animator != null) _animator.Wear(entry);
+            else if (entry.Portrait != null) _renderer.sprite = entry.Portrait;
         }
 
         int IndexForOwner() => _roster == null ? 0 : _roster.Of(OwnerClientId)?.CharacterIndex ?? 0;

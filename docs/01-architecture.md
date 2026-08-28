@@ -83,7 +83,7 @@ Assets/
 │   ├── UI/                   MainMenu.uxml, LoadingScreen.uxml, EndScreen.uxml,
 │   │                         RoundClock.uxml, LifeBars.uxml, Nameplate.uxml,
 │   │                         Snackdown.uss, MenuPanelSettings, WorldSpacePanelSettings
-│   ├── Scenes/               Bootstrap, Lobby, Arena01, Arena02, Sandbox
+│   ├── Scenes/               Bootstrap, Lobby, Arena01, Arena02, Sandbox, AssetGallery
 │   ├── Prefabs/              Player, PlayerSession, Fruit, NetworkSimulation
 │   ├── Art/                  placeholder primitives
 │   └── Settings/             ScriptableObject configs (movement, match, arenas,
@@ -101,7 +101,8 @@ Third-party art sits at the `Assets/` root (as it shipped); **all authored code 
 
 ## Scenes load additively on top of Bootstrap
 
-Four scenes, two of which are arenas — which is the split paying for itself:
+Six scenes, two of which are arenas — which is the split paying for itself — and two of which are
+tools rather than game:
 
 | Scene | Holds | Lifetime |
 |---|---|---|
@@ -109,6 +110,7 @@ Four scenes, two of which are arenas — which is the split paying for itself:
 | **Lobby** | Menu and lobby UI | Between matches |
 | **Arena01**, **Arena02** | Geometry, spawn points, camera | During a match |
 | **Sandbox** | Bootstrap's objects again, hosting and starting a match on Play | Never in a build; opened by hand |
+| **AssetGallery** | Every sprite in the project, laid out at the size its import settings produce | Never in a build; opened by hand |
 
 **Arena02 is Arena01 with the red and blue channels of every colour swapped** — warm where the first
 is cool, and identical in every other respect. That is a deliberately small change and worth naming
@@ -118,10 +120,10 @@ same, so this is a palette, not a second level design. What it proves is the par
 the catalog, the host's choice of arena, the networked load and the camera clamp all work with more
 than one entry, which no amount of authoring on a single scene could have shown.
 
-All five are listed in Build Settings, and **Sandbox is listed with its checkbox off** — present so
-Unity stops adding it back every time somebody opens it, disabled so it stays out of a player build.
-The other four are enabled because Netcode can only load a scene over the network if it is in that
-list, which is what an arena is. Removing Sandbox from the list is not a tidy-up: it comes straight
+All six are listed in Build Settings, and **Sandbox and AssetGallery are listed with their checkboxes
+off** — present so Unity stops adding them back every time somebody opens one, disabled so they stay
+out of a player build. The other four are enabled because Netcode can only load a scene over the
+network if it is in that list, which is what an arena is. Removing Sandbox from the list is not a tidy-up: it comes straight
 back the next time the scene is opened, and the churn shows up in every diff.
 
 Bootstrap is loaded first and **never unloaded**; the lobby and arenas come and go on top of it
@@ -291,6 +293,38 @@ disagreeing about numbers that decide the match.
 Nothing `Simulate()` reads is in there. Movement is executed identically on both sides of the wire,
 and a divergence there produces a trembling character whose symptom points at reconciliation, which
 is not where the bug would be. Tuning is for the rules, not for the physics.
+
+### The gallery exists because a sprite's size is invisible until you compare it
+
+`AssetGallery` holds all 113 sprites in the project as plain `SpriteRenderer`s at scale 1, grouped
+into a row per source folder, above a strip of 1×1 unit squares and the character at the size the
+game draws it. Nothing runs; the point is that what you see *is* what the import settings produce, so
+a wrong pixels-per-unit shows up as a sprite the wrong size next to a ruler rather than as a feeling
+that something is off in the arena.
+
+It is what made the pack's three different pixels-per-unit visible at a glance, and they are one now.
+The art was drawn on a single pixel grid — 32-pixel characters, 16-pixel tiles — and it is imported on
+one: **every sprite in the pack is at 32 pixels per unit.** A 32×32 character frame is one world unit,
+a 16×16 tile is half of one, and a 32×32 fruit frame is a unit whose apple occupies the middle
+16 pixels. Measured against the character's own 27 opaque pixels, the apple's 16 come out at 0.59 of
+its height — which is 16/27, the ratio the artist drew.
+
+Before that they were at 32, 64 and 100, and the last one was doing the damage: a 16-pixel tile at 100
+is 0.16 units against a one-unit character, a sixth of the size the art intends. Nothing in the game
+used those sprites yet, which is why it had gone unnoticed and why fixing it cost nothing.
+
+`WhiteSquare.png` stays at 4, deliberately. It is not pack art — it is a 4×4 white block that exists
+to be exactly one unit, and both arenas are built out of it.
+
+**The gameplay does not read any of this.** A fruit is collected by
+`Fruit._pickupRadius`, a number in world units, and a character collides through
+`MovementConfig.ColliderSize`. Both are authored independently of how big the sprite is drawn, which
+is why re-importing the whole pack changed what the game looks like and nothing about how it plays.
+
+Two settings come with the grid and matter as much. **Point filtering and no compression** were
+already right. **`FullRect` meshes were not**: the pack imported with `Tight`, which fits the mesh to
+the opaque pixels of each frame, so every frame of a run cycle gets a slightly different quad and the
+sprite swims inside its own transform. Pixel art wants the full rectangle every time.
 
 ## Art has a size; it is not scaled to one
 

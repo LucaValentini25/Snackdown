@@ -1,0 +1,18 @@
+/*
+ * The theme every runtime panel in Snackdown is drawn with.
+ *
+ * A theme rather than a stylesheet linked from each document. Four UXML files were each carrying
+ * their own <Style src="Snackdown.uss">, which works and means the fifth one added will forget,
+ * and that a change to what "the UI" is styled with is a change to four files. A theme is set once
+ * on the PanelSettings and reaches everything that panel draws.
+ *
+ * It imports two things and defines nothing of its own. The default runtime theme first, because
+ * it is what gives Unity's own controls - the dropdown's list, the text field's cursor, the
+ * scroller - any appearance at all; dropping it does not give a blank slate, it gives unstyled
+ * internals. Then Snackdown.uss, which is where every rule this project wrote actually lives.
+ *
+ * The order matters and is the usual one: the general theme, then the specific overrides.
+ */
+
+@import url("unity-theme://default");
+@import url("project://database/Assets/_Project/UI/Snackdown.uss");
