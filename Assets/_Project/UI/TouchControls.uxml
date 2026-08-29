@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The pad a phone gets instead of a keyboard. Never present in a Windows or WebGL build: the
+    component behind it is compiled for Android and iOS only, and on anything else it destroys its
+    own object before the first frame is drawn.
+
+    Positioned against the corners rather than laid out in a row, because a thumb reaches the
+    bottom corners of a phone and nothing else. Steering on the left, jump on the right, and pause
+    out of the way at the top - a pause button under a thumb is a pause button pressed by accident
+    in the middle of a jump.
+-->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
+
+    <ui:VisualElement name="touch-root" class="touch-root">
+        <ui:Button name="touch-pause" text="II" class="button touch-key touch-key--pause" />
+
+        <ui:VisualElement class="touch-cluster touch-cluster--left">
+            <ui:Button name="touch-left" text="&#60;" class="button touch-key" />
+            <ui:Button name="touch-right" text="&#62;" class="button touch-key" />
+        </ui:VisualElement>
+
+        <ui:VisualElement class="touch-cluster touch-cluster--right">
+            <ui:Button name="touch-jump" text="^" class="button touch-key touch-key--jump" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

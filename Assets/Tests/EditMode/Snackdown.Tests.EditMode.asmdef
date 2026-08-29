@@ -6,6 +6,7 @@
         "Snackdown.Netcode",
         "Snackdown.Connection",
         "Snackdown.Gameplay",
+        "Snackdown.Input",
         "Snackdown.UI",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",

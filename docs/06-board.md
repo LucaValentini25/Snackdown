@@ -7,7 +7,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 
 **Last updated:** 2026-08-25
 
-**Overall:** 99% — 73 done, 1 in progress, 0 blocked, 0 to do, 2 dropped, across 11 epics.
+**Overall:** 99% — 75 done, 1 in progress, 0 blocked, 0 to do, 2 dropped, across 12 epics.
 
 ## Epics
 
@@ -24,6 +24,7 @@ and what is known to be wrong. Updated when a task, an epic or a working session
 | [Loose ends](#loose-ends) | 5 | To do | 5/5 |
 | [Make it look like a game](#make-it-look-like-a-game) | 5 | Done | 18/18 |
 | [A way out, from the menu and from a match](#a-way-out-from-the-menu-and-from-a-match) | 5 | Done | 2/2 |
+| [A pad for a phone, and only for a phone](#a-pad-for-a-phone-and-only-for-a-phone) | 5 | Done | 2/2 |
 
 ### Netcode core — predicted character
 
@@ -177,6 +178,15 @@ A build has no way to close itself and a match has no way to leave except dying.
 |:---:|---|---|---|
 | `[x]` | The main menu can close the game | the button renders in the front panel with the rest of the column and calls the one exit path. Whether it actually closes a build is not checkable from the editor, which is the reason the editor branch exists at all | GameExit is one static in one place because Application.Quit does nothing in the editor and the branch that fixes that is exactly what gets copied once and updated once. Written where both callers already live rather than in Core, which the UI assembly does not reference and should not start to for one method Hidden while a connection attempt is running, alongside the buttons that were already hidden there: quitting mid-connect would leave a half-open session behind on the service, and the only button worth reaching during an attempt is the one that cancels it. Measured in play by driving the busy state and reading the resolved display of each button. |
 | `[x]` | Escape opens a menu over a running match | eight EditMode tests on when it may be on screen, including the two that matter: a match starting under an open menu, and a host walking out from under one. Then rendered in play mode with every button resolving and the layout measured - the panel at 420x324 with its three buttons where the stylesheet puts them | Nothing is paused, because in a networked match nothing can be: the other players go on regardless, so the character stays under its owner's control and this is a layer rather than a modal. That decision is also why the backdrop dims to 35% and not the end screen's 72% - a player who keeps control but cannot see what is happening to them is no better off. Leaving reuses the lobby's own Leave call, so a host deletes the session and a client departs without a second copy of that difference; what it adds is unloading the arena by hand, because the director that loaded it is despawned with the session and nothing else would. The rule for when the menu may open is asked every frame, not only on the keypress, which is what closes it when the phase changes underneath somebody reading it |
+
+### A pad for a phone, and only for a phone
+
+Every control in the project is a key or a gamepad button, so a phone build would ship with no way to move at all. Luca's constraint is the shape of the work: the pad must not appear in a Windows or WebGL build, which rules out deciding it at runtime.
+
+| | Task | Verified by | Notes |
+|:---:|---|---|---|
+| `[x]` | The pad is a gamepad, so nothing downstream knows about thumbs | driven end to end in play: the panel's state queued into the virtual device gives leftStick (1,0) and buttonSouth pressed, and on the other side InputReader answers MoveX 1 and JumpHeld true without a line of it having changed. Seven EditMode tests cover the direction rule | It creates a real Gamepad and writes state into it, so every existing binding picks it up unchanged - including the escape menu's <Gamepad>/start, which matters because a phone has no Escape key and without it there would be no way to leave a match. The alternative, feeding InputReader directly, would have been a second source of truth and would have left the pause button needing its own wiring. Two buttons rather than a stick, because the axis is quantised to -1, 0 or 1 at the source and a stick would promise a precision the simulation throws away. The rule for holding both at once is last-press-wins: two thumbs hold both constantly, and cancelling to zero turns pressing right while still holding left into a dead stop |
+| `[x]` | It cannot appear on a platform without a touchscreen | the compiler is the check: everything that builds a device or reads a screen is inside #if UNITY_ANDROID || UNITY_IOS, so a Windows or WebGL build does not contain it. What is left there is a component that destroys its own object in Awake, before anything is drawn | Compile-time rather than a runtime test of Touchscreen.current, which is what Luca asked for and is also the stronger guarantee: it cannot appear because it is not there. The consequence to know is that a WebGL build opened on a phone gets no controls either. The editor gets a switch instead of the gate, because the build target on this machine is Windows and a panel that can only be seen by switching platform is a panel nobody checks; it defaults to off. The pad lives in the arena scenes rather than in Bootstrap, which gives it the right lifetime for free - it exists exactly while there is a character to drive. Putting it in Bootstrap would have meant asking the match phase, and Snackdown.Input is a leaf assembly that depends only on the Input System; a reference to Gameplay for that would invert the layering ADR 0001 was written about. The cost is that a future arena has to remember to include it, the same way it has to remember a background |
 
 ## Decisions
 

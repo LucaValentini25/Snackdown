@@ -742,6 +742,53 @@
     align-self: center;
 }
 
+/* The on-screen pad. It does not fill or centre anything: every child is placed against a corner,
+   because the reachable part of a phone held in two hands is the two bottom corners and nothing in
+   between. The root ignores pointers so a tap on empty screen still reaches whatever is under it. */
+.touch-root {
+    flex-grow: 1;
+}
+
+.touch-cluster {
+    position: absolute;
+    bottom: 24px;
+    flex-direction: row;
+}
+
+.touch-cluster--left {
+    left: 24px;
+}
+
+.touch-cluster--right {
+    right: 24px;
+}
+
+/* Square and large. These are sized for a thumb rather than for a cursor, which is why they do not
+   inherit the 220x60 of every other button in the project. */
+.touch-key {
+    width: 88px;
+    height: 88px;
+    margin: 0 8px 0 0;
+    padding: 0;
+    font-size: 40px;
+    opacity: 0.75;
+}
+
+.touch-key--jump {
+    width: 104px;
+    height: 104px;
+    margin: 0;
+}
+
+.touch-key--pause {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+}
+
 .clock-root {
     position: absolute;
     top: 10px;

@@ -1,7 +1,7 @@
 {
   "project": "Snackdown",
   "updated": "2026-08-25",
-  "currentEpic": "quit-and-pause",
+  "currentEpic": "touch-controls",
 
   "epics": [
     {
@@ -202,7 +202,30 @@
             "notes": "Nothing is paused, because in a networked match nothing can be: the other players go on regardless, so the character stays under its owner's control and this is a layer rather than a modal. That decision is also why the backdrop dims to 35% and not the end screen's 72% - a player who keeps control but cannot see what is happening to them is no better off. Leaving reuses the lobby's own Leave call, so a host deletes the session and a client departs without a second copy of that difference; what it adds is unloading the arena by hand, because the director that loaded it is despawned with the session and nothing else would. The rule for when the menu may open is asked every frame, not only on the keypress, which is what closes it when the phase changes underneath somebody reading it"
           }
         ]
-      }
+      },
+        {
+          "id": "touch-controls",
+          "title": "A pad for a phone, and only for a phone",
+          "phase": "5",
+          "status": "done",
+          "goal": "Every control in the project is a key or a gamepad button, so a phone build would ship with no way to move at all. Luca's constraint is the shape of the work: the pad must not appear in a Windows or WebGL build, which rules out deciding it at runtime.",
+          "tasks": [
+            {
+              "id": "tc-1",
+              "title": "The pad is a gamepad, so nothing downstream knows about thumbs",
+              "status": "done",
+              "test": "driven end to end in play: the panel's state queued into the virtual device gives leftStick (1,0) and buttonSouth pressed, and on the other side InputReader answers MoveX 1 and JumpHeld true without a line of it having changed. Seven EditMode tests cover the direction rule",
+              "notes": "It creates a real Gamepad and writes state into it, so every existing binding picks it up unchanged - including the escape menu's <Gamepad>/start, which matters because a phone has no Escape key and without it there would be no way to leave a match. The alternative, feeding InputReader directly, would have been a second source of truth and would have left the pause button needing its own wiring. Two buttons rather than a stick, because the axis is quantised to -1, 0 or 1 at the source and a stick would promise a precision the simulation throws away. The rule for holding both at once is last-press-wins: two thumbs hold both constantly, and cancelling to zero turns pressing right while still holding left into a dead stop"
+            },
+            {
+              "id": "tc-2",
+              "title": "It cannot appear on a platform without a touchscreen",
+              "status": "done",
+              "test": "the compiler is the check: everything that builds a device or reads a screen is inside #if UNITY_ANDROID || UNITY_IOS, so a Windows or WebGL build does not contain it. What is left there is a component that destroys its own object in Awake, before anything is drawn",
+              "notes": "Compile-time rather than a runtime test of Touchscreen.current, which is what Luca asked for and is also the stronger guarantee: it cannot appear because it is not there. The consequence to know is that a WebGL build opened on a phone gets no controls either. The editor gets a switch instead of the gate, because the build target on this machine is Windows and a panel that can only be seen by switching platform is a panel nobody checks; it defaults to off. The pad lives in the arena scenes rather than in Bootstrap, which gives it the right lifetime for free - it exists exactly while there is a character to drive. Putting it in Bootstrap would have meant asking the match phase, and Snackdown.Input is a leaf assembly that depends only on the Input System; a reference to Gameplay for that would invert the layering ADR 0001 was written about. The cost is that a future arena has to remember to include it, the same way it has to remember a background"
+            }
+          ]
+        }
   ],
 
   "decisions": [
