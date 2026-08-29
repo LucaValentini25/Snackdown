@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Snackdown.Gameplay.Match;
 using Snackdown.Input;
 using UnityEngine;
@@ -42,12 +43,22 @@ namespace Snackdown.UI
         static TouchControls _live;
 
         readonly TouchDirection _direction = new TouchDirection();
+
+        /// <summary>Which key each finger is currently over, by pointer id.</summary>
+        readonly Dictionary<int, VisualElement> _fingers = new Dictionary<int, VisualElement>();
+
+        VisualElement _left;
+        VisualElement _right;
+        VisualElement _jumpKey;
+        VisualElement _pauseKey;
         VisualElement _root;
         VisualElement _safe;
         Gamepad _pad;
         bool _jump;
         bool _pause;
         bool _shown;
+        bool _leftHeld;
+        bool _rightHeld;
         Rect _safeArea;
 
         /// <remarks>
@@ -74,10 +85,20 @@ namespace Snackdown.UI
 
             _root = _document.rootVisualElement.Q<VisualElement>("touch-root");
             _safe = _root.Q<VisualElement>("touch-safe");
-            Hold(_root.Q<Button>("touch-left"), pressed => Steer(-1, pressed));
-            Hold(_root.Q<Button>("touch-right"), pressed => Steer(1, pressed));
-            Hold(_root.Q<Button>("touch-jump"), pressed => _jump = pressed);
-            Hold(_root.Q<Button>("touch-pause"), pressed => _pause = pressed);
+            _left = _root.Q<VisualElement>("touch-left");
+            _right = _root.Q<VisualElement>("touch-right");
+            _jumpKey = _root.Q<VisualElement>("touch-jump");
+            _pauseKey = _root.Q<VisualElement>("touch-pause");
+
+            // The keys are drawings, not controls. Every pointer is tracked on the root instead,
+            // which is what lets a thumb slide from one to the next - see OnPointerDown.
+            foreach (VisualElement key in new[] { _left, _right, _jumpKey, _pauseKey })
+                if (key != null) key.pickingMode = PickingMode.Ignore;
+
+            _root.RegisterCallback<PointerDownEvent>(OnPointerDown);
+            _root.RegisterCallback<PointerMoveEvent>(OnPointerMove);
+            _root.RegisterCallback<PointerUpEvent>(OnPointerLifted);
+            _root.RegisterCallback<PointerCancelEvent>(OnPointerLifted);
 
             _safeArea = new Rect();
             Show(false);
@@ -130,7 +151,10 @@ namespace Snackdown.UI
         /// <summary>Drops every button. For a panel that goes away with a thumb still on it.</summary>
         void LetGo()
         {
+            _fingers.Clear();
             _direction.ReleaseAll();
+            _leftHeld = false;
+            _rightHeld = false;
             _jump = false;
             _pause = false;
         }
@@ -173,30 +197,71 @@ namespace Snackdown.UI
         }
 
         /// <summary>
-        /// Reports a button as held rather than clicked, and keeps reporting through a thumb that
-        /// slides off it.
+        /// Tracks one finger from the moment it lands until it is lifted.
         /// </summary>
         /// <remarks>
-        /// Capturing the pointer is the part that matters. Without it, dragging a thumb past the
-        /// edge of a button never sends the release and the character keeps running.
+        /// <para><b>Captured on the root, never on a key.</b> Capturing on the key was the first
+        /// attempt and it made the pad feel broken: a captured element keeps every later event for
+        /// that finger, so sliding a thumb from left to right delivered nothing to right until the
+        /// thumb was lifted. UI Toolkit's own Button does the same thing through its clickable, which
+        /// is why the keys have their picking turned off and are only drawings now.</para>
+        /// <para>Holding the pointer at the root means every move is reported here and the key under
+        /// the finger is worked out each time. Sliding between keys is then just the answer
+        /// changing, and each finger is its own entry, so jumping with one thumb while steering with
+        /// the other is two independent answers rather than a fight over one capture.</para>
         /// </remarks>
-        static void Hold(Button button, System.Action<bool> report)
+        void OnPointerDown(PointerDownEvent evt)
         {
-            if (button == null) return;
+            _root.CapturePointer(evt.pointerId);
+            _fingers[evt.pointerId] = KeyUnder(evt.position);
+            Recompute();
+        }
 
-            button.RegisterCallback<PointerDownEvent>(evt =>
+        void OnPointerMove(PointerMoveEvent evt)
+        {
+            if (!_fingers.ContainsKey(evt.pointerId)) return;
+
+            _fingers[evt.pointerId] = KeyUnder(evt.position);
+            Recompute();
+        }
+
+        void OnPointerLifted(IPointerEvent evt)
+        {
+            if (_root.HasPointerCapture(evt.pointerId)) _root.ReleasePointer(evt.pointerId);
+            _fingers.Remove(evt.pointerId);
+            Recompute();
+        }
+
+        VisualElement KeyUnder(Vector3 position)
+        {
+            foreach (VisualElement key in new[] { _left, _right, _jumpKey, _pauseKey })
+                if (key != null && key.worldBound.Contains(position)) return key;
+
+            return null;
+        }
+
+        /// <remarks>
+        /// Rebuilt from every finger rather than toggled per event, so a key stays held while any
+        /// finger is on it and a finger that slid away stops holding the one it left. The direction
+        /// is fed as presses and releases so that the last one pressed still wins.
+        /// </remarks>
+        void Recompute()
+        {
+            bool left = false, right = false;
+            _jump = false;
+            _pause = false;
+
+            foreach (VisualElement key in _fingers.Values)
             {
-                button.CapturePointer(evt.pointerId);
-                report(true);
-            });
+                if (key == null) continue;
+                if (key == _left) left = true;
+                else if (key == _right) right = true;
+                else if (key == _jumpKey) _jump = true;
+                else if (key == _pauseKey) _pause = true;
+            }
 
-            button.RegisterCallback<PointerUpEvent>(evt =>
-            {
-                if (button.HasPointerCapture(evt.pointerId)) button.ReleasePointer(evt.pointerId);
-                report(false);
-            });
-
-            button.RegisterCallback<PointerCaptureOutEvent>(_ => report(false));
+            if (left != _leftHeld) { _leftHeld = left; Steer(-1, left); }
+            if (right != _rightHeld) { _rightHeld = right; Steer(1, right); }
         }
 
         bool WantedHere()
