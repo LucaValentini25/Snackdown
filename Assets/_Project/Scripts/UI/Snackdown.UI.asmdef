@@ -5,6 +5,7 @@
         "Snackdown.Connection",
         "Snackdown.Netcode",
         "Snackdown.Gameplay",
+        "Snackdown.Input",
         "Unity.Netcode.Runtime",
         "Unity.InputSystem",
         "Unity.Multiplayer.Tools.NetworkSimulator.Runtime",

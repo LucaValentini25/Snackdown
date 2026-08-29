@@ -13,15 +13,21 @@
     <Style src="project://database/Assets/_Project/UI/Snackdown.uss" />
 
     <ui:VisualElement name="touch-root" class="touch-root">
-        <ui:Button name="touch-pause" text="II" class="button touch-key touch-key--pause" />
+        <!-- Everything sits inside this and not in the root, because the safe-area inset has to be
+             an offset the buttons are measured from. Padding on the root does not do that: an
+             absolutely positioned child is placed against the border edge, so a notch inset applied
+             there moves nothing at all - which is exactly what it did until it was measured. -->
+        <ui:VisualElement name="touch-safe" class="touch-safe">
+            <ui:Button name="touch-pause" text="II" class="button touch-key touch-key--pause" />
 
-        <ui:VisualElement class="touch-cluster touch-cluster--left">
-            <ui:Button name="touch-left" text="&#60;" class="button touch-key" />
-            <ui:Button name="touch-right" text="&#62;" class="button touch-key" />
-        </ui:VisualElement>
+            <ui:VisualElement class="touch-cluster touch-cluster--left">
+                <ui:Button name="touch-left" text="&#60;" class="button touch-key" />
+                <ui:Button name="touch-right" text="&#62;" class="button touch-key" />
+            </ui:VisualElement>
 
-        <ui:VisualElement class="touch-cluster touch-cluster--right">
-            <ui:Button name="touch-jump" text="^" class="button touch-key touch-key--jump" />
+            <ui:VisualElement class="touch-cluster touch-cluster--right">
+                <ui:Button name="touch-jump" text="^" class="button touch-key touch-key--jump" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

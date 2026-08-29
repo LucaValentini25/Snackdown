@@ -744,49 +744,78 @@
 
 /* The on-screen pad. It does not fill or centre anything: every child is placed against a corner,
    because the reachable part of a phone held in two hands is the two bottom corners and nothing in
-   between. The root ignores pointers so a tap on empty screen still reaches whatever is under it. */
+   between. The root carries the safe-area inset as padding, which is why the corners are measured
+   from it rather than from the screen. */
 .touch-root {
     flex-grow: 1;
 }
 
+/* Inset from each edge by the safe area at runtime. Absolute rather than padding on the root,
+   because a corner-positioned child measures from the border edge and would ignore padding. */
+.touch-safe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
 .touch-cluster {
     position: absolute;
-    bottom: 24px;
+    bottom: 20px;
     flex-direction: row;
 }
 
 .touch-cluster--left {
-    left: 24px;
+    left: 20px;
 }
 
 .touch-cluster--right {
-    right: 24px;
+    right: 20px;
 }
 
-/* Square and large. These are sized for a thumb rather than for a cursor, which is why they do not
-   inherit the 220x60 of every other button in the project. */
+/* Round, and drawn as a plain disc rather than with the pack's nine-slice frame. A sliced sprite
+   cannot be made circular by a corner radius - the frame is part of the image - so a touch key that
+   wants to be round has to stop being one of those buttons and say so. Sized for a thumb rather
+   than a cursor, which is why they do not inherit the 220x60 the rest of the project uses. */
 .touch-key {
-    width: 88px;
-    height: 88px;
-    margin: 0 8px 0 0;
+    width: 72px;
+    height: 72px;
+    margin: 0 10px 0 0;
     padding: 0;
-    font-size: 40px;
-    opacity: 0.75;
+    font-size: 32px;
+    border-width: 2px;
+    border-radius: 36px;
+    border-color: var(--panel-edge);
+    background-image: none;
+    background-color: var(--panel);
+    color: var(--ink);
+    opacity: 0.7;
+}
+
+.touch-key:hover,
+.touch-key:active {
+    background-color: var(--panel);
+    border-color: var(--panel-edge);
+    opacity: 0.9;
 }
 
 .touch-key--jump {
-    width: 104px;
-    height: 104px;
+    width: 84px;
+    height: 84px;
+    border-radius: 42px;
     margin: 0;
 }
 
 .touch-key--pause {
     position: absolute;
-    top: 16px;
-    left: 16px;
-    width: 56px;
-    height: 56px;
-    font-size: 24px;
+    top: 12px;
+    left: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    font-size: 20px;
+    margin: 0;
 }
 
 .clock-root {
