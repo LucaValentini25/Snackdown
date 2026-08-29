@@ -8370,7 +8370,7 @@ MonoBehaviour:
   m_AssetsPPU: 32
   m_RefResolutionX: 960
   m_RefResolutionY: 540
-  m_CropFrame: 0
+  m_CropFrame: 3
   m_GridSnapping: 1
   m_FilterMode: 0
   m_UpscaleRT: 0
