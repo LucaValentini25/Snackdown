@@ -60,10 +60,22 @@ class Piece:
 
 
 class Arena:
-    def __init__(self, floor_row, floor_bottom_row, inner, walls, ceiling_row, theme):
+    def __init__(self, floor_row, floor_bottom_row, inner, walls, ceiling_row, theme,
+                 overscan_x=12, overscan_down=8, overscan_up=12):
+        """`overscan_*` is terrain drawn outside the arena, in cells.
+
+        The camera fits the arena and then keeps whatever the screen's shape gives
+        it, so on anything wider or taller than the arena it sees past the walls. Up
+        to there the ground simply stopped, in mid-air. This carries it far enough
+        out that no sane aspect ratio reaches the end: twelve cells is six world
+        units, which covers a 21:9 screen on the wide side and a square one on the
+        tall side. It is all behind the walls, so none of it is reachable and none
+        of it can change a route.
+        """
         self.floor_row, self.floor_bottom_row = floor_row, floor_bottom_row
         self.inner, self.walls, self.ceiling_row = inner, walls, ceiling_row
         self.theme = theme
+        self.overscan_x, self.overscan_down, self.overscan_up = overscan_x, overscan_down, overscan_up
         self.pieces = []
 
     def mirror(self, x):
@@ -184,8 +196,8 @@ def build_cells(arena):
 
     # The ground runs the full width, under the walls: a wall standing on a hole in
     # the floor is a hole the players can be knocked into.
-    for row in range(arena.floor_bottom_row, arena.floor_row + 1):
-        for x in range(arena.walls[0][0], arena.walls[1][1] + 1):
+    for row in range(arena.floor_bottom_row - arena.overscan_down, arena.floor_row + 1):
+        for x in range(arena.walls[0][0] - arena.overscan_x, arena.walls[1][1] + 1 + arena.overscan_x):
             solid.add((x, row))
     for p in arena.pieces:
         if p.kind == "terrain":
@@ -216,10 +228,11 @@ def build_cells(arena):
             for x in range(p.x0, p.x1 + 1):
                 cells[(x, p.row)] = t.bar["l"] if x == p.x0 else (t.bar["r"] if x == p.x1 else t.bar["m"])
 
+    top = arena.ceiling_row + arena.overscan_up
     for x0, x1 in arena.walls:
-        for row in range(arena.floor_row + 1, arena.ceiling_row + 1):
+        for row in range(arena.floor_row + 1, top + 1):
             for x in (x0, x1):
-                cells[(x, row)] = t.wall[(arena.ceiling_row - row) % 3]
+                cells[(x, row)] = t.wall[(top - row) % 3]
     return cells
 
 
