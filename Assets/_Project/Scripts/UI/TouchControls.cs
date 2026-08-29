@@ -38,6 +38,9 @@ namespace Snackdown.UI
 #endif
 
 #if UNITY_ANDROID || UNITY_IOS || UNITY_EDITOR
+        /// <summary>The one pad allowed to exist, so a second scene cannot register a second device.</summary>
+        static TouchControls _live;
+
         readonly TouchDirection _direction = new TouchDirection();
         VisualElement _root;
         VisualElement _safe;
@@ -47,14 +50,21 @@ namespace Snackdown.UI
         bool _shown;
         Rect _safeArea;
 
+        /// <remarks>
+        /// The guard is not defensive tidiness. This registers a device with the Input System, which
+        /// is global, so a second copy of this component is a second gamepad the player never
+        /// plugged in - and the sandbox scene mirrors the bootstrap overlays, so loading both at once
+        /// is a supported thing to do rather than a mistake.
+        /// </remarks>
         void Awake()
         {
-            if (!WantedHere())
+            if (!WantedHere() || _live != null)
             {
                 Destroy(gameObject);
                 return;
             }
 
+            _live = this;
             _pad = InputSystem.AddDevice<Gamepad>("SnackdownTouchPad");
         }
 
@@ -77,6 +87,7 @@ namespace Snackdown.UI
 
         void OnDestroy()
         {
+            if (ReferenceEquals(_live, this)) _live = null;
             if (_pad != null && _pad.added) InputSystem.RemoveDevice(_pad);
         }
 
